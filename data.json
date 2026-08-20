@@ -8,5 +8,23 @@
       "id": "mt240345im9aa"
     }
   ],
-  "classes": []
+  "classes": [
+    {
+      "title": "matematik",
+      "teacherId": "mt240345im9aa",
+      "day": "pazartesi",
+      "dayLabel": "Pazartesi",
+      "date": "2026-08-24",
+      "startTime": "14:00",
+      "endTime": "15:00",
+      "meetLink": "https://meet.google.com/wym-frof-jdx",
+      "classroom": "-",
+      "description": "",
+      "capacity": 25,
+      "type": "Canlı Ders",
+      "status": "upcoming",
+      "courseType": "math",
+      "id": "mt241baltsfdj"
+    }
+  ]
 }
