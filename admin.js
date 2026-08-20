@@ -1,38 +1,15 @@
 const ADMIN_USER = "oneregitim";
 const ADMIN_PASS = "oneregitim123";
+const GITHUB_REPO = "oneregitimkurumlari/oneregitimkurumlari";
+const DATA_FILE = "data.json";
+const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
 
-function getData(key) {
-    return JSON.parse(localStorage.getItem(key) || "[]");
-}
-
-function setData(key, data) {
-    localStorage.setItem(key, JSON.stringify(data));
-}
-
-function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-}
-
-function formatTime(start, end) {
-    return start + " - " + end;
-}
-
-function formatDate(dateStr) {
-    if (!dateStr) return "-";
-    const d = new Date(dateStr);
-    const day = d.getDate();
-    const months = ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
-    return day + " " + months[d.getMonth()] + " " + d.getFullYear();
-}
+let GITHUB_TOKEN = localStorage.getItem("github_token") || "";
+let remoteData = { teachers: [], classes: [], sha: "" };
 
 const dayLabels = {
-    pazartesi: "Pazartesi",
-    sali: "Salı",
-    carsamba: "Çarşamba",
-    persembe: "Perşembe",
-    cuma: "Cuma",
-    cumartesi: "Cumartesi",
-    pazar: "Pazar"
+    pazartesi: "Pazartesi", sali: "Salı", carsamba: "Çarşamba",
+    persembe: "Perşembe", cuma: "Cuma", cumartesi: "Cumartesi", pazar: "Pazar"
 };
 
 const courseTypes = {
@@ -48,12 +25,33 @@ function getCourseType(branch) {
     return "math";
 }
 
+function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    const months = ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
+    return d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
+}
+
+function formatTime(start, end) { return start + " - " + end; }
+
 function showToast(msg) {
     const t = document.createElement("div");
     t.textContent = msg;
-    t.style.cssText = "position:fixed;bottom:24px;right:24px;background:#10b981;color:white;padding:14px 24px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);animation:fadeIn .3s;";
+    t.style.cssText = "position:fixed;bottom:24px;right:24px;background:#10b981;color:white;padding:14px 24px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);";
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 3000);
+}
+
+function showError(msg) {
+    const t = document.createElement("div");
+    t.textContent = msg;
+    t.style.cssText = "position:fixed;bottom:24px;right:24px;background:#ef4444;color:white;padding:14px 24px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);";
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
 }
 
 function showConfirm(msg, callback) {
@@ -72,8 +70,69 @@ function showConfirm(msg, callback) {
     overlay.querySelector("#confirmNo").onclick = () => overlay.remove();
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+async function fetchRemoteData() {
+    try {
+        const res = await fetch(DATA_URL + "?t=" + Date.now());
+        if (!res.ok) throw new Error("Veri okunamadı");
+        const json = await res.json();
+        remoteData.teachers = json.teachers || [];
+        remoteData.classes = json.classes || [];
 
+        const metaRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}`, {
+            headers: GITHUB_TOKEN ? { "Authorization": "token " + GITHUB_TOKEN } : {}
+        });
+        if (metaRes.ok) {
+            const meta = await metaRes.json();
+            remoteData.sha = meta.sha;
+        }
+        return true;
+    } catch (e) {
+        console.error("Uzak veri okuma hatası:", e);
+        return false;
+    }
+}
+
+async function saveRemoteData() {
+    if (!GITHUB_TOKEN) {
+        showError("GitHub Token tanımlanmamış! Ayarlar sekmesinden girin.");
+        return false;
+    }
+
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify({
+        teachers: remoteData.teachers,
+        classes: remoteData.classes
+    }, null, 2))));
+
+    try {
+        const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}`, {
+            method: "PUT",
+            headers: {
+                "Authorization": "token " + GITHUB_TOKEN,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                message: "Yönetim paneli güncellendi - " + new Date().toISOString(),
+                content: content,
+                sha: remoteData.sha
+            })
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.message || "Kayıt başarısız");
+        }
+
+        const result = await res.json();
+        remoteData.sha = result.content.sha;
+        return true;
+    } catch (e) {
+        console.error("Kayıt hatası:", e);
+        showError("Kayıt başarısız: " + e.message);
+        return false;
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
     const loginScreen = document.getElementById("loginScreen");
     const adminPanel = document.getElementById("adminPanel");
     const loginForm = document.getElementById("loginForm");
@@ -104,12 +163,50 @@ document.addEventListener("DOMContentLoaded", () => {
         location.reload();
     });
 
-    function initPanel() {
+    async function initPanel() {
+        const loading = document.createElement("div");
+        loading.id = "loadingOverlay";
+        loading.style.cssText = "position:fixed;inset:0;background:rgba(255,255,255,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:600;color:var(--primary);";
+        loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;font-size:2rem;"></i> Veriler yükleniyor...';
+        document.body.appendChild(loading);
+
+        const ok = await fetchRemoteData();
+        loading.remove();
+
+        if (!ok && !GITHUB_TOKEN) {
+            document.getElementById("settingsPage").innerHTML = `
+                <div style="background:white;padding:40px;border-radius:12px;box-shadow:var(--shadow);text-align:center;max-width:600px;margin:0 auto;">
+                    <i class="fas fa-key" style="font-size:3rem;color:var(--warning);margin-bottom:16px;display:block;"></i>
+                    <h3 style="margin-bottom:12px;">GitHub Token Gerekli</h3>
+                    <p style="color:var(--text-medium);margin-bottom:20px;">Verilerin kaydedilmesi ve tüm cihazlardan görüntülenebilmesi için bir GitHub Personal Access Token gerekiyor.</p>
+                    <ol style="text-align:left;max-width:400px;margin:0 auto 20px;color:var(--text-medium);line-height:2;">
+                        <li><a href="https://github.com/settings/tokens" target="_blank">GitHub Token sayfasına</a> git</li>
+                        <li><strong>"Generate new token (classic)"</strong> tıkla</li>
+                        <li><strong>repo</strong> iznini işaretle</li>
+                        <li>Oluşturulan tokenı aşağıya yapıştır</li>
+                    </ol>
+                    <div style="display:flex;gap:8px;max-width:400px;margin:0 auto;">
+                        <input type="password" id="tokenInput" placeholder="GitHub Token" style="flex:1;padding:10px 14px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;">
+                        <button onclick="saveToken()" style="padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Kaydet</button>
+                    </div>
+                </div>`;
+            return;
+        }
+
         renderTeachers();
         renderClasses();
         updateDashboard();
         initNavigation();
     }
+
+    window.saveToken = function() {
+        const token = document.getElementById("tokenInput").value.trim();
+        if (!token) { showError("Token boş olamaz!"); return; }
+        GITHUB_TOKEN = token;
+        localStorage.setItem("github_token", token);
+        showToast("Token kaydedildi! Sayfa yenileniyor...");
+        setTimeout(() => location.reload(), 1500);
+    };
 
     function initNavigation() {
         document.querySelectorAll(".sidebar-btn").forEach(btn => {
@@ -125,9 +222,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderTeachers() {
-        const teachers = getData("teachers");
         const tbody = document.getElementById("teacherTable");
         const empty = document.getElementById("emptyTeachers");
+        const teachers = remoteData.teachers;
 
         if (teachers.length === 0) {
             tbody.innerHTML = "";
@@ -143,24 +240,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td>${t.branch}</td>
                 <td>${t.email || "-"}</td>
                 <td class="actions-cell">
-                    <button class="btn-edit" onclick="editTeacher('${t.id}')">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn-delete" onclick="deleteTeacher('${t.id}')">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <button class="btn-edit" onclick="editTeacher('${t.id}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-delete" onclick="deleteTeacher('${t.id}')"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
         `).join("");
-
         updateTeacherSelect();
     }
 
     function updateTeacherSelect() {
-        const teachers = getData("teachers");
         const select = document.getElementById("classTeacher");
         select.innerHTML = '<option value="">Öğretmen Seçin</option>' +
-            teachers.map(t => `<option value="${t.id}">${t.name} ${t.surname} (${t.branch})</option>`).join("");
+            remoteData.teachers.map(t => `<option value="${t.id}">${t.name} ${t.surname} (${t.branch})</option>`).join("");
     }
 
     document.getElementById("addTeacherBtn").addEventListener("click", () => {
@@ -175,11 +266,9 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("teacherForm").style.display = "none";
     });
 
-    document.getElementById("teacherFormEl").addEventListener("submit", (e) => {
+    document.getElementById("teacherFormEl").addEventListener("submit", async (e) => {
         e.preventDefault();
-        const teachers = getData("teachers");
         const editId = document.getElementById("editTeacherId").value;
-
         const teacherData = {
             name: document.getElementById("teacherName").value.trim(),
             surname: document.getElementById("teacherSurname").value.trim(),
@@ -188,26 +277,25 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         if (editId) {
-            const idx = teachers.findIndex(t => t.id === editId);
-            if (idx !== -1) teachers[idx] = { ...teachers[idx], ...teacherData };
-            showToast("Öğretmen güncellendi!");
+            const idx = remoteData.teachers.findIndex(t => t.id === editId);
+            if (idx !== -1) remoteData.teachers[idx] = { ...remoteData.teachers[idx], ...teacherData };
         } else {
             teacherData.id = generateId();
-            teachers.push(teacherData);
-            showToast("Öğretmen eklendi!");
+            remoteData.teachers.push(teacherData);
         }
 
-        setData("teachers", teachers);
-        renderTeachers();
-        updateDashboard();
-        document.getElementById("teacherForm").style.display = "none";
+        const ok = await saveRemoteData();
+        if (ok) {
+            showToast(editId ? "Öğretmen güncellendi!" : "Öğretmen eklendi!");
+            renderTeachers();
+            updateDashboard();
+            document.getElementById("teacherForm").style.display = "none";
+        }
     });
 
     window.editTeacher = function(id) {
-        const teachers = getData("teachers");
-        const t = teachers.find(x => x.id === id);
+        const t = remoteData.teachers.find(x => x.id === id);
         if (!t) return;
-
         document.getElementById("teacherForm").style.display = "block";
         document.getElementById("teacherFormTitle").textContent = "Öğretmeni Düzenle";
         document.getElementById("editTeacherId").value = t.id;
@@ -218,34 +306,30 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     window.deleteTeacher = function(id) {
-        showConfirm("Bu öğretmeni silmek istediğinize emin misiniz?", () => {
-            let teachers = getData("teachers");
-            teachers = teachers.filter(t => t.id !== id);
-            setData("teachers", teachers);
-            renderTeachers();
-            updateDashboard();
-            showToast("Öğretmen silindi!");
+        showConfirm("Bu öğretmeni silmek istediğinize emin misiniz?", async () => {
+            remoteData.teachers = remoteData.teachers.filter(t => t.id !== id);
+            const ok = await saveRemoteData();
+            if (ok) {
+                renderTeachers();
+                updateDashboard();
+                showToast("Öğretmen silindi!");
+            }
         });
     };
 
-    function renderClasses(filter) {
-        let classes = getData("classes");
-        const teachers = getData("teachers");
+    function renderClasses() {
         const tbody = document.getElementById("classTable");
         const empty = document.getElementById("emptyClasses");
+        let classes = [...remoteData.classes];
 
         const filterDay = document.getElementById("filterDay").value;
         const searchTerm = document.getElementById("searchClass").value.toLowerCase();
 
-        if (filterDay !== "tum") {
-            classes = classes.filter(c => c.day === filterDay);
-        }
-        if (searchTerm) {
-            classes = classes.filter(c =>
-                c.title.toLowerCase().includes(searchTerm) ||
-                c.description.toLowerCase().includes(searchTerm)
-            );
-        }
+        if (filterDay !== "tum") classes = classes.filter(c => c.day === filterDay);
+        if (searchTerm) classes = classes.filter(c =>
+            c.title.toLowerCase().includes(searchTerm) ||
+            (c.description || "").toLowerCase().includes(searchTerm)
+        );
 
         if (classes.length === 0) {
             tbody.innerHTML = "";
@@ -260,7 +344,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         tbody.innerHTML = classes.map((c, i) => {
-            const teacher = teachers.find(t => t.id === c.teacherId);
+            const teacher = remoteData.teachers.find(t => t.id === c.teacherId);
             const teacherName = teacher ? teacher.name + " " + teacher.surname : "Bilinmiyor";
             return `
             <tr>
@@ -272,12 +356,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td>${formatTime(c.startTime, c.endTime)}</td>
                 <td><a href="${c.meetLink}" target="_blank" class="meet-link">${c.meetLink}</a></td>
                 <td class="actions-cell">
-                    <button class="btn-edit" onclick="editClass('${c.id}')">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn-delete" onclick="deleteClass('${c.id}')">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <button class="btn-edit" onclick="editClass('${c.id}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-delete" onclick="deleteClass('${c.id}')"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`;
         }).join("");
@@ -296,12 +376,11 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("classForm").style.display = "none";
     });
 
-    document.getElementById("classFormEl").addEventListener("submit", (e) => {
+    document.getElementById("classFormEl").addEventListener("submit", async (e) => {
         e.preventDefault();
-        let classes = getData("classes");
         const editId = document.getElementById("editClassId").value;
-
         const day = document.getElementById("classDay").value;
+
         const classData = {
             title: document.getElementById("className").value.trim(),
             teacherId: document.getElementById("classTeacher").value,
@@ -318,31 +397,29 @@ document.addEventListener("DOMContentLoaded", () => {
             status: "upcoming"
         };
 
-        const teachers = getData("teachers");
-        const teacher = teachers.find(t => t.id === classData.teacherId);
+        const teacher = remoteData.teachers.find(t => t.id === classData.teacherId);
         classData.courseType = teacher ? getCourseType(teacher.branch) : "math";
 
         if (editId) {
-            const idx = classes.findIndex(c => c.id === editId);
-            if (idx !== -1) classes[idx] = { ...classes[idx], ...classData };
-            showToast("Ders güncellendi!");
+            const idx = remoteData.classes.findIndex(c => c.id === editId);
+            if (idx !== -1) remoteData.classes[idx] = { ...remoteData.classes[idx], ...classData };
         } else {
             classData.id = generateId();
-            classes.push(classData);
-            showToast("Ders eklendi!");
+            remoteData.classes.push(classData);
         }
 
-        setData("classes", classes);
-        renderClasses();
-        updateDashboard();
-        document.getElementById("classForm").style.display = "none";
+        const ok = await saveRemoteData();
+        if (ok) {
+            showToast(editId ? "Ders güncellendi!" : "Ders eklendi!");
+            renderClasses();
+            updateDashboard();
+            document.getElementById("classForm").style.display = "none";
+        }
     });
 
     window.editClass = function(id) {
-        const classes = getData("classes");
-        const c = classes.find(x => x.id === id);
+        const c = remoteData.classes.find(x => x.id === id);
         if (!c) return;
-
         updateTeacherSelect();
         document.getElementById("classForm").style.display = "block";
         document.getElementById("classFormTitle").textContent = "Dersi Düzenle";
@@ -360,13 +437,14 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     window.deleteClass = function(id) {
-        showConfirm("Bu dersi silmek istediğinize emin misiniz?", () => {
-            let classes = getData("classes");
-            classes = classes.filter(c => c.id !== id);
-            setData("classes", classes);
-            renderClasses();
-            updateDashboard();
-            showToast("Ders silindi!");
+        showConfirm("Bu dersi silmek istediğinize emin misiniz?", async () => {
+            remoteData.classes = remoteData.classes.filter(c => c.id !== id);
+            const ok = await saveRemoteData();
+            if (ok) {
+                renderClasses();
+                updateDashboard();
+                showToast("Ders silindi!");
+            }
         });
     };
 
@@ -374,16 +452,13 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("searchClass").addEventListener("input", () => renderClasses());
 
     function updateDashboard() {
-        const teachers = getData("teachers");
-        const classes = getData("classes");
         const today = new Date().toISOString().split("T")[0];
-
-        document.getElementById("teacherCount").textContent = teachers.length;
-        document.getElementById("classCount").textContent = classes.length;
-        document.getElementById("todayCount").textContent = classes.filter(c => c.date === today).length;
+        document.getElementById("teacherCount").textContent = remoteData.teachers.length;
+        document.getElementById("classCount").textContent = remoteData.classes.length;
+        document.getElementById("todayCount").textContent = remoteData.classes.filter(c => c.date === today).length;
 
         const recent = document.getElementById("recentClasses");
-        const lastClasses = classes.slice(-5).reverse();
+        const lastClasses = remoteData.classes.slice(-5).reverse();
 
         if (lastClasses.length === 0) {
             recent.innerHTML = '<p style="color:var(--text-light);padding:20px 0;">Henüz ders eklenmemiş</p>';
@@ -391,7 +466,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         recent.innerHTML = lastClasses.map(c => {
-            const teacher = teachers.find(t => t.id === c.teacherId);
+            const teacher = remoteData.teachers.find(t => t.id === c.teacherId);
             const name = teacher ? teacher.name + " " + teacher.surname : "Bilinmiyor";
             return `
             <div class="recent-item">
@@ -405,29 +480,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     document.getElementById("exportDataBtn").addEventListener("click", () => {
-        const data = {
-            teachers: getData("teachers"),
-            classes: getData("classes"),
-            exportDate: new Date().toISOString()
-        };
+        const data = { teachers: remoteData.teachers, classes: remoteData.classes, exportDate: new Date().toISOString() };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
-        a.download = "oner-egitim-verileri.json";
-        a.click();
+        a.href = url; a.download = "oner-egitim-verileri.json"; a.click();
         URL.revokeObjectURL(url);
         showToast("Veriler dışa aktarıldı!");
     });
 
     document.getElementById("clearDataBtn").addEventListener("click", () => {
-        showConfirm("Tüm öğretmen ve ders verileri silinecek! Emin misiniz?", () => {
-            localStorage.removeItem("teachers");
-            localStorage.removeItem("classes");
-            renderTeachers();
-            renderClasses();
-            updateDashboard();
-            showToast("Tüm veriler temizlendi!");
+        showConfirm("Tüm öğretmen ve ders verileri silinecek! Emin misiniz?", async () => {
+            remoteData.teachers = [];
+            remoteData.classes = [];
+            const ok = await saveRemoteData();
+            if (ok) {
+                renderTeachers();
+                renderClasses();
+                updateDashboard();
+                showToast("Tüm veriler temizlendi!");
+            }
         });
+    });
+
+    document.getElementById("tokenSaveBtn")?.addEventListener("click", () => {
+        const token = document.getElementById("tokenInput").value.trim();
+        if (!token) { showError("Token boş olamaz!"); return; }
+        GITHUB_TOKEN = token;
+        localStorage.setItem("github_token", token);
+        showToast("Token kaydedildi! Sayfa yenileniyor...");
+        setTimeout(() => location.reload(), 1500);
     });
 });

@@ -1,11 +1,9 @@
+const GITHUB_REPO = "oneregitimkurumlari/oneregitimkurumlari";
+const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
+
 const dayLabels = {
-    pazartesi: "Pazartesi",
-    sali: "Salı",
-    carsamba: "Çarşamba",
-    persembe: "Perşembe",
-    cuma: "Cuma",
-    cumartesi: "Cumartesi",
-    pazar: "Pazar"
+    pazartesi: "Pazartesi", sali: "Salı", carsamba: "Çarşamba",
+    persembe: "Perşembe", cuma: "Cuma", cumartesi: "Cumartesi", pazar: "Pazar"
 };
 
 const statusMap = {
@@ -14,16 +12,32 @@ const statusMap = {
     finished: { label: "Bitti", class: "status-finished" }
 };
 
-function getData(key) {
-    return JSON.parse(localStorage.getItem(key) || "[]");
+let cachedData = { teachers: [], classes: [] };
+
+function getDuration(start, end) {
+    if (!start || !end) return "-";
+    const [sh, sm] = start.split(":").map(Number);
+    const [eh, em] = end.split(":").map(Number);
+    const diff = (eh * 60 + em) - (sh * 60 + sm);
+    return diff + " dk";
+}
+
+async function loadData() {
+    try {
+        const res = await fetch(DATA_URL + "?t=" + Date.now());
+        if (!res.ok) throw new Error("Veri yüklenemedi");
+        const json = await res.json();
+        cachedData.teachers = json.teachers || [];
+        cachedData.classes = json.classes || [];
+    } catch (e) {
+        console.log("Veri yüklenemedi:", e);
+        cachedData = { teachers: [], classes: [] };
+    }
 }
 
 function getScheduleData() {
-    const classes = getData("classes");
-    const teachers = getData("teachers");
-
-    return classes.map(c => {
-        const teacher = teachers.find(t => t.id === c.teacherId);
+    return cachedData.classes.map(c => {
+        const teacher = cachedData.teachers.find(t => t.id === c.teacherId);
         return {
             id: c.id,
             title: c.title,
@@ -41,24 +55,6 @@ function getScheduleData() {
             duration: getDuration(c.startTime, c.endTime)
         };
     });
-}
-
-function getDuration(start, end) {
-    if (!start || !end) return "-";
-    const [sh, sm] = start.split(":").map(Number);
-    const [eh, em] = end.split(":").map(Number);
-    const diff = (eh * 60 + em) - (sh * 60 + sm);
-    if (diff >= 60) return Math.floor(diff / 60) + " dk";
-    return diff + " dk";
-}
-
-function getCourseTypes(scheduleData) {
-    const types = {};
-    const classData = getData("classes");
-    classData.forEach(c => {
-        if (c.courseType) types[c.courseType] = true;
-    });
-    return Object.keys(types);
 }
 
 function renderSchedule(filter = "tum") {
@@ -102,48 +98,22 @@ function renderSchedule(filter = "tum") {
 
 function renderCourses() {
     const grid = document.getElementById("coursesGrid");
-    const classes = getData("classes");
-    const teachers = getData("teachers");
-
     const courseMap = {};
-    classes.forEach(c => {
-        const teacher = teachers.find(t => t.id === c.teacherId);
+    cachedData.classes.forEach(c => {
+        const teacher = cachedData.teachers.find(t => t.id === c.teacherId);
         const branch = teacher ? teacher.branch : "Diğer";
-        if (!courseMap[branch]) {
-            courseMap[branch] = { name: branch, count: 0, students: 0 };
-        }
+        if (!courseMap[branch]) courseMap[branch] = { name: branch, count: 0, students: 0 };
         courseMap[branch].count++;
         courseMap[branch].students += c.capacity || 0;
     });
 
-    const courseIcons = {
-        "Matematik": "fa-square-root-variable",
-        "Fizik": "fa-atom",
-        "Biyoloji": "fa-dna",
-        "Kimya": "fa-flask",
-        "İngilizce": "fa-language",
-        "Tarih": "fa-landmark",
-        "Bilgisayar": "fa-code",
-        "Geometri": "fa-shapes",
-        "Türkçe": "fa-pen-fancy",
-        "Felsefe": "fa-brain"
-    };
-
-    const courseDescs = {
-        "Matematik": "Temel ve ileri seviye matematik eğitimi",
-        "Fizik": "Fizik bilimi ve uygulamaları",
-        "Biyoloji": "Yaşam bilimleri ve uygulamaları",
-        "Kimya": "Kimya bilimi ve laboratuvar çalışmaları",
-        "İngilizce": "Yabancı dil eğitimi",
-        "Tarih": "Tarih bilimi ve kültürel miras",
-        "Bilgisayar": "Programlama ve teknoloji",
-        "Geometri": "Geometri ve uzay ilişkileri",
-        "Türkçe": "Dil bilgisi ve edebiyat",
-        "Felsefe": "Felsefi düşünce ve mantık"
+    const icons = {
+        "Matematik":"fa-square-root-variable","Fizik":"fa-atom","Biyoloji":"fa-dna",
+        "Kimya":"fa-flask","İngilizce":"fa-language","Tarih":"fa-landmark",
+        "Bilgisayar":"fa-code","Geometri":"fa-shapes","Türkçe":"fa-pen-fancy"
     };
 
     const courses = Object.values(courseMap);
-
     if (courses.length === 0) {
         grid.innerHTML = `
             <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-light);">
@@ -153,82 +123,45 @@ function renderCourses() {
         return;
     }
 
-    grid.innerHTML = courses.map(c => {
-        const icon = courseIcons[c.name] || "fa-book";
-        const desc = courseDescs[c.name] || "Eğitim programı";
-        return `
+    grid.innerHTML = courses.map(c => `
         <div class="course-card">
-            <div class="course-icon">
-                <i class="fas ${icon}"></i>
-            </div>
+            <div class="course-icon"><i class="fas ${icons[c.name] || 'fa-book'}"></i></div>
             <h3>${c.name}</h3>
-            <p>${desc}</p>
+            <p>Eğitim programı</p>
             <div class="course-meta">
                 <span><i class="fas fa-book"></i> ${c.count} Seans</span>
                 <span><i class="fas fa-users"></i> ${c.students} Öğrenci</span>
             </div>
-        </div>`;
-    }).join("");
+        </div>
+    `).join("");
 }
 
-function joinClass(link) {
-    if (link) window.open(link, "_blank");
-}
+function joinClass(link) { if (link) window.open(link, "_blank"); }
 
 function showDetails(id) {
-    const scheduleData = getScheduleData();
-    const item = scheduleData.find(s => String(s.id) === String(id));
+    const item = getScheduleData().find(s => String(s.id) === String(id));
     if (!item) return;
-
     const modal = document.getElementById("classModal");
-    const body = document.getElementById("modalBody");
-
-    body.innerHTML = `
+    document.getElementById("modalBody").innerHTML = `
         <h3>${item.title}</h3>
-        <div class="modal-detail">
-            <i class="fas fa-user"></i>
-            <span><strong>Eğitmen:</strong> ${item.instructor}</span>
-        </div>
-        <div class="modal-detail">
-            <i class="fas fa-calendar"></i>
-            <span><strong>Gün:</strong> ${item.dayLabel}</span>
-        </div>
-        <div class="modal-detail">
-            <i class="fas fa-clock"></i>
-            <span><strong>Saat:</strong> ${item.time}</span>
-        </div>
-        <div class="modal-detail">
-            <i class="fas fa-door-open"></i>
-            <span><strong>Sınıf:</strong> ${item.classroom}</span>
-        </div>
-        <div class="modal-detail">
-            <i class="fas fa-hourglass-half"></i>
-            <span><strong>Süre:</strong> ${item.duration}</span>
-        </div>
-        <div class="modal-detail">
-            <i class="fas fa-info-circle"></i>
-            <span><strong>Açıklama:</strong> ${item.description}</span>
-        </div>
-        <div class="modal-detail">
-            <i class="fas fa-video"></i>
-            <span><strong>Google Meet:</strong> <a href="${item.link}" target="_blank" style="color: var(--primary); text-decoration: underline; font-family: monospace; font-size: 0.85rem;">${item.link}</a></span>
-        </div>
+        <div class="modal-detail"><i class="fas fa-user"></i><span><strong>Eğitmen:</strong> ${item.instructor}</span></div>
+        <div class="modal-detail"><i class="fas fa-calendar"></i><span><strong>Gün:</strong> ${item.dayLabel}</span></div>
+        <div class="modal-detail"><i class="fas fa-clock"></i><span><strong>Saat:</strong> ${item.time}</span></div>
+        <div class="modal-detail"><i class="fas fa-door-open"></i><span><strong>Sınıf:</strong> ${item.classroom}</span></div>
+        <div class="modal-detail"><i class="fas fa-hourglass-half"></i><span><strong>Süre:</strong> ${item.duration}</span></div>
+        <div class="modal-detail"><i class="fas fa-info-circle"></i><span><strong>Açıklama:</strong> ${item.description}</span></div>
+        <div class="modal-detail"><i class="fas fa-video"></i><span><strong>Google Meet:</strong> <a href="${item.link}" target="_blank" style="color:var(--primary);text-decoration:underline;font-family:monospace;font-size:0.85rem;">${item.link}</a></span></div>
         <div class="modal-actions">
-            <a href="${item.link}" target="_blank" class="btn btn-secondary">
-                <i class="fas fa-video"></i> Derse Katıl
-            </a>
+            <a href="${item.link}" target="_blank" class="btn btn-secondary"><i class="fas fa-video"></i> Derse Katıl</a>
             <button class="btn btn-details" onclick="closeModal()">Kapat</button>
-        </div>
-    `;
-
+        </div>`;
     modal.classList.add("active");
 }
 
-function closeModal() {
-    document.getElementById("classModal").classList.remove("active");
-}
+function closeModal() { document.getElementById("classModal").classList.remove("active"); }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    await loadData();
     renderSchedule();
     renderCourses();
 
@@ -245,18 +178,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     document.getElementById("modalClose").addEventListener("click", closeModal);
-
     document.getElementById("classModal").addEventListener("click", (e) => {
         if (e.target.id === "classModal") closeModal();
     });
-
-    document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") closeModal();
-    });
-
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
     document.querySelectorAll(".nav-link").forEach(link => {
-        link.addEventListener("click", () => {
-            document.querySelector(".nav").classList.remove("active");
-        });
+        link.addEventListener("click", () => document.querySelector(".nav").classList.remove("active"));
     });
 });
