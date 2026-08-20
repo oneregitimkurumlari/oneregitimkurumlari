@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Öner Eğitim Kurumları - Online Ders Programı</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<header class="header">
+    <div class="container header-inner">
+        <div class="logo">
+            <img src="images.png" alt="Öner Eğitim Kurumları Logosu" class="logo-img">
+            <div class="logo-text">
+                <h1>Öner Eğitim Kurumları</h1>
+                <p>Online Ders Platformu</p>
+            </div>
+        </div>
+        <nav class="nav">
+            <a href="#program" class="nav-link">Ders Programı</a>
+            <a href="#dersler" class="nav-link">Dersler</a>
+            <a href="#hakkimizda" class="nav-link">Hakkımızda</a>
+            <a href="#iletisim" class="nav-link">İletişim</a>
+        </nav>
+        <button class="menu-toggle" id="menuToggle">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+</header>
+
+<section class="hero">
+    <div class="hero-content">
+        <h2>Öner Eğitim Kurumları</h2>
+        <p>Güncel ders programınızı inceleyin ve derslerinize katılın</p>
+        <a href="#program" class="btn btn-primary">Ders Programını Gör</a>
+    </div>
+</section>
+
+<section class="stats-bar">
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <i class="fas fa-graduation-cap"></i>
+                <div>
+                    <span class="stat-number">150+</span>
+                    <span class="stat-label">Aktif Öğrenci</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-chalkboard-teacher"></i>
+                <div>
+                    <span class="stat-number">12</span>
+                    <span class="stat-label">Uzman Eğitmen</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-book-open"></i>
+                <div>
+                    <span class="stat-number">24</span>
+                    <span class="stat-label">Farklı Ders</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-video"></i>
+                <div>
+                    <span class="stat-number">51</span>
+                    <span class="stat-label">Haftalık Seans</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="program">
+    <div class="container">
+        <div class="section-header">
+            <h2>Ders Programı</h2>
+            <p>Haftalık ders programınızı inceleyin</p>
+        </div>
+
+        <div class="day-filter">
+            <button class="day-btn active" data-day="tum">Tümü</button>
+            <button class="day-btn" data-day="pazartesi">Pazartesi</button>
+            <button class="day-btn" data-day="sali">Salı</button>
+            <button class="day-btn" data-day="carsamba">Çarşamba</button>
+            <button class="day-btn" data-day="persembe">Perşembe</button>
+            <button class="day-btn" data-day="cuma">Cuma</button>
+            <button class="day-btn" data-day="cumartesi">Cumartesi</button>
+            <button class="day-btn" data-day="pazar">Pazar</button>
+        </div>
+
+        <div class="schedule-grid" id="scheduleGrid">
+        </div>
+    </div>
+</section>
+
+<section class="section section-alt" id="dersler">
+    <div class="container">
+        <div class="section-header">
+            <h2>Derslerimiz</h2>
+            <p>Sunulan eğitim programları</p>
+        </div>
+        <div class="courses-grid" id="coursesGrid">
+        </div>
+    </div>
+</section>
+
+<section class="section" id="hakkimizda">
+    <div class="container">
+        <div class="about-grid">
+            <div class="about-content">
+                <h2>Hakkımızda</h2>
+                <p>Öner Eğitim Kurumları, 2015 yılından bu yana kaliteli online eğitim hizmeti sunmaktadır. Uzman eğitmen kadromuz ve modern eğitim yöntemlerimizle öğrencilerimize en iyi eğitimi vermeyi hedefliyoruz.</p>
+                <p>Misyonumuz, herkesin erişebileceği, interaktif ve etkili bir eğitim ortamı oluşturmaktır.</p>
+                <div class="about-features">
+                    <div class="feature">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Uzman Eğitmenler</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Canlı Dersler</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Kayıt İmkânı</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Sertifika</span>
+                    </div>
+                </div>
+            </div>
+            <div class="about-image">
+                <div class="about-card">
+                    <i class="fas fa-laptop-code"></i>
+                    <h3>Kaliteli Eğitim</h3>
+                    <p>Modern teknoloji ile donatılmış sınıflarda eğitim</p>
+                </div>
+                <div class="about-card">
+                    <i class="fas fa-users"></i>
+                    <h3>Küçük Sınıflar</h3>
+                    <p>Maksimum 25 kişilik sınıflar</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section section-alt" id="iletisim">
+    <div class="container">
+        <div class="section-header">
+            <h2>İletişim</h2>
+            <p>Bize ulaşmak için aşağıdaki bilgileri kullanabilirsiniz</p>
+        </div>
+        <div class="contact-grid">
+            <div class="contact-card">
+                <i class="fas fa-phone"></i>
+                <h3>Telefon</h3>
+                <p>+90 352 223 29 59</p>
+                <p>+90 535 646 85 54</p>
+            </div>
+            <div class="contact-card">
+                <i class="fas fa-envelope"></i>
+                <h3>E-posta</h3>
+                <p>info@oneregitim.com</p>
+            </div>
+            <div class="contact-card">
+                <i class="fas fa-map-marker-alt"></i>
+                <h3>Adres</h3>
+                <p>Kocasinan, Kayseri</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer">
+    <div class="container footer-inner">
+        <div class="footer-logo">
+            <img src="images.png" alt="Logo" class="footer-logo-img">
+            <p>Öner Eğitim Kurumları &copy; 2026 Tüm hakları saklıdır.</p>
+        </div>
+        <div class="footer-social">
+            <a href="#"><i class="fab fa-instagram"></i></a>
+            <a href="#"><i class="fab fa-twitter"></i></a>
+            <a href="#"><i class="fab fa-youtube"></i></a>
+            <a href="#"><i class="fab fa-linkedin"></i></a>
+        </div>
+    </div>
+</footer>
+
+<div class="modal" id="classModal">
+    <div class="modal-content">
+        <button class="modal-close" id="modalClose">&times;</button>
+        <div class="modal-body" id="modalBody">
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
