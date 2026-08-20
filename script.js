@@ -1,286 +1,12 @@
-const scheduleData = [
-    {
-        id: 1,
-        title: "Matematik - Türev",
-        instructor: "Dr. Ahmet Yılmaz",
-        day: "pazartesi",
-        dayLabel: "Pazartesi",
-        time: "09:00 - 10:30",
-        classroom: "A-101",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "math",
-        description: "Türev kavramı, kuralları ve uygulamaları",
-        link: "https://meet.google.com/gvf-csrk-mid",
-        students: 32,
-        duration: "90 dk"
-    },
-    {
-        id: 2,
-        title: "Fizik - Kuvvet ve Hareket",
-        instructor: "Prof. Mehmet Kaya",
-        day: "pazartesi",
-        dayLabel: "Pazartesi",
-        time: "11:00 - 12:30",
-        classroom: "B-202",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "physics",
-        description: "Newton yasaları ve hareket denklemleri",
-        link: "https://meet.google.com/tpy-gcfb-tnq",
-        students: 28,
-        duration: "90 dk"
-    },
-    {
-        id: 3,
-        title: "Biyoloji - Hücre Biyolojisi",
-        instructor: "Dr. Fatma Demir",
-        day: "pazartesi",
-        dayLabel: "Pazartesi",
-        time: "14:00 - 15:30",
-        classroom: "C-303",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "biology",
-        description: "Hücre yapısı ve organelleri",
-        link: "https://meet.google.com/qkk-bhdd-ene",
-        students: 35,
-        duration: "90 dk"
-    },
-    {
-        id: 4,
-        title: "Kimya - Periyodik Tablo",
-        instructor: "Dr. Ali Çelik",
-        day: "sali",
-        dayLabel: "Salı",
-        time: "09:00 - 10:30",
-        classroom: "A-102",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "chemistry",
-        description: "Elementler ve periyodik özellikler",
-        link: "https://meet.google.com/vtm-huvd-dmo",
-        students: 30,
-        duration: "90 dk"
-    },
-    {
-        id: 5,
-        title: "İngilizce - Grammar",
-        instructor: "Sarah Johnson",
-        day: "sali",
-        dayLabel: "Salı",
-        time: "11:00 - 12:30",
-        classroom: "D-104",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "english",
-        description: "Present tenses ve Usage",
-        link: "https://meet.google.com/wzh-qfbq-oxh",
-        students: 25,
-        duration: "90 dk"
-    },
-    {
-        id: 6,
-        title: "Tarih - Osmanlı Tarihi",
-        instructor: "Prof. Hasan Özkan",
-        day: "sali",
-        dayLabel: "Salı",
-        time: "14:00 - 15:30",
-        classroom: "B-201",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "history",
-        description: "Osmanlı Devleti'nin kuruluşu ve yükselişi",
-        link: "https://meet.google.com/oyd-rjou-xih",
-        students: 40,
-        duration: "90 dk"
-    },
-    {
-        id: 7,
-        title: "Matematik - İntegral",
-        instructor: "Dr. Ahmet Yılmaz",
-        day: "carsamba",
-        dayLabel: "Çarşamba",
-        time: "09:00 - 10:30",
-        classroom: "A-101",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "math",
-        description: "Belirsiz ve belirli integral",
-        link: "https://meet.google.com/gvf-csrk-mid",
-        students: 32,
-        duration: "90 dk"
-    },
-    {
-        id: 8,
-        title: "Bilgisayar - Python Programlama",
-        instructor: "Eng. Zeynep Arslan",
-        day: "carsamba",
-        dayLabel: "Çarşamba",
-        time: "11:00 - 12:30",
-        classroom: "E-Lab",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "computer",
-        description: "Python'a giriş ve temel kavramlar",
-        link: "https://meet.google.com/zqb-xwom-lvv",
-        students: 22,
-        duration: "90 dk"
-    },
-    {
-        id: 9,
-        title: "Fizik - Elektrik ve Manyetizma",
-        instructor: "Prof. Mehmet Kaya",
-        day: "persembe",
-        dayLabel: "Perşembe",
-        time: "09:00 - 10:30",
-        classroom: "B-202",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "physics",
-        description: "Elektriksel alan ve potansiyel",
-        link: "https://meet.google.com/tpy-gcfb-tnq",
-        students: 28,
-        duration: "90 dk"
-    },
-    {
-        id: 10,
-        title: "İngilizce - Speaking",
-        instructor: "Sarah Johnson",
-        day: "persembe",
-        dayLabel: "Perşembe",
-        time: "11:00 - 12:30",
-        classroom: "D-104",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "english",
-        description: "Günlük konuşma pratiği",
-        link: "https://meet.google.com/wzh-qfbq-oxh",
-        students: 20,
-        duration: "90 dk"
-    },
-    {
-        id: 11,
-        title: "Kimya - Organik Kimya",
-        instructor: "Dr. Ali Çelik",
-        day: "cuma",
-        dayLabel: "Cuma",
-        time: "09:00 - 10:30",
-        classroom: "A-102",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "chemistry",
-        description: "Karbon bileşikleri ve reaksiyonları",
-        link: "https://meet.google.com/vtm-huvd-dmo",
-        students: 30,
-        duration: "90 dk"
-    },
-    {
-        id: 12,
-        title: "Biyoloji - Genetik",
-        instructor: "Dr. Fatma Demir",
-        day: "cuma",
-        dayLabel: "Cuma",
-        time: "14:00 - 15:30",
-        classroom: "C-303",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "biology",
-        description: "Genetik kod ve kalıtım",
-        link: "https://meet.google.com/qkk-bhdd-ene",
-        students: 35,
-        duration: "90 dk"
-    },
-    {
-        id: 13,
-        title: "Matematik - Olasılık",
-        instructor: "Dr. Ahmet Yılmaz",
-        day: "cumartesi",
-        dayLabel: "Cumartesi",
-        time: "10:00 - 12:00",
-        classroom: "A-101",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "math",
-        description: "Olasılık kuramı ve istatistik",
-        link: "https://meet.google.com/gvf-csrk-mid",
-        students: 32,
-        duration: "120 dk"
-    },
-    {
-        id: 14,
-        title: "Bilgisayar - Web Tasarım",
-        instructor: "Eng. Zeynep Arslan",
-        day: "cumartesi",
-        dayLabel: "Cumartesi",
-        time: "13:00 - 15:00",
-        classroom: "E-Lab",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "computer",
-        description: "HTML, CSS ve JavaScript",
-        link: "https://meet.google.com/zqb-xwom-lvv",
-        students: 18,
-        duration: "120 dk"
-    },
-    {
-        id: 15,
-        title: "Matematik - Geometri",
-        instructor: "Dr. Ahmet Yılmaz",
-        day: "pazar",
-        dayLabel: "Pazar",
-        time: "10:00 - 12:00",
-        classroom: "A-101",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "math",
-        description: "Dik üçgenler ve trigonometri",
-        link: "https://meet.google.com/gvf-csrk-mid",
-        students: 28,
-        duration: "120 dk"
-    },
-    {
-        id: 16,
-        title: "Fizik - Optik",
-        instructor: "Prof. Mehmet Kaya",
-        day: "pazar",
-        dayLabel: "Pazar",
-        time: "13:00 - 15:00",
-        classroom: "B-202",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "physics",
-        description: "Işık ve optik olayları",
-        link: "https://meet.google.com/tpy-gcfb-tnq",
-        students: 25,
-        duration: "120 dk"
-    },
-    {
-        id: 17,
-        title: "İngilizce - Writing",
-        instructor: "Sarah Johnson",
-        day: "pazar",
-        dayLabel: "Pazar",
-        time: "15:00 - 17:00",
-        classroom: "D-104",
-        type: "Canlı Ders",
-        status: "upcoming",
-        courseType: "english",
-        description: "Kompozisyon ve yazma teknikleri",
-        link: "https://meet.google.com/wzh-qfbq-oxh",
-        students: 22,
-        duration: "120 dk"
-    }
-];
-
-const courses = [
-    { name: "Matematik", icon: "fa-square-root-variable", desc: "Lise ve üniversite seviyesinde matematik eğitimi", lessons: 48, students: 150 },
-    { name: "Fizik", icon: "fa-atom", desc: "Temel ve ileri fizik konuları", lessons: 36, students: 95 },
-    { name: "Biyoloji", icon: "fa-dna", desc: "Yaşam bilimleri ve uygulamaları", lessons: 32, students: 85 },
-    { name: "Kimya", icon: "fa-flask", desc: "Analitik ve organik kimya", lessons: 36, students: 90 },
-    { name: "İngilizce", icon: "fa-language", desc: "Gramer, konuşma ve yazma", lessons: 40, students: 120 },
-    { name: "Bilgisayar", icon: "fa-code", desc: "Programlama ve yazılım geliştirme", lessons: 44, students: 75 }
-];
+const dayLabels = {
+    pazartesi: "Pazartesi",
+    sali: "Salı",
+    carsamba: "Çarşamba",
+    persembe: "Perşembe",
+    cuma: "Cuma",
+    cumartesi: "Cumartesi",
+    pazar: "Pazar"
+};
 
 const statusMap = {
     live: { label: "Canlı", class: "status-live" },
@@ -288,15 +14,73 @@ const statusMap = {
     finished: { label: "Bitti", class: "status-finished" }
 };
 
+function getData(key) {
+    return JSON.parse(localStorage.getItem(key) || "[]");
+}
+
+function getScheduleData() {
+    const classes = getData("classes");
+    const teachers = getData("teachers");
+
+    return classes.map(c => {
+        const teacher = teachers.find(t => t.id === c.teacherId);
+        return {
+            id: c.id,
+            title: c.title,
+            instructor: teacher ? teacher.name + " " + teacher.surname : "Bilinmiyor",
+            day: c.day,
+            dayLabel: dayLabels[c.day] || c.day,
+            time: c.startTime + " - " + c.endTime,
+            classroom: c.classroom || "-",
+            type: c.type || "Canlı Ders",
+            status: c.status || "upcoming",
+            courseType: c.courseType || "math",
+            description: c.description || "",
+            link: c.meetLink,
+            students: c.capacity || 0,
+            duration: getDuration(c.startTime, c.endTime)
+        };
+    });
+}
+
+function getDuration(start, end) {
+    if (!start || !end) return "-";
+    const [sh, sm] = start.split(":").map(Number);
+    const [eh, em] = end.split(":").map(Number);
+    const diff = (eh * 60 + em) - (sh * 60 + sm);
+    if (diff >= 60) return Math.floor(diff / 60) + " dk";
+    return diff + " dk";
+}
+
+function getCourseTypes(scheduleData) {
+    const types = {};
+    const classData = getData("classes");
+    classData.forEach(c => {
+        if (c.courseType) types[c.courseType] = true;
+    });
+    return Object.keys(types);
+}
+
 function renderSchedule(filter = "tum") {
     const grid = document.getElementById("scheduleGrid");
+    const scheduleData = getScheduleData();
     const filtered = filter === "tum" ? scheduleData : scheduleData.filter(s => s.day === filter);
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-light);">
+                <i class="fas fa-calendar-plus" style="font-size:3rem;margin-bottom:16px;display:block;"></i>
+                <p style="font-size:1.1rem;">Henüz ders eklenmemiş</p>
+                <p style="font-size:0.9rem;">Yönetim panelinden ders ekleyebilirsiniz.</p>
+            </div>`;
+        return;
+    }
 
     grid.innerHTML = filtered.map(item => `
         <div class="schedule-card ${item.courseType}" data-id="${item.id}">
             <div class="schedule-header">
                 <span class="schedule-day">${item.dayLabel}</span>
-                <span class="schedule-status ${statusMap[item.status].class}">${statusMap[item.status].label}</span>
+                <span class="schedule-status ${statusMap[item.status]?.class || 'status-upcoming'}">${statusMap[item.status]?.label || 'Yaklaşıyor'}</span>
             </div>
             <h3 class="schedule-title">${item.title}</h3>
             <div class="schedule-info">
@@ -308,7 +92,7 @@ function renderSchedule(filter = "tum") {
                 <button class="schedule-btn btn-join" onclick="joinClass('${item.link}')">
                     <i class="fas fa-video"></i> Derse Katıl
                 </button>
-                <button class="schedule-btn btn-details" onclick="showDetails(${item.id})">
+                <button class="schedule-btn btn-details" onclick="showDetails('${item.id}')">
                     Detay
                 </button>
             </div>
@@ -318,27 +102,82 @@ function renderSchedule(filter = "tum") {
 
 function renderCourses() {
     const grid = document.getElementById("coursesGrid");
-    grid.innerHTML = courses.map(c => `
+    const classes = getData("classes");
+    const teachers = getData("teachers");
+
+    const courseMap = {};
+    classes.forEach(c => {
+        const teacher = teachers.find(t => t.id === c.teacherId);
+        const branch = teacher ? teacher.branch : "Diğer";
+        if (!courseMap[branch]) {
+            courseMap[branch] = { name: branch, count: 0, students: 0 };
+        }
+        courseMap[branch].count++;
+        courseMap[branch].students += c.capacity || 0;
+    });
+
+    const courseIcons = {
+        "Matematik": "fa-square-root-variable",
+        "Fizik": "fa-atom",
+        "Biyoloji": "fa-dna",
+        "Kimya": "fa-flask",
+        "İngilizce": "fa-language",
+        "Tarih": "fa-landmark",
+        "Bilgisayar": "fa-code",
+        "Geometri": "fa-shapes",
+        "Türkçe": "fa-pen-fancy",
+        "Felsefe": "fa-brain"
+    };
+
+    const courseDescs = {
+        "Matematik": "Temel ve ileri seviye matematik eğitimi",
+        "Fizik": "Fizik bilimi ve uygulamaları",
+        "Biyoloji": "Yaşam bilimleri ve uygulamaları",
+        "Kimya": "Kimya bilimi ve laboratuvar çalışmaları",
+        "İngilizce": "Yabancı dil eğitimi",
+        "Tarih": "Tarih bilimi ve kültürel miras",
+        "Bilgisayar": "Programlama ve teknoloji",
+        "Geometri": "Geometri ve uzay ilişkileri",
+        "Türkçe": "Dil bilgisi ve edebiyat",
+        "Felsefe": "Felsefi düşünce ve mantık"
+    };
+
+    const courses = Object.values(courseMap);
+
+    if (courses.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-light);">
+                <i class="fas fa-book-open" style="font-size:3rem;margin-bottom:16px;display:block;"></i>
+                <p style="font-size:1.1rem;">Henüz ders eklenmemiş</p>
+            </div>`;
+        return;
+    }
+
+    grid.innerHTML = courses.map(c => {
+        const icon = courseIcons[c.name] || "fa-book";
+        const desc = courseDescs[c.name] || "Eğitim programı";
+        return `
         <div class="course-card">
             <div class="course-icon">
-                <i class="fas ${c.icon}"></i>
+                <i class="fas ${icon}"></i>
             </div>
             <h3>${c.name}</h3>
-            <p>${c.desc}</p>
+            <p>${desc}</p>
             <div class="course-meta">
-                <span><i class="fas fa-book"></i> ${c.lessons} Seans</span>
+                <span><i class="fas fa-book"></i> ${c.count} Seans</span>
                 <span><i class="fas fa-users"></i> ${c.students} Öğrenci</span>
             </div>
-        </div>
-    `).join("");
+        </div>`;
+    }).join("");
 }
 
 function joinClass(link) {
-    window.open(link, "_blank");
+    if (link) window.open(link, "_blank");
 }
 
 function showDetails(id) {
-    const item = scheduleData.find(s => s.id === id);
+    const scheduleData = getScheduleData();
+    const item = scheduleData.find(s => String(s.id) === String(id));
     if (!item) return;
 
     const modal = document.getElementById("classModal");
@@ -361,10 +200,6 @@ function showDetails(id) {
         <div class="modal-detail">
             <i class="fas fa-door-open"></i>
             <span><strong>Sınıf:</strong> ${item.classroom}</span>
-        </div>
-        <div class="modal-detail">
-            <i class="fas fa-users"></i>
-            <span><strong>Katılımcı:</strong> ${item.students} öğrenci</span>
         </div>
         <div class="modal-detail">
             <i class="fas fa-hourglass-half"></i>
