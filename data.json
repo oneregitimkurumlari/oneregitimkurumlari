@@ -1,4 +1,12 @@
 {
-    "teachers": [],
-    "classes": []
+  "teachers": [
+    {
+      "name": "furkan",
+      "surname": "öner",
+      "branch": "matematik",
+      "email": "",
+      "id": "mt240345im9aa"
+    }
+  ],
+  "classes": []
 }
