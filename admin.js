@@ -5,7 +5,7 @@ const DATA_FILE = "data.json";
 const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
 
 let GITHUB_TOKEN = localStorage.getItem("github_token") || "";
-let remoteData = { teachers: [], classes: [], students: [], sha: "" };
+let remoteData = { teachers: [], classes: [], students: [], homeworks: [], sha: "" };
 
 const dayLabels = {
     pazartesi: "Pazartesi", sali: "Salı", carsamba: "Çarşamba",
@@ -84,6 +84,7 @@ async function fetchRemoteData() {
             remoteData.teachers = json.teachers || [];
             remoteData.classes = json.classes || [];
             remoteData.students = json.students || [];
+            remoteData.homeworks = json.homeworks || [];
         } else {
             const res = await fetch(DATA_URL + "?t=" + Date.now());
             if (!res.ok) throw new Error("Veri okunamadı");
@@ -91,6 +92,7 @@ async function fetchRemoteData() {
             remoteData.teachers = json.teachers || [];
             remoteData.classes = json.classes || [];
             remoteData.students = json.students || [];
+            remoteData.homeworks = json.homeworks || [];
         }
         return true;
     } catch (e) {
@@ -119,7 +121,8 @@ async function saveRemoteData() {
     const content = btoa(unescape(encodeURIComponent(JSON.stringify({
         teachers: remoteData.teachers,
         classes: remoteData.classes,
-        students: remoteData.students
+        students: remoteData.students,
+        homeworks: remoteData.homeworks || []
     }, null, 2))));
 
     try {
@@ -231,6 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderTeachers();
         renderClasses();
         renderStudents();
+        renderHomework();
         updateDashboard();
         initNavigation();
     }
@@ -273,6 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <tr>
                 <td>${i + 1}</td>
                 <td><strong>${t.name} ${t.surname}</strong></td>
+                <td>${t.username || "-"}</td>
                 <td>${t.branch}</td>
                 <td>${t.email || "-"}</td>
                 <td class="actions-cell">
@@ -305,12 +310,24 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("teacherFormEl").addEventListener("submit", async (e) => {
         e.preventDefault();
         const editId = document.getElementById("editTeacherId").value;
+        const password = document.getElementById("teacherPassword").value;
+
+        if (!editId && password.length < 6) {
+            showError("Şifre en az 6 karakter olmalıdır!");
+            return;
+        }
+
         const teacherData = {
             name: document.getElementById("teacherName").value.trim(),
             surname: document.getElementById("teacherSurname").value.trim(),
+            username: document.getElementById("teacherUsername").value.trim(),
             branch: document.getElementById("teacherBranch").value.trim(),
             email: document.getElementById("teacherEmail").value.trim()
         };
+
+        if (!editId || password.length > 0) {
+            teacherData.password = password;
+        }
 
         if (editId) {
             const idx = remoteData.teachers.findIndex(t => t.id === editId);
@@ -337,6 +354,8 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("editTeacherId").value = t.id;
         document.getElementById("teacherName").value = t.name;
         document.getElementById("teacherSurname").value = t.surname;
+        document.getElementById("teacherUsername").value = t.username || "";
+        document.getElementById("teacherPassword").value = "";
         document.getElementById("teacherBranch").value = t.branch;
         document.getElementById("teacherEmail").value = t.email || "";
     };
@@ -593,6 +612,114 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
+    function renderHomework() {
+        const tbody = document.getElementById("homeworkTable");
+        const empty = document.getElementById("emptyHomework");
+        const homeworks = remoteData.homeworks || [];
+
+        if (homeworks.length === 0) {
+            tbody.innerHTML = "";
+            empty.style.display = "block";
+            return;
+        }
+        empty.style.display = "none";
+
+        tbody.innerHTML = homeworks.map((h, i) => {
+            const teacher = remoteData.teachers.find(t => t.id === h.teacherId);
+            const teacherName = teacher ? teacher.name + " " + teacher.surname : "Yönetim";
+            const fileIcon = h.fileType === "pdf" ? "fa-file-pdf" : h.fileType === "word" ? "fa-file-word" : h.fileType === "excel" ? "fa-file-excel" : "fa-file";
+            const fileLink = h.fileUrl ? `<a href="${h.fileUrl}" target="_blank" style="color:var(--primary);"><i class="fas ${fileIcon}"></i> ${h.fileName || "Dosya"}</a>` : `<span style="color:var(--text-light);">-</span>`;
+            return `
+            <tr>
+                <td>${i + 1}</td>
+                <td><strong>${h.title}</strong></td>
+                <td>${h.subject}</td>
+                <td>${teacherName}</td>
+                <td>${fileLink}</td>
+                <td>${formatDate(h.createdAt)}</td>
+                <td class="actions-cell">
+                    <button class="btn-edit" onclick="editHomework('${h.id}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-delete" onclick="deleteHomework('${h.id}')"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }).join("");
+    }
+
+    document.getElementById("addHomeworkBtn").addEventListener("click", () => {
+        document.getElementById("homeworkForm").style.display = "block";
+        document.getElementById("homeworkFormTitle").textContent = "Yeni Ödev Ekle";
+        document.getElementById("homeworkFormEl").reset();
+        document.getElementById("editHomeworkId").value = "";
+        document.getElementById("homeworkTitle").focus();
+    });
+
+    document.getElementById("cancelHomeworkBtn").addEventListener("click", () => {
+        document.getElementById("homeworkForm").style.display = "none";
+    });
+
+    document.getElementById("homeworkFormEl").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const editId = document.getElementById("editHomeworkId").value;
+        const fileInput = document.getElementById("homeworkFile");
+        const file = fileInput.files[0];
+
+        let fileData = {};
+        if (file) {
+            const ext = file.name.split(".").pop().toLowerCase();
+            const fileType = ext === "pdf" ? "pdf" : ["doc","docx"].includes(ext) ? "word" : ["xls","xlsx"].includes(ext) ? "excel" : "other";
+            fileData = { fileName: file.name, fileType: fileType };
+        }
+
+        const homeworkData = {
+            title: document.getElementById("homeworkTitle").value.trim(),
+            subject: document.getElementById("homeworkSubject").value.trim(),
+            description: document.getElementById("homeworkDesc").value.trim(),
+            fileUrl: document.getElementById("homeworkFileUrl").value.trim(),
+            ...fileData,
+            teacherId: ""
+        };
+
+        if (editId) {
+            const idx = (remoteData.homeworks || []).findIndex(h => h.id === editId);
+            if (idx !== -1) remoteData.homeworks[idx] = { ...remoteData.homeworks[idx], ...homeworkData };
+        } else {
+            homeworkData.id = generateId();
+            homeworkData.createdAt = new Date().toISOString().split("T")[0];
+            if (!remoteData.homeworks) remoteData.homeworks = [];
+            remoteData.homeworks.push(homeworkData);
+        }
+
+        const ok = await saveRemoteData();
+        if (ok) {
+            showToast(editId ? "Ödev güncellendi!" : "Ödev eklendi!");
+            renderHomework();
+            document.getElementById("homeworkForm").style.display = "none";
+        }
+    });
+
+    window.editHomework = function(id) {
+        const h = (remoteData.homeworks || []).find(x => x.id === id);
+        if (!h) return;
+        document.getElementById("homeworkForm").style.display = "block";
+        document.getElementById("homeworkFormTitle").textContent = "Ödevi Düzenle";
+        document.getElementById("editHomeworkId").value = h.id;
+        document.getElementById("homeworkTitle").value = h.title;
+        document.getElementById("homeworkSubject").value = h.subject;
+        document.getElementById("homeworkDesc").value = h.description || "";
+        document.getElementById("homeworkFileUrl").value = h.fileUrl || "";
+    };
+
+    window.deleteHomework = function(id) {
+        showConfirm("Bu ödevi silmek istediğinize emin misiniz?", async () => {
+            remoteData.homeworks = (remoteData.homeworks || []).filter(h => h.id !== id);
+            const ok = await saveRemoteData();
+            if (ok) {
+                renderHomework();
+                showToast("Ödev silindi!");
+            }
+        });
+    };
+
     function updateDashboard() {
         const today = new Date().toISOString().split("T")[0];
         document.getElementById("teacherCount").textContent = remoteData.teachers.length;
@@ -623,7 +750,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     document.getElementById("exportDataBtn").addEventListener("click", () => {
-        const data = { teachers: remoteData.teachers, classes: remoteData.classes, students: remoteData.students || [], exportDate: new Date().toISOString() };
+        const data = { teachers: remoteData.teachers, classes: remoteData.classes, students: remoteData.students || [], homeworks: remoteData.homeworks || [], exportDate: new Date().toISOString() };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -637,11 +764,13 @@ document.addEventListener("DOMContentLoaded", () => {
             remoteData.teachers = [];
             remoteData.classes = [];
             remoteData.students = [];
+            remoteData.homeworks = [];
             const ok = await saveRemoteData();
             if (ok) {
                 renderTeachers();
                 renderClasses();
                 renderStudents();
+                renderHomework();
                 updateDashboard();
                 showToast("Tüm veriler temizlendi!");
             }

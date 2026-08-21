@@ -12,7 +12,7 @@ const statusMap = {
     finished: { label: "Bitti", class: "status-finished" }
 };
 
-let cachedData = { teachers: [], classes: [], students: [] };
+let cachedData = { teachers: [], classes: [], students: [], homeworks: [] };
 
 function getDuration(start, end) {
     if (!start || !end) return "-";
@@ -30,9 +30,10 @@ async function loadData() {
         cachedData.teachers = json.teachers || [];
         cachedData.classes = json.classes || [];
         cachedData.students = json.students || [];
+        cachedData.homeworks = json.homeworks || [];
     } catch (e) {
         console.log("Veri yüklenemedi:", e);
-        cachedData = { teachers: [], classes: [], students: [] };
+        cachedData = { teachers: [], classes: [], students: [], homeworks: [] };
     }
 }
 
@@ -137,6 +138,42 @@ function renderCourses() {
     `).join("");
 }
 
+function renderHomework() {
+    const grid = document.getElementById("homeworkGrid");
+    const homeworks = cachedData.homeworks || [];
+
+    if (homeworks.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-light);">
+                <i class="fas fa-file-alt" style="font-size:3rem;margin-bottom:16px;display:block;"></i>
+                <p style="font-size:1.1rem;">Henüz ödev eklenmemiş</p>
+            </div>`;
+        return;
+    }
+
+    const sorted = [...homeworks].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    grid.innerHTML = sorted.map(h => {
+        const teacher = cachedData.teachers.find(t => t.id === h.teacherId);
+        const teacherName = teacher ? teacher.name + " " + teacher.surname : "Yönetim";
+        const fileIcon = h.fileType === "pdf" ? "fa-file-pdf" : h.fileType === "word" ? "fa-file-word" : h.fileType === "excel" ? "fa-file-excel" : "fa-file";
+        const fileTag = h.fileUrl ? `<a href="${h.fileUrl}" target="_blank" class="homework-file"><i class="fas ${fileIcon}"></i> ${h.fileName || "Dosyayı İndir"}</a>` : "";
+        return `
+        <div class="homework-card">
+            <div class="homework-header">
+                <span class="homework-subject">${h.subject}</span>
+                <span class="homework-date">${h.createdAt || ""}</span>
+            </div>
+            <h3>${h.title}</h3>
+            <p class="homework-desc">${h.description || ""}</p>
+            <div class="homework-meta">
+                <span><i class="fas fa-user"></i> ${teacherName}</span>
+            </div>
+            ${fileTag}
+        </div>`;
+    }).join("");
+}
+
 function joinClass(link) { if (link) window.open(link, "_blank"); }
 
 function showDetails(id) {
@@ -169,6 +206,7 @@ function showSite() {
 function initSite() {
     renderSchedule();
     renderCourses();
+    renderHomework();
 
     document.querySelectorAll(".day-btn").forEach(btn => {
         btn.addEventListener("click", () => {

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Öner Eğitim Kurumları - Öğretmen Paneli</title>
+    <link rel="stylesheet" href="admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+    <div class="login-box">
+        <img src="images.png" alt="Logo" class="login-logo">
+        <h1>Öner Eğitim Kurumları</h1>
+        <p>Öğretmen Paneli</p>
+        <form id="loginForm">
+            <div class="input-group">
+                <i class="fas fa-user"></i>
+                <input type="text" id="username" placeholder="Kullanıcı Adı" required>
+            </div>
+            <div class="input-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="password" placeholder="Şifre" required>
+            </div>
+            <div class="error-msg" id="errorMsg"></div>
+            <button type="submit" class="btn-login">Giriş Yap</button>
+        </form>
+        <a href="admin.html" style="display:block;margin-top:16px;color:var(--text-light);text-decoration:none;font-size:0.85rem;"><i class="fas fa-user-shield"></i> Yönetici Girişi</a>
+    </div>
+</div>
+
+<div class="admin-panel" id="adminPanel">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <img src="images.png" alt="Logo" class="sidebar-logo">
+            <h2>Öğretmen Paneli</h2>
+        </div>
+        <nav class="sidebar-nav">
+            <button class="sidebar-btn active" data-section="classes">
+                <i class="fas fa-video"></i> Canlı Dersler
+            </button>
+            <button class="sidebar-btn" data-section="homework">
+                <i class="fas fa-file-upload"></i> Ödevler
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="btn-logout" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i> Çıkış Yap
+            </button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-bar">
+            <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+            <h2 id="sectionTitle">Canlı Dersler</h2>
+            <div class="teacher-info" id="teacherInfo"></div>
+        </header>
+
+        <div class="content-area">
+            <div class="section-page active" id="classesPage">
+                <div class="page-header">
+                    <h3>Canlı Derslerim</h3>
+                    <button class="btn-add" id="addClassBtn">
+                        <i class="fas fa-plus"></i> Canlı Ders Ekle
+                    </button>
+                </div>
+
+                <div class="form-panel" id="classForm" style="display:none;">
+                    <h3 id="classFormTitle">Yeni Canlı Ders Ekle</h3>
+                    <form id="classFormEl">
+                        <input type="hidden" id="editClassId">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Ders Adı</label>
+                                <input type="text" id="className" placeholder="Örn: Matematik - Türev" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Gün</label>
+                                <select id="classDay" required>
+                                    <option value="pazartesi">Pazartesi</option>
+                                    <option value="sali">Salı</option>
+                                    <option value="carsamba">Çarşamba</option>
+                                    <option value="persembe">Perşembe</option>
+                                    <option value="cuma">Cuma</option>
+                                    <option value="cumartesi">Cumartesi</option>
+                                    <option value="pazar">Pazar</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Tarih</label>
+                                <input type="date" id="classDate" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Başlangıç Saati</label>
+                                <input type="time" id="classStartTime" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Bitiş Saati</label>
+                                <input type="time" id="classEndTime" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Google Meet Linki</label>
+                                <input type="url" id="classMeetLink" placeholder="https://meet.google.com/xxx-yyy-zzz" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Sınıf / Salon</label>
+                                <input type="text" id="classRoom" placeholder="Örn: A-101">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Açıklama</label>
+                                <input type="text" id="classDesc" placeholder="Ders konusu hakkında kısa açıklama">
+                            </div>
+                            <div class="form-group">
+                                <label>Kontenjan</label>
+                                <input type="number" id="classCapacity" placeholder="25" min="1">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-save">
+                                <i class="fas fa-save"></i> Kaydet
+                            </button>
+                            <button type="button" class="btn-cancel" id="cancelClassBtn">
+                                <i class="fas fa-times"></i> İptal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="filter-row">
+                    <select id="filterDay">
+                        <option value="tum">Tüm Günler</option>
+                        <option value="pazartesi">Pazartesi</option>
+                        <option value="sali">Salı</option>
+                        <option value="carsamba">Çarşamba</option>
+                        <option value="persembe">Perşembe</option>
+                        <option value="cuma">Cuma</option>
+                        <option value="cumartesi">Cumartesi</option>
+                        <option value="pazar">Pazar</option>
+                    </select>
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchClass" placeholder="Ders ara...">
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Ders</th>
+                                <th>Gün</th>
+                                <th>Tarih</th>
+                                <th>Saat</th>
+                                <th>Meet Linki</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="classTable"></tbody>
+                    </table>
+                    <div class="empty-state" id="emptyClasses">
+                        <i class="fas fa-video"></i>
+                        <p>Henüz ders eklenmemiş</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-page" id="homeworkPage">
+                <div class="page-header">
+                    <h3>Ödevlerim</h3>
+                    <button class="btn-add" id="addHomeworkBtn">
+                        <i class="fas fa-plus"></i> Ödev Ekle
+                    </button>
+                </div>
+
+                <div class="form-panel" id="homeworkForm" style="display:none;">
+                    <h3 id="homeworkFormTitle">Yeni Ödev Ekle</h3>
+                    <form id="homeworkFormEl">
+                        <input type="hidden" id="editHomeworkId">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Ödev Başlığı</label>
+                                <input type="text" id="homeworkTitle" placeholder="Örn: Türev Problemleri" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Ders</label>
+                                <input type="text" id="homeworkSubject" placeholder="Örn: Matematik" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Açıklama</label>
+                                <textarea id="homeworkDesc" placeholder="Ödev açıklaması..." style="width:100%;padding:10px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:inherit;min-height:80px;resize:vertical;"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Dosya Yükle (PDF, Word, Excel)</label>
+                                <input type="file" id="homeworkFile" accept=".pdf,.doc,.docx,.xls,.xlsx" style="padding:8px 0;">
+                            </div>
+                            <div class="form-group">
+                                <label>Dosya Linki (isteğe bağlı)</label>
+                                <input type="url" id="homeworkFileUrl" placeholder="https://drive.google.com/...">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-save">
+                                <i class="fas fa-save"></i> Kaydet
+                            </button>
+                            <button type="button" class="btn-cancel" id="cancelHomeworkBtn">
+                                <i class="fas fa-times"></i> İptal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Başlık</th>
+                                <th>Ders</th>
+                                <th>Dosya</th>
+                                <th>Tarih</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="homeworkTable"></tbody>
+                    </table>
+                    <div class="empty-state" id="emptyHomework">
+                        <i class="fas fa-file-alt"></i>
+                        <p>Henüz ödev eklenmemiş</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="teacher.js"></script>
+</body>
+</html>

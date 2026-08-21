@@ -49,6 +49,9 @@
             <button class="sidebar-btn" data-section="students">
                 <i class="fas fa-user-graduate"></i> Öğrenciler
             </button>
+            <button class="sidebar-btn" data-section="homework">
+                <i class="fas fa-file-upload"></i> Ödevler
+            </button>
             <button class="sidebar-btn" data-section="settings">
                 <i class="fas fa-cog"></i> Ayarlar
             </button>
@@ -132,6 +135,16 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group">
+                                <label>Kullanıcı Adı</label>
+                                <input type="text" id="teacherUsername" placeholder="Örn: ahmet_ogretmen" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Şifre</label>
+                                <input type="password" id="teacherPassword" placeholder="En az 6 karakter" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
                                 <label>Branş</label>
                                 <input type="text" id="teacherBranch" placeholder="Örn: Matematik" required>
                             </div>
@@ -157,6 +170,7 @@
                             <tr>
                                 <th>#</th>
                                 <th>Ad Soyad</th>
+                                <th>Kullanıcı Adı</th>
                                 <th>Branş</th>
                                 <th>E-posta</th>
                                 <th>İşlemler</th>
@@ -361,6 +375,76 @@
                     <div class="empty-state" id="emptyStudents">
                         <i class="fas fa-user-graduate"></i>
                         <p>Henüz öğrenci eklenmemiş</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-page" id="homeworkPage">
+                <div class="page-header">
+                    <h3>Ödev Yönetimi</h3>
+                    <button class="btn-add" id="addHomeworkBtn">
+                        <i class="fas fa-plus"></i> Ödev Ekle
+                    </button>
+                </div>
+
+                <div class="form-panel" id="homeworkForm" style="display:none;">
+                    <h3 id="homeworkFormTitle">Yeni Ödev Ekle</h3>
+                    <form id="homeworkFormEl">
+                        <input type="hidden" id="editHomeworkId">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Ödev Başlığı</label>
+                                <input type="text" id="homeworkTitle" placeholder="Örn: Türev Problemleri" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Ders</label>
+                                <input type="text" id="homeworkSubject" placeholder="Örn: Matematik" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Açıklama</label>
+                                <textarea id="homeworkDesc" placeholder="Ödev açıklaması..." style="width:100%;padding:10px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:inherit;min-height:80px;resize:vertical;"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Dosya Yükle (PDF, Word, Excel)</label>
+                                <input type="file" id="homeworkFile" accept=".pdf,.doc,.docx,.xls,.xlsx" style="padding:8px 0;">
+                            </div>
+                            <div class="form-group">
+                                <label>Dosya Linki (isteğe bağlı)</label>
+                                <input type="url" id="homeworkFileUrl" placeholder="https://drive.google.com/...">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-save">
+                                <i class="fas fa-save"></i> Kaydet
+                            </button>
+                            <button type="button" class="btn-cancel" id="cancelHomeworkBtn">
+                                <i class="fas fa-times"></i> İptal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Başlık</th>
+                                <th>Ders</th>
+                                <th>Dosya</th>
+                                <th>Tarih</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="homeworkTable"></tbody>
+                    </table>
+                    <div class="empty-state" id="emptyHomework">
+                        <i class="fas fa-file-alt"></i>
+                        <p>Henüz ödev eklenmemiş</p>
                     </div>
                 </div>
             </div>
