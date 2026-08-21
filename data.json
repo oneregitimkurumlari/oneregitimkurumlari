@@ -5,7 +5,9 @@
       "surname": "öner",
       "branch": "matematik",
       "email": "",
-      "id": "mt240345im9aa"
+      "id": "mt240345im9aa",
+      "username": "FURKAN",
+      "password": "FURKAN123"
     }
   ],
   "classes": [
@@ -37,5 +39,6 @@
       "password": "Kayseri38",
       "id": "mt31e6ibbrrz4"
     }
-  ]
+  ],
+  "homeworks": []
 }
