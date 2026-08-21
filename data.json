@@ -40,17 +40,5 @@
       "id": "mt31e6ibbrrz4"
     }
   ],
-  "homeworks": [
-    {
-      "title": "BURSLULUK SINAVI",
-      "subject": "TÜM DERS",
-      "description": "",
-      "fileUrl": "",
-      "fileName": "oner-egitim-pihos2025-bursluluk-4-hayat-bilgisi-10.pdf",
-      "fileType": "pdf",
-      "teacherId": "mt240345im9aa",
-      "id": "mt3477mkgtn1w",
-      "createdAt": "2026-08-21"
-    }
-  ]
+  "homeworks": []
 }
