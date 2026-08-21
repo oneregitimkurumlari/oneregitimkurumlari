@@ -21,6 +21,117 @@
     --transition: all 0.3s ease;
 }
 
+.site-login {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--navy) 0%, var(--primary-dark) 100%);
+    padding: 20px;
+}
+
+.site-login-box {
+    background: white;
+    padding: 48px 40px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+.site-login-box .login-logo {
+    height: 80px;
+    width: 80px;
+    object-fit: contain;
+    border-radius: 12px;
+    margin-bottom: 16px;
+}
+
+.site-login-box h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 4px;
+}
+
+.site-login-box > p {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    margin-bottom: 32px;
+}
+
+.site-login-box .input-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    transition: var(--transition);
+}
+
+.site-login-box .input-group:focus-within {
+    border-color: var(--primary);
+}
+
+.site-login-box .input-group i {
+    color: var(--text-light);
+    font-size: 1rem;
+}
+
+.site-login-box .input-group input {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--text-dark);
+}
+
+.site-login-box .input-group input::placeholder {
+    color: var(--text-light);
+}
+
+.site-login-box .error-msg {
+    color: #ef4444;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+    min-height: 20px;
+}
+
+.site-login-box .btn-login {
+    width: 100%;
+    padding: 14px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.site-login-box .btn-login:hover {
+    background: var(--primary-dark);
+}
+
+.site-login-box .admin-link {
+    display: block;
+    margin-top: 20px;
+    color: var(--text-light);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: var(--transition);
+}
+
+.site-login-box .admin-link:hover {
+    color: var(--primary);
+}
+
 * {
     margin: 0;
     padding: 0;

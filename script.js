@@ -12,7 +12,7 @@ const statusMap = {
     finished: { label: "Bitti", class: "status-finished" }
 };
 
-let cachedData = { teachers: [], classes: [] };
+let cachedData = { teachers: [], classes: [], students: [] };
 
 function getDuration(start, end) {
     if (!start || !end) return "-";
@@ -29,9 +29,10 @@ async function loadData() {
         const json = await res.json();
         cachedData.teachers = json.teachers || [];
         cachedData.classes = json.classes || [];
+        cachedData.students = json.students || [];
     } catch (e) {
         console.log("Veri yüklenemedi:", e);
-        cachedData = { teachers: [], classes: [] };
+        cachedData = { teachers: [], classes: [], students: [] };
     }
 }
 
@@ -160,8 +161,12 @@ function showDetails(id) {
 
 function closeModal() { document.getElementById("classModal").classList.remove("active"); }
 
-document.addEventListener("DOMContentLoaded", async () => {
-    await loadData();
+function showSite() {
+    document.getElementById("siteLogin").style.display = "none";
+    document.getElementById("siteMain").style.display = "block";
+}
+
+function initSite() {
     renderSchedule();
     renderCourses();
 
@@ -185,4 +190,37 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelectorAll(".nav-link").forEach(link => {
         link.addEventListener("click", () => document.querySelector(".nav").classList.remove("active"));
     });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+    await loadData();
+
+    if (sessionStorage.getItem("siteLogged") === "true") {
+        showSite();
+        initSite();
+        return;
+    }
+
+    const loginForm = document.getElementById("siteLoginForm");
+    if (loginForm) {
+        loginForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const username = document.getElementById("siteUsername").value.trim();
+            const password = document.getElementById("sitePassword").value;
+            const errorMsg = document.getElementById("siteErrorMsg");
+
+            const students = cachedData.students || [];
+            const student = students.find(s => s.username === username && s.password === password);
+
+            if (student) {
+                sessionStorage.setItem("siteLogged", "true");
+                sessionStorage.setItem("siteUser", student.name + " " + student.surname);
+                errorMsg.textContent = "";
+                showSite();
+                initSite();
+            } else {
+                errorMsg.textContent = "Kullanıcı adı veya şifre hatalı!";
+            }
+        });
+    }
 });

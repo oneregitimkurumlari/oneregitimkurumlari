@@ -10,6 +10,29 @@
 </head>
 <body>
 
+<div class="site-login" id="siteLogin">
+    <div class="site-login-box">
+        <img src="images.png" alt="Logo" class="login-logo">
+        <h1>Öner Eğitim Kurumları</h1>
+        <p>Devam etmek için giriş yapın</p>
+        <form id="siteLoginForm">
+            <div class="input-group">
+                <i class="fas fa-user"></i>
+                <input type="text" id="siteUsername" placeholder="Kullanıcı Adı" required autocomplete="username">
+            </div>
+            <div class="input-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="sitePassword" placeholder="Şifre" required autocomplete="current-password">
+            </div>
+            <div class="error-msg" id="siteErrorMsg"></div>
+            <button type="submit" class="btn-login">Giriş Yap</button>
+        </form>
+        <a href="admin.html" class="admin-link"><i class="fas fa-user-shield"></i> Yönetici Girişi</a>
+    </div>
+</div>
+
+<div class="site-main" id="siteMain" style="display:none;">
+
 <header class="header">
     <div class="container header-inner">
         <div class="logo">
@@ -193,6 +216,8 @@
         </div>
     </div>
 </footer>
+
+</div>
 
 <div class="modal" id="classModal">
     <div class="modal-content">
