@@ -22,22 +22,33 @@ function getDuration(start, end) {
     return diff + " dk";
 }
 
+function applyJson(json) {
+    cachedData.teachers = json.teachers || [];
+    cachedData.classes = json.classes || [];
+    cachedData.students = json.students || [];
+    cachedData.homeworks = json.homeworks || [];
+}
+
 async function loadData() {
     try {
-        const token = localStorage.getItem("github_token") || "";
-        const headers = token ? { "Authorization": "token " + token } : {};
-        const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json`, { headers });
-        if (!res.ok) throw new Error("Veri yüklenemedi");
-        const meta = await res.json();
-        const decoded = decodeURIComponent(escape(atob(meta.content)));
-        const json = JSON.parse(decoded);
-        cachedData.teachers = json.teachers || [];
-        cachedData.classes = json.classes || [];
-        cachedData.students = json.students || [];
-        cachedData.homeworks = json.homeworks || [];
-    } catch (e) {
-        console.log("Veri yüklenemedi:", e);
-        cachedData = { teachers: [], classes: [], students: [], homeworks: [] };
+        const res = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
+        if (!res.ok) throw new Error("Veri yüklenemedi (" + res.status + ")");
+        const json = await res.json();
+        applyJson(json);
+    } catch (rawErr) {
+        console.warn("Raw veri okunamadı, GitHub API deneniyor:", rawErr.message);
+        try {
+            const token = localStorage.getItem("github_token") || "";
+            const headers = token ? { "Authorization": "token " + token } : {};
+            const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json?t=${Date.now()}`, { headers, cache: "no-store" });
+            if (!res.ok) throw new Error("Veri yüklenemedi (" + res.status + ")");
+            const meta = await res.json();
+            const decoded = decodeURIComponent(escape(atob(meta.content)));
+            applyJson(JSON.parse(decoded));
+        } catch (e) {
+            console.error("Veri yüklenemedi:", e);
+            cachedData = { teachers: [], classes: [], students: [], homeworks: [] };
+        }
     }
 }
 

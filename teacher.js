@@ -4,6 +4,26 @@ const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.j
 
 let GITHUB_TOKEN = localStorage.getItem("github_token") || "";
 let remoteData = { teachers: [], classes: [], students: [], homeworks: [], sha: "" };
+let deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
+
+function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+function showSaveOverlay() {
+    const o = document.createElement("div");
+    o.id = "saveOverlay";
+    o.style.cssText = "position:fixed;inset:0;background:rgba(255,255,255,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:600;color:#2563eb;flex-direction:column;gap:12px;";
+    o.innerHTML = '<i class="fas fa-cloud-upload-alt fa-spin" style="font-size:2rem;"></i> GitHub\'a kaydediliyor...';
+    document.body.appendChild(o);
+}
+
+function hideSaveOverlay() {
+    const o = document.getElementById("saveOverlay");
+    if (o) o.remove();
+}
 let currentTeacher = null;
 
 const dayLabels = {
@@ -73,7 +93,7 @@ async function fetchRemoteData() {
     try {
         if (GITHUB_TOKEN) {
             try {
-                const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
+                const res = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
                     headers: { "Authorization": "token " + GITHUB_TOKEN, "Cache-Control": "no-cache" },
                     cache: "no-store"
                 });
@@ -86,18 +106,20 @@ async function fetchRemoteData() {
                 remoteData.classes = json.classes || [];
                 remoteData.students = json.students || [];
                 remoteData.homeworks = json.homeworks || [];
+                deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
                 return true;
             } catch (apiErr) {
                 console.warn("GitHub API hatası, raw fallback deneniyor:", apiErr.message);
             }
         }
-        const res = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
+        const res = await fetchWithTimeout(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
         if (!res.ok) throw new Error("Veri okunamadı");
         const json = await res.json();
         remoteData.teachers = json.teachers || [];
         remoteData.classes = json.classes || [];
         remoteData.students = json.students || [];
         remoteData.homeworks = json.homeworks || [];
+        deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
         return true;
     } catch (e) {
         console.error("Uzak veri okuma hatası:", e);
@@ -111,31 +133,35 @@ async function saveRemoteData() {
         return false;
     }
 
+    showSaveOverlay();
+
     try {
-        const metaRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
+        const metaRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
             headers: { "Authorization": "token " + GITHUB_TOKEN },
             cache: "no-store"
         });
         if (!metaRes.ok) {
             const err = await metaRes.json().catch(() => ({}));
-            showError("SHA alınamadı: " + (err.message || metaRes.status));
+            showError("SHA alınamadı: " + (err.message || metaRes.status) + (metaRes.status === 401 ? " - Token geçersiz veya süresi dolmuş!" : ""));
             return false;
         }
         const meta = await metaRes.json();
         const decoded = decodeURIComponent(escape(atob(meta.content)));
         const serverData = JSON.parse(decoded);
 
-        function mergeArrays(serverArr, localArr) {
+        function mergeArrays(serverArr, localArr, delSet) {
             const merged = new Map();
-            for (const item of (serverArr || [])) merged.set(item.id, item);
+            for (const item of (serverArr || [])) {
+                if (!delSet.has(item.id)) merged.set(item.id, item);
+            }
             for (const item of (localArr || [])) merged.set(item.id, item);
             return Array.from(merged.values());
         }
 
-        remoteData.teachers = mergeArrays(serverData.teachers, remoteData.teachers);
-        remoteData.classes = mergeArrays(serverData.classes, remoteData.classes);
-        remoteData.students = mergeArrays(serverData.students, remoteData.students);
-        remoteData.homeworks = mergeArrays(serverData.homeworks, remoteData.homeworks || []);
+        remoteData.teachers = mergeArrays(serverData.teachers, remoteData.teachers, deletedIds.teachers);
+        remoteData.classes = mergeArrays(serverData.classes, remoteData.classes, deletedIds.classes);
+        remoteData.students = mergeArrays(serverData.students, remoteData.students, deletedIds.students);
+        remoteData.homeworks = mergeArrays(serverData.homeworks, remoteData.homeworks || [], deletedIds.homeworks);
         remoteData.sha = meta.sha;
 
         const content = btoa(unescape(encodeURIComponent(JSON.stringify({
@@ -145,7 +171,7 @@ async function saveRemoteData() {
             homeworks: remoteData.homeworks
         }, null, 2))));
 
-        const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}`, {
+        const res = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}`, {
             method: "PUT",
             headers: {
                 "Authorization": "token " + GITHUB_TOKEN,
@@ -156,21 +182,30 @@ async function saveRemoteData() {
                 content: content,
                 sha: remoteData.sha
             })
-        });
+        }, 30000);
 
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            showError("Kayit basarisiz: " + (err.message || "HTTP " + res.status));
+            let msg = "Kayit basarisiz: " + (err.message || "HTTP " + res.status);
+            if (res.status === 401 || res.status === 403) msg += " - Token gecersiz/Yetki yok. Yonetim panelinden yeni token girin.";
+            if (res.status === 409) msg += " - Versiyon cakismasi, tekrar deneyin.";
+            showError(msg);
             return false;
         }
 
         const result = await res.json();
         remoteData.sha = result.content.sha;
+        deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
         return true;
     } catch (e) {
         console.error("Kayit hatasi:", e);
-        showError("Kayit basarisiz: " + e.message);
+        const msg = e.name === "AbortError"
+            ? "Kayit basarisiz: Istek zaman asimina ugradi (ag cok yavas veya GitHub'a erisilemiyor)"
+            : "Kayit basarisiz: " + e.message;
+        showError(msg);
         return false;
+    } finally {
+        hideSaveOverlay();
     }
 }
 
@@ -405,6 +440,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.deleteClass = function(id) {
         showConfirm("Bu dersi silmek istediğinize emin misiniz?", async () => {
             remoteData.classes = remoteData.classes.filter(c => c.id !== id);
+            deletedIds.classes.add(id);
             const ok = await saveRemoteData();
             if (ok) {
                 renderClasses(currentTeacher);
@@ -549,6 +585,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.deleteHomework = function(id) {
         showConfirm("Bu ödevi silmek istediğinize emin misiniz?", async () => {
             remoteData.homeworks = (remoteData.homeworks || []).filter(h => h.id !== id);
+            deletedIds.homeworks.add(id);
             const ok = await saveRemoteData();
             if (ok) {
                 renderHomework(currentTeacher);
