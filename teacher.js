@@ -73,7 +73,8 @@ async function fetchRemoteData() {
     try {
         if (GITHUB_TOKEN) {
             const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
-                headers: { "Authorization": "token " + GITHUB_TOKEN, "Cache-Control": "no-cache" }
+                headers: { "Authorization": "token " + GITHUB_TOKEN, "Cache-Control": "no-cache" },
+                cache: "no-store"
             });
             if (!res.ok) throw new Error("Veri okunamadı");
             const meta = await res.json();
@@ -85,7 +86,7 @@ async function fetchRemoteData() {
             remoteData.students = json.students || [];
             remoteData.homeworks = json.homeworks || [];
         } else {
-            const res = await fetch(DATA_URL + "?t=" + Date.now());
+            const res = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
             if (!res.ok) throw new Error("Veri okunamadı");
             const json = await res.json();
             remoteData.teachers = json.teachers || [];
@@ -208,6 +209,21 @@ document.addEventListener("DOMContentLoaded", () => {
     async function initPanel(teacherId) {
         await fetchRemoteData();
         currentTeacher = teacherId;
+
+        if (!GITHUB_TOKEN) {
+            let existingBanner = document.getElementById("tokenBanner");
+            if (!existingBanner) {
+                const banner = document.createElement("div");
+                banner.id = "tokenBanner";
+                banner.style.cssText = "background:#f59e0b;color:#78350f;padding:12px 20px;font-size:0.85rem;font-weight:600;text-align:center;";
+                banner.innerHTML = '<i class="fas fa-exclamation-triangle"></i> GitHub Token tanımlanmamış! Ders/ödev ekleyebilmek için yöneticiden token girilmesi gerekiyor.';
+                document.querySelector(".main-content").insertBefore(banner, document.querySelector(".content-area"));
+            }
+        } else {
+            const existingBanner = document.getElementById("tokenBanner");
+            if (existingBanner) existingBanner.remove();
+        }
+
         renderClasses(teacherId);
         renderHomework(teacherId);
         initNavigation();

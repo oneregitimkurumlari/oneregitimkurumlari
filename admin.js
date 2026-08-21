@@ -74,7 +74,8 @@ async function fetchRemoteData() {
     try {
         if (GITHUB_TOKEN) {
             const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
-                headers: { "Authorization": "token " + GITHUB_TOKEN, "Cache-Control": "no-cache" }
+                headers: { "Authorization": "token " + GITHUB_TOKEN, "Cache-Control": "no-cache" },
+                cache: "no-store"
             });
             if (!res.ok) throw new Error("Veri okunamadı");
             const meta = await res.json();
@@ -86,7 +87,7 @@ async function fetchRemoteData() {
             remoteData.students = json.students || [];
             remoteData.homeworks = json.homeworks || [];
         } else {
-            const res = await fetch(DATA_URL + "?t=" + Date.now());
+            const res = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
             if (!res.ok) throw new Error("Veri okunamadı");
             const json = await res.json();
             remoteData.teachers = json.teachers || [];
@@ -108,7 +109,8 @@ async function saveRemoteData() {
     }
 
     const metaRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
-        headers: { "Authorization": "token " + GITHUB_TOKEN, "Cache-Control": "no-cache" }
+        headers: { "Authorization": "token " + GITHUB_TOKEN, "Cache-Control": "no-cache" },
+        cache: "no-store"
     });
     if (!metaRes.ok) {
         const err = await metaRes.json();
@@ -195,24 +197,25 @@ document.addEventListener("DOMContentLoaded", () => {
         const ok = await fetchRemoteData();
         loading.remove();
 
-        if (!ok && !GITHUB_TOKEN) {
-            document.getElementById("settingsPage").innerHTML = `
-                <div style="background:white;padding:40px;border-radius:12px;box-shadow:var(--shadow);text-align:center;max-width:600px;margin:0 auto;">
-                    <i class="fas fa-key" style="font-size:3rem;color:var(--warning);margin-bottom:16px;display:block;"></i>
-                    <h3 style="margin-bottom:12px;">GitHub Token Gerekli</h3>
-                    <p style="color:var(--text-medium);margin-bottom:20px;">Verilerin kaydedilmesi ve tüm cihazlardan görüntülenebilmesi için bir GitHub Personal Access Token gerekiyor.</p>
-                    <ol style="text-align:left;max-width:400px;margin:0 auto 20px;color:var(--text-medium);line-height:2;">
-                        <li><a href="https://github.com/settings/tokens" target="_blank">GitHub Token sayfasına</a> git</li>
-                        <li><strong>"Generate new token (classic)"</strong> tıkla</li>
-                        <li><strong>repo</strong> iznini işaretle</li>
-                        <li>Oluşturulan tokenı aşağıya yapıştır</li>
-                    </ol>
-                    <div style="display:flex;gap:8px;max-width:400px;margin:0 auto;">
-                        <input type="password" id="tokenInput" placeholder="GitHub Token" style="flex:1;padding:10px 14px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;">
-                        <button onclick="saveToken()" style="padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Kaydet</button>
-                    </div>
-                </div>`;
-            return;
+        if (!GITHUB_TOKEN) {
+            let existingBanner = document.getElementById("tokenBanner");
+            if (!existingBanner) {
+                const banner = document.createElement("div");
+                banner.id = "tokenBanner";
+                banner.style.cssText = "background:#f59e0b;color:#78350f;padding:12px 20px;font-size:0.85rem;font-weight:600;text-align:center;cursor:pointer;";
+                banner.innerHTML = '<i class="fas fa-exclamation-triangle"></i> GitHub Token tanımlanmamış! Kaydetme çalışmaz. Ayarlar\'a tıklayarak token girin.';
+                banner.addEventListener("click", () => {
+                    document.querySelectorAll(".sidebar-btn").forEach(b => b.classList.remove("active"));
+                    document.querySelector('.sidebar-btn[data-section="settings"]').classList.add("active");
+                    document.querySelectorAll(".section-page").forEach(p => p.classList.remove("active"));
+                    document.getElementById("settingsPage").classList.add("active");
+                    document.getElementById("sectionTitle").textContent = "Ayarlar";
+                });
+                document.querySelector(".main-content").insertBefore(banner, document.querySelector(".content-area"));
+            }
+        } else {
+            const existingBanner = document.getElementById("tokenBanner");
+            if (existingBanner) existingBanner.remove();
         }
 
         if (ok && GITHUB_TOKEN) {
@@ -226,6 +229,26 @@ document.addEventListener("DOMContentLoaded", () => {
                         <div style="display:flex;gap:8px;max-width:400px;margin:0 auto;">
                             <input type="password" id="tokenInput" value="${GITHUB_TOKEN}" style="flex:1;padding:10px 14px;border:2px solid #10b981;border-radius:8px;font-size:0.9rem;background:#f0fdf4;">
                             <button onclick="saveToken()" style="padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Güncelle</button>
+                        </div>
+                    </div>`;
+            }
+        } else if (!GITHUB_TOKEN) {
+            const sp = document.getElementById("settingsPage");
+            if (sp) {
+                sp.innerHTML = `
+                    <div style="background:white;padding:40px;border-radius:12px;box-shadow:var(--shadow);text-align:center;max-width:600px;margin:0 auto;">
+                        <i class="fas fa-key" style="font-size:3rem;color:var(--warning);margin-bottom:16px;display:block;"></i>
+                        <h3 style="margin-bottom:12px;">GitHub Token Gerekli</h3>
+                        <p style="color:var(--text-medium);margin-bottom:20px;">Verilerin kaydedilmesi ve tüm cihazlardan görüntülenebilmesi için bir GitHub Personal Access Token gerekiyor.</p>
+                        <ol style="text-align:left;max-width:400px;margin:0 auto 20px;color:var(--text-medium);line-height:2;">
+                            <li><a href="https://github.com/settings/tokens" target="_blank">GitHub Token sayfasına</a> git</li>
+                            <li><strong>"Generate new token (classic)"</strong> tıkla</li>
+                            <li><strong>repo</strong> iznini işaretle</li>
+                            <li>Oluşturulan tokenı aşağıya yapıştır</li>
+                        </ol>
+                        <div style="display:flex;gap:8px;max-width:400px;margin:0 auto;">
+                            <input type="password" id="tokenInput" placeholder="GitHub Token" style="flex:1;padding:10px 14px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;">
+                            <button onclick="saveToken()" style="padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Kaydet</button>
                         </div>
                     </div>`;
             }
