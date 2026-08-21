@@ -2,7 +2,7 @@
   "teachers": [
     {
       "name": "furkan",
-      "surname": "öner",
+      "surname": "�ner",
       "branch": "matematik",
       "email": "",
       "username": "FURKAN",
@@ -23,7 +23,7 @@
       "classroom": "-",
       "description": "",
       "capacity": 25,
-      "type": "CanlÄ± Ders",
+      "type": "Canlı Ders",
       "status": "upcoming",
       "courseType": "math",
       "id": "mt241baltsfdj"
@@ -33,8 +33,8 @@
     {
       "username": "FURKAN",
       "name": "Furkan",
-      "surname": "öner",
-      "studentClass": "PÄ°HOS",
+      "surname": "�ner",
+      "studentClass": "PİHOS",
       "email": "",
       "password": "Kayseri38",
       "id": "mt31e6ibbrrz4"
@@ -43,7 +43,7 @@
   "homeworks": [
     {
       "title": "BURSLULUK SINAVI",
-      "subject": "TÃM DERS",
+      "subject": "TÜM DERS",
       "description": "BURSLULUK SINAVI 4",
       "fileUrl": "",
       "fileName": "oner-egitim-pihos2025-bursluluk-4-word-eklenmis-filigransiz (2).pdf",
