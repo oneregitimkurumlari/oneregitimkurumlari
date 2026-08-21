@@ -111,41 +111,40 @@ async function saveRemoteData() {
         return false;
     }
 
-    const metaRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
-        headers: { "Authorization": "token " + GITHUB_TOKEN, "Cache-Control": "no-cache" },
-        cache: "no-store"
-    });
-    if (!metaRes.ok) {
-        const err = await metaRes.json();
-        showError("SHA alınamadı: " + (err.message || metaRes.status));
-        return false;
-    }
-    const meta = await metaRes.json();
-
-    const decoded = decodeURIComponent(escape(atob(meta.content)));
-    const serverData = JSON.parse(decoded);
-
-    function mergeArrays(serverArr, localArr) {
-        const merged = new Map();
-        for (const item of (serverArr || [])) merged.set(item.id, item);
-        for (const item of (localArr || [])) merged.set(item.id, item);
-        return Array.from(merged.values());
-    }
-
-    remoteData.teachers = mergeArrays(serverData.teachers, remoteData.teachers);
-    remoteData.classes = mergeArrays(serverData.classes, remoteData.classes);
-    remoteData.students = mergeArrays(serverData.students, remoteData.students);
-    remoteData.homeworks = mergeArrays(serverData.homeworks, remoteData.homeworks || []);
-    remoteData.sha = meta.sha;
-
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify({
-        teachers: remoteData.teachers,
-        classes: remoteData.classes,
-        students: remoteData.students,
-        homeworks: remoteData.homeworks
-    }, null, 2))));
-
     try {
+        const metaRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
+            headers: { "Authorization": "token " + GITHUB_TOKEN },
+            cache: "no-store"
+        });
+        if (!metaRes.ok) {
+            const err = await metaRes.json().catch(() => ({}));
+            showError("SHA alınamadı: " + (err.message || metaRes.status));
+            return false;
+        }
+        const meta = await metaRes.json();
+        const decoded = decodeURIComponent(escape(atob(meta.content)));
+        const serverData = JSON.parse(decoded);
+
+        function mergeArrays(serverArr, localArr) {
+            const merged = new Map();
+            for (const item of (serverArr || [])) merged.set(item.id, item);
+            for (const item of (localArr || [])) merged.set(item.id, item);
+            return Array.from(merged.values());
+        }
+
+        remoteData.teachers = mergeArrays(serverData.teachers, remoteData.teachers);
+        remoteData.classes = mergeArrays(serverData.classes, remoteData.classes);
+        remoteData.students = mergeArrays(serverData.students, remoteData.students);
+        remoteData.homeworks = mergeArrays(serverData.homeworks, remoteData.homeworks || []);
+        remoteData.sha = meta.sha;
+
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify({
+            teachers: remoteData.teachers,
+            classes: remoteData.classes,
+            students: remoteData.students,
+            homeworks: remoteData.homeworks
+        }, null, 2))));
+
         const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}`, {
             method: "PUT",
             headers: {
@@ -153,23 +152,24 @@ async function saveRemoteData() {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                message: "Öğretmen paneli güncellendi - " + new Date().toISOString(),
+                message: "Ogretmen paneli guncellendi - " + new Date().toISOString(),
                 content: content,
                 sha: remoteData.sha
             })
         });
 
         if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.message || "HTTP " + res.status);
+            const err = await res.json().catch(() => ({}));
+            showError("Kayit basarisiz: " + (err.message || "HTTP " + res.status));
+            return false;
         }
 
         const result = await res.json();
         remoteData.sha = result.content.sha;
         return true;
     } catch (e) {
-        console.error("Kayıt hatası:", e);
-        showError("Kayıt başarısız: " + e.message);
+        console.error("Kayit hatasi:", e);
+        showError("Kayit basarisiz: " + e.message);
         return false;
     }
 }
