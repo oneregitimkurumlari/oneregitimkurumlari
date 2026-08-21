@@ -172,7 +172,8 @@ function renderHomework() {
         const teacher = cachedData.teachers.find(t => t.id === h.teacherId);
         const teacherName = teacher ? teacher.name + " " + teacher.surname : "Yönetim";
         const fileIcon = h.fileType === "pdf" ? "fa-file-pdf" : h.fileType === "word" ? "fa-file-word" : h.fileType === "excel" ? "fa-file-excel" : "fa-file";
-        const fileTag = h.fileUrl ? `<a href="${h.fileUrl}" target="_blank" class="homework-file"><i class="fas ${fileIcon}"></i> ${h.fileName || "Dosyayı İndir"}</a>` : "";
+        const safeName = (h.fileName || "odev-dosyasi").replace(/\\/g, "").replace(/'/g, "").replace(/"/g, "");
+        const fileTag = h.fileUrl ? `<a href="${h.fileUrl}" class="homework-file" onclick="downloadHomeworkFile('${h.fileUrl}', '${safeName}'); return false;"><i class="fas ${fileIcon}"></i> ${h.fileName || "Dosyayı İndir"}</a>` : "";
         return `
         <div class="homework-card">
             <div class="homework-header">
@@ -190,6 +191,40 @@ function renderHomework() {
 }
 
 function joinClass(link) { if (link) window.open(link, "_blank"); }
+
+function showDownloadToast(msg, isError) {
+    const t = document.createElement("div");
+    t.textContent = msg;
+    t.style.cssText = "position:fixed;bottom:24px;right:24px;" +
+        "background:" + (isError ? "#ef4444" : "#10b981") + ";color:white;padding:14px 24px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);";
+    document.body.appendChild(t);
+    if (!isError) setTimeout(() => t.remove(), 8000);
+}
+
+async function downloadHomeworkFile(url, fileName) {
+    let rawUrl = url;
+    const m = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/(?:blob|raw)\/([^\/]+)\/(.+)/);
+    if (m) rawUrl = "https://raw.githubusercontent.com/" + m[1] + "/" + m[2] + "/" + m[3] + "/" + m[4];
+
+    try {
+        showDownloadToast("Dosya indiriliyor, lütfen bekleyin...");
+        const res = await fetch(rawUrl);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const blob = await res.blob();
+        const objUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = objUrl;
+        a.download = fileName || "odev-dosyasi";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(objUrl), 10000);
+    } catch (e) {
+        console.error("Dosya indirme hatası:", e);
+        showDownloadToast("İndirme başarısız, dosya yeni sekmede açılıyor...", true);
+        window.open(rawUrl, "_blank");
+    }
+}
 
 function showDetails(id) {
     const item = getScheduleData().find(s => String(s.id) === String(id));
