@@ -1,56 +1,29 @@
-{
-  "teachers": [
-    {
-      "name": "furkan",
-      "surname": "öner",
-      "branch": "matematik",
-      "email": "",
-      "username": "FURKAN",
-      "password": "FURKAN123",
-      "id": "mt240345im9aa"
-    }
-  ],
-  "classes": [
-    {
-      "title": "matematik",
-      "teacherId": "mt240345im9aa",
-      "day": "pazartesi",
-      "dayLabel": "Pazartesi",
-      "date": "2026-08-24",
-      "startTime": "14:00",
-      "endTime": "15:00",
-      "meetLink": "https://meet.google.com/wym-frof-jdx",
-      "classroom": "-",
-      "description": "",
-      "capacity": 25,
-      "type": "Canlı Ders",
-      "status": "upcoming",
-      "courseType": "math",
-      "id": "mt241baltsfdj"
-    }
-  ],
-  "students": [
-    {
-      "username": "FURKAN",
-      "name": "Furkan",
-      "surname": "öner",
-      "studentClass": "PİHOS",
-      "email": "",
-      "password": "Kayseri38",
-      "id": "mt31e6ibbrrz4"
-    }
-  ],
-  "homeworks": [
-    {
-      "title": "BURSLULUK SINAVI",
-      "subject": "TÜM DERS",
-      "description": "BURSLULUK SINAVI 4",
-      "fileUrl": "",
-      "fileName": "oner-egitim-pihos2025-bursluluk-4-word-eklenmis-filigransiz (2).pdf",
-      "fileType": "pdf",
-      "teacherId": "mt240345im9aa",
-      "id": "mt355v1004e0r",
-      "createdAt": "2026-08-21"
-    }
-  ]
-}
+ewogICJ0ZWFjaGVycyI6IFsKICAgIHsKICAgICAgIm5hbWUiOiAiZnVya2Fu
+IiwKICAgICAgInN1cm5hbWUiOiAiw7ZuZXIiLAogICAgICAiYnJhbmNoIjog
+Im1hdGVtYXRpayIsCiAgICAgICJlbWFpbCI6ICIiLAogICAgICAidXNlcm5h
+bWUiOiAiRlVSS0FOIiwKICAgICAgInBhc3N3b3JkIjogIkZVUktBTjEyMyIs
+CiAgICAgICJpZCI6ICJtdDI0MDM0NWltOWFhIgogICAgfQogIF0sCiAgImNs
+YXNzZXMiOiBbCiAgICB7CiAgICAgICJ0aXRsZSI6ICJtYXRlbWF0aWsiLAog
+ICAgICAidGVhY2hlcklkIjogIm10MjQwMzQ1aW05YWEiLAogICAgICAiZGF5
+IjogInBhemFydGVzaSIsCiAgICAgICJkYXlMYWJlbCI6ICJQYXphcnRlc2ki
+LAogICAgICAiZGF0ZSI6ICIyMDI2LTA4LTI0IiwKICAgICAgInN0YXJ0VGlt
+ZSI6ICIxNDowMCIsCiAgICAgICJlbmRUaW1lIjogIjE1OjAwIiwKICAgICAg
+Im1lZXRMaW5rIjogImh0dHBzOi8vbWVldC5nb29nbGUuY29tL3d5bS1mcm9m
+LWpkeCIsCiAgICAgICJjbGFzc3Jvb20iOiAiLSIsCiAgICAgICJkZXNjcmlw
+dGlvbiI6ICIiLAogICAgICAiY2FwYWNpdHkiOiAyNSwKICAgICAgInR5cGUi
+OiAiQ2FubMSxIERlcnMiLAogICAgICAic3RhdHVzIjogInVwY29taW5nIiwK
+ICAgICAgImNvdXJzZVR5cGUiOiAibWF0aCIsCiAgICAgICJpZCI6ICJtdDI0
+MWJhbHRzZmRqIgogICAgfQogIF0sCiAgInN0dWRlbnRzIjogWwogICAgewog
+ICAgICAidXNlcm5hbWUiOiAiRlVSS0FOIiwKICAgICAgIm5hbWUiOiAiRnVy
+a2FuIiwKICAgICAgInN1cm5hbWUiOiAiw7ZuZXIiLAogICAgICAic3R1ZGVu
+dENsYXNzIjogIlDEsEhPUyIsCiAgICAgICJlbWFpbCI6ICIiLAogICAgICAi
+cGFzc3dvcmQiOiAiS2F5c2VyaTM4IiwKICAgICAgImlkIjogIm10MzFlNmli
+YnJyejQiCiAgICB9CiAgXSwKICAiaG9tZXdvcmtzIjogWwogICAgewogICAg
+ICAidGl0bGUiOiAiQlVSU0xVTFVLIFNJTkFWSSIsCiAgICAgICJzdWJqZWN0
+IjogIlTDnE0gREVSUyIsCiAgICAgICJkZXNjcmlwdGlvbiI6ICJCVVJTTFVM
+VUsgU0lOQVZJIDQiLAogICAgICAiZmlsZVVybCI6ICIiLAogICAgICAiZmls
+ZU5hbWUiOiAib25lci1lZ2l0aW0tcGlob3MyMDI1LWJ1cnNsdWx1ay00LXdv
+cmQtZWtsZW5taXMtZmlsaWdyYW5zaXogKDIpLnBkZiIsCiAgICAgICJmaWxl
+VHlwZSI6ICJwZGYiLAogICAgICAidGVhY2hlcklkIjogIm10MjQwMzQ1aW05
+YWEiLAogICAgICAiaWQiOiAibXQzNTV2MTAwNGUwciIsCiAgICAgICJjcmVh
+dGVkQXQiOiAiMjAyNi0wOC0yMSIKICAgIH0KICBdCn0=
