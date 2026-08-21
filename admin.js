@@ -73,28 +73,32 @@ function showConfirm(msg, callback) {
 async function fetchRemoteData() {
     try {
         if (GITHUB_TOKEN) {
-            const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
-                headers: { "Authorization": "token " + GITHUB_TOKEN, "Cache-Control": "no-cache" },
-                cache: "no-store"
-            });
-            if (!res.ok) throw new Error("Veri okunamadı");
-            const meta = await res.json();
-            remoteData.sha = meta.sha;
-            const decoded = decodeURIComponent(escape(atob(meta.content)));
-            const json = JSON.parse(decoded);
-            remoteData.teachers = json.teachers || [];
-            remoteData.classes = json.classes || [];
-            remoteData.students = json.students || [];
-            remoteData.homeworks = json.homeworks || [];
-        } else {
-            const res = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
-            if (!res.ok) throw new Error("Veri okunamadı");
-            const json = await res.json();
-            remoteData.teachers = json.teachers || [];
-            remoteData.classes = json.classes || [];
-            remoteData.students = json.students || [];
-            remoteData.homeworks = json.homeworks || [];
+            try {
+                const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
+                    headers: { "Authorization": "token " + GITHUB_TOKEN, "Cache-Control": "no-cache" },
+                    cache: "no-store"
+                });
+                if (!res.ok) throw new Error("API " + res.status);
+                const meta = await res.json();
+                remoteData.sha = meta.sha;
+                const decoded = decodeURIComponent(escape(atob(meta.content)));
+                const json = JSON.parse(decoded);
+                remoteData.teachers = json.teachers || [];
+                remoteData.classes = json.classes || [];
+                remoteData.students = json.students || [];
+                remoteData.homeworks = json.homeworks || [];
+                return true;
+            } catch (apiErr) {
+                console.warn("GitHub API hatası, raw fallback deneniyor:", apiErr.message);
+            }
         }
+        const res = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
+        if (!res.ok) throw new Error("Veri okunamadı");
+        const json = await res.json();
+        remoteData.teachers = json.teachers || [];
+        remoteData.classes = json.classes || [];
+        remoteData.students = json.students || [];
+        remoteData.homeworks = json.homeworks || [];
         return true;
     } catch (e) {
         console.error("Uzak veri okuma hatası:", e);
