@@ -72,19 +72,25 @@ function showConfirm(msg, callback) {
 
 async function fetchRemoteData() {
     try {
-        const res = await fetch(DATA_URL + "?t=" + Date.now());
-        if (!res.ok) throw new Error("Veri okunamadı");
-        const json = await res.json();
-        remoteData.teachers = json.teachers || [];
-        remoteData.classes = json.classes || [];
-        remoteData.students = json.students || [];
-
-        const metaRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}`, {
-            headers: GITHUB_TOKEN ? { "Authorization": "token " + GITHUB_TOKEN } : {}
-        });
-        if (metaRes.ok) {
-            const meta = await metaRes.json();
+        if (GITHUB_TOKEN) {
+            const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}`, {
+                headers: { "Authorization": "token " + GITHUB_TOKEN }
+            });
+            if (!res.ok) throw new Error("Veri okunamadı");
+            const meta = await res.json();
             remoteData.sha = meta.sha;
+            const decoded = decodeURIComponent(escape(atob(meta.content)));
+            const json = JSON.parse(decoded);
+            remoteData.teachers = json.teachers || [];
+            remoteData.classes = json.classes || [];
+            remoteData.students = json.students || [];
+        } else {
+            const res = await fetch(DATA_URL + "?t=" + Date.now());
+            if (!res.ok) throw new Error("Veri okunamadı");
+            const json = await res.json();
+            remoteData.teachers = json.teachers || [];
+            remoteData.classes = json.classes || [];
+            remoteData.students = json.students || [];
         }
         return true;
     } catch (e) {
