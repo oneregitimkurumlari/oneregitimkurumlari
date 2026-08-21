@@ -222,12 +222,34 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.querySelectorAll(".section-page").forEach(p => p.classList.remove("active"));
                 document.getElementById(section + "Page").classList.add("active");
                 document.getElementById("sectionTitle").textContent = btn.textContent.trim();
+                document.querySelector(".sidebar").classList.remove("mobile-open");
             });
         });
 
         document.getElementById("menuToggle").addEventListener("click", () => {
-            document.querySelector(".sidebar").classList.toggle("active");
+            document.querySelector(".sidebar").classList.toggle("mobile-open");
         });
+
+        let overlay = document.querySelector(".sidebar-overlay");
+        if (!overlay) {
+            overlay = document.createElement("div");
+            overlay.className = "sidebar-overlay";
+            document.body.appendChild(overlay);
+        }
+        overlay.addEventListener("click", () => {
+            document.querySelector(".sidebar").classList.remove("mobile-open");
+            overlay.classList.remove("active");
+        });
+
+        const sidebar = document.querySelector(".sidebar");
+        const observer = new MutationObserver(() => {
+            if (sidebar.classList.contains("mobile-open")) {
+                overlay.classList.add("active");
+            } else {
+                overlay.classList.remove("active");
+            }
+        });
+        observer.observe(sidebar, { attributes: true, attributeFilter: ["class"] });
     }
 
     function renderClasses(teacherId) {
