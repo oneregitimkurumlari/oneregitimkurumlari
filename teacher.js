@@ -165,7 +165,10 @@ document.addEventListener("DOMContentLoaded", () => {
         loginScreen.style.display = "none";
         adminPanel.classList.add("active");
         document.getElementById("teacherInfo").textContent = teacherName || "Öğretmen";
-        initPanel(teacherId);
+        (async () => {
+            await fetchRemoteData();
+            initPanel(teacherId);
+        })();
     }
 
     loginForm.addEventListener("submit", async (e) => {
@@ -203,6 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     async function initPanel(teacherId) {
+        await fetchRemoteData();
         currentTeacher = teacherId;
         renderClasses(teacherId);
         renderHomework(teacherId);
