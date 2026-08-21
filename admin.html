@@ -46,6 +46,9 @@
             <button class="sidebar-btn" data-section="classes">
                 <i class="fas fa-video"></i> Canlı Dersler
             </button>
+            <button class="sidebar-btn" data-section="students">
+                <i class="fas fa-user-graduate"></i> Öğrenciler
+            </button>
             <button class="sidebar-btn" data-section="settings">
                 <i class="fas fa-cog"></i> Ayarlar
             </button>
@@ -89,6 +92,13 @@
                         <div>
                             <span class="stat-val" id="todayCount">0</span>
                             <span class="stat-lbl">Bugünkü Ders</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-user-graduate"></i>
+                        <div>
+                            <span class="stat-val" id="studentCount">0</span>
+                            <span class="stat-lbl">Öğrenci</span>
                         </div>
                     </div>
                 </div>
@@ -277,6 +287,80 @@
                     <div class="empty-state" id="emptyClasses">
                         <i class="fas fa-video"></i>
                         <p>Henüz canlı ders eklenmemiş</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-page" id="studentsPage">
+                <div class="page-header">
+                    <h3>Öğrenci Yönetimi</h3>
+                    <button class="btn-add" id="addStudentBtn">
+                        <i class="fas fa-plus"></i> Öğrenci Ekle
+                    </button>
+                </div>
+
+                <div class="form-panel" id="studentForm" style="display:none;">
+                    <h3 id="studentFormTitle">Yeni Öğrenci Ekle</h3>
+                    <form id="studentFormEl">
+                        <input type="hidden" id="editStudentId">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Kullanıcı Adı</label>
+                                <input type="text" id="studentUsername" placeholder="Örn: ahmet_yilmaz" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Şifre</label>
+                                <input type="password" id="studentPassword" placeholder="En az 6 karakter" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Ad</label>
+                                <input type="text" id="studentName" placeholder="Örn: Ahmet" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Soyad</label>
+                                <input type="text" id="studentSurname" placeholder="Örn: Yılmaz" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Sınıf</label>
+                                <input type="text" id="studentClass" placeholder="Örn: 11-A">
+                            </div>
+                            <div class="form-group">
+                                <label>E-posta (isteğe bağlı)</label>
+                                <input type="email" id="studentEmail" placeholder="ornek@email.com">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-save">
+                                <i class="fas fa-save"></i> Kaydet
+                            </button>
+                            <button type="button" class="btn-cancel" id="cancelStudentBtn">
+                                <i class="fas fa-times"></i> İptal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Kullanıcı Adı</th>
+                                <th>Ad Soyad</th>
+                                <th>Sınıf</th>
+                                <th>E-posta</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentTable"></tbody>
+                    </table>
+                    <div class="empty-state" id="emptyStudents">
+                        <i class="fas fa-user-graduate"></i>
+                        <p>Henüz öğrenci eklenmemiş</p>
                     </div>
                 </div>
             </div>

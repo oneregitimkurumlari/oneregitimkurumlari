@@ -5,7 +5,7 @@ const DATA_FILE = "data.json";
 const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
 
 let GITHUB_TOKEN = localStorage.getItem("github_token") || "";
-let remoteData = { teachers: [], classes: [], sha: "" };
+let remoteData = { teachers: [], classes: [], students: [], sha: "" };
 
 const dayLabels = {
     pazartesi: "Pazartesi", sali: "Salı", carsamba: "Çarşamba",
@@ -77,6 +77,7 @@ async function fetchRemoteData() {
         const json = await res.json();
         remoteData.teachers = json.teachers || [];
         remoteData.classes = json.classes || [];
+        remoteData.students = json.students || [];
 
         const metaRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}`, {
             headers: GITHUB_TOKEN ? { "Authorization": "token " + GITHUB_TOKEN } : {}
@@ -100,7 +101,8 @@ async function saveRemoteData() {
 
     const content = btoa(unescape(encodeURIComponent(JSON.stringify({
         teachers: remoteData.teachers,
-        classes: remoteData.classes
+        classes: remoteData.classes,
+        students: remoteData.students
     }, null, 2))));
 
     try {
@@ -195,6 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         renderTeachers();
         renderClasses();
+        renderStudents();
         updateDashboard();
         initNavigation();
     }
@@ -451,11 +454,118 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("filterDay").addEventListener("change", () => renderClasses());
     document.getElementById("searchClass").addEventListener("input", () => renderClasses());
 
+    function renderStudents() {
+        const tbody = document.getElementById("studentTable");
+        const empty = document.getElementById("emptyStudents");
+        const students = remoteData.students || [];
+
+        if (students.length === 0) {
+            tbody.innerHTML = "";
+            empty.style.display = "block";
+            return;
+        }
+        empty.style.display = "none";
+
+        tbody.innerHTML = students.map((s, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td><strong>${s.username}</strong></td>
+                <td>${s.name} ${s.surname}</td>
+                <td>${s.studentClass || "-"}</td>
+                <td>${s.email || "-"}</td>
+                <td class="actions-cell">
+                    <button class="btn-edit" onclick="editStudent('${s.id}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-delete" onclick="deleteStudent('${s.id}')"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join("");
+    }
+
+    document.getElementById("addStudentBtn").addEventListener("click", () => {
+        document.getElementById("studentForm").style.display = "block";
+        document.getElementById("studentFormTitle").textContent = "Yeni Öğrenci Ekle";
+        document.getElementById("studentFormEl").reset();
+        document.getElementById("editStudentId").value = "";
+        document.getElementById("studentUsername").focus();
+    });
+
+    document.getElementById("cancelStudentBtn").addEventListener("click", () => {
+        document.getElementById("studentForm").style.display = "none";
+    });
+
+    document.getElementById("studentFormEl").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const editId = document.getElementById("editStudentId").value;
+        const username = document.getElementById("studentUsername").value.trim();
+        const password = document.getElementById("studentPassword").value;
+
+        if (!editId && password.length < 6) {
+            showError("Şifre en az 6 karakter olmalıdır!");
+            return;
+        }
+
+        const studentData = {
+            username: username,
+            name: document.getElementById("studentName").value.trim(),
+            surname: document.getElementById("studentSurname").value.trim(),
+            studentClass: document.getElementById("studentClass").value.trim(),
+            email: document.getElementById("studentEmail").value.trim()
+        };
+
+        if (!editId || password.length > 0) {
+            studentData.password = password;
+        }
+
+        if (editId) {
+            const idx = (remoteData.students || []).findIndex(s => s.id === editId);
+            if (idx !== -1) remoteData.students[idx] = { ...remoteData.students[idx], ...studentData };
+        } else {
+            studentData.id = generateId();
+            if (!remoteData.students) remoteData.students = [];
+            remoteData.students.push(studentData);
+        }
+
+        const ok = await saveRemoteData();
+        if (ok) {
+            showToast(editId ? "Öğrenci güncellendi!" : "Öğrenci eklendi!");
+            renderStudents();
+            updateDashboard();
+            document.getElementById("studentForm").style.display = "none";
+        }
+    });
+
+    window.editStudent = function(id) {
+        const s = (remoteData.students || []).find(x => x.id === id);
+        if (!s) return;
+        document.getElementById("studentForm").style.display = "block";
+        document.getElementById("studentFormTitle").textContent = "Öğrenciyi Düzenle";
+        document.getElementById("editStudentId").value = s.id;
+        document.getElementById("studentUsername").value = s.username;
+        document.getElementById("studentPassword").value = "";
+        document.getElementById("studentName").value = s.name;
+        document.getElementById("studentSurname").value = s.surname;
+        document.getElementById("studentClass").value = s.studentClass || "";
+        document.getElementById("studentEmail").value = s.email || "";
+    };
+
+    window.deleteStudent = function(id) {
+        showConfirm("Bu öğrenciyi silmek istediğinize emin misiniz?", async () => {
+            remoteData.students = (remoteData.students || []).filter(s => s.id !== id);
+            const ok = await saveRemoteData();
+            if (ok) {
+                renderStudents();
+                updateDashboard();
+                showToast("Öğrenci silindi!");
+            }
+        });
+    };
+
     function updateDashboard() {
         const today = new Date().toISOString().split("T")[0];
         document.getElementById("teacherCount").textContent = remoteData.teachers.length;
         document.getElementById("classCount").textContent = remoteData.classes.length;
         document.getElementById("todayCount").textContent = remoteData.classes.filter(c => c.date === today).length;
+        document.getElementById("studentCount").textContent = (remoteData.students || []).length;
 
         const recent = document.getElementById("recentClasses");
         const lastClasses = remoteData.classes.slice(-5).reverse();
@@ -480,7 +590,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     document.getElementById("exportDataBtn").addEventListener("click", () => {
-        const data = { teachers: remoteData.teachers, classes: remoteData.classes, exportDate: new Date().toISOString() };
+        const data = { teachers: remoteData.teachers, classes: remoteData.classes, students: remoteData.students || [], exportDate: new Date().toISOString() };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -493,10 +603,12 @@ document.addEventListener("DOMContentLoaded", () => {
         showConfirm("Tüm öğretmen ve ders verileri silinecek! Emin misiniz?", async () => {
             remoteData.teachers = [];
             remoteData.classes = [];
+            remoteData.students = [];
             const ok = await saveRemoteData();
             if (ok) {
                 renderTeachers();
                 renderClasses();
+                renderStudents();
                 updateDashboard();
                 showToast("Tüm veriler temizlendi!");
             }
