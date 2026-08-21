@@ -99,6 +99,17 @@ async function saveRemoteData() {
         return false;
     }
 
+    const metaRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}`, {
+        headers: { "Authorization": "token " + GITHUB_TOKEN }
+    });
+    if (!metaRes.ok) {
+        const err = await metaRes.json();
+        showError("SHA alınamadı: " + (err.message || metaRes.status));
+        return false;
+    }
+    const meta = await metaRes.json();
+    remoteData.sha = meta.sha;
+
     const content = btoa(unescape(encodeURIComponent(JSON.stringify({
         teachers: remoteData.teachers,
         classes: remoteData.classes,
@@ -121,7 +132,7 @@ async function saveRemoteData() {
 
         if (!res.ok) {
             const err = await res.json();
-            throw new Error(err.message || "Kayıt başarısız");
+            throw new Error(err.message || "HTTP " + res.status);
         }
 
         const result = await res.json();
