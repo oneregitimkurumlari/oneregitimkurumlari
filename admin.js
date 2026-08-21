@@ -206,6 +206,22 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        if (ok && GITHUB_TOKEN) {
+            const sp = document.getElementById("settingsPage");
+            if (sp) {
+                sp.innerHTML = `
+                    <div style="background:white;padding:40px;border-radius:12px;box-shadow:var(--shadow);text-align:center;max-width:600px;margin:0 auto;">
+                        <i class="fas fa-check-circle" style="font-size:3rem;color:#10b981;margin-bottom:16px;display:block;"></i>
+                        <h3 style="margin-bottom:12px;">GitHub Bağlantısı Aktif</h3>
+                        <p style="color:var(--text-medium);margin-bottom:20px;">Token kayıtlı ve çalışıyor. Veriler otomatik olarak GitHub'a kaydediliyor.</p>
+                        <div style="display:flex;gap:8px;max-width:400px;margin:0 auto;">
+                            <input type="password" id="tokenInput" value="${GITHUB_TOKEN}" style="flex:1;padding:10px 14px;border:2px solid #10b981;border-radius:8px;font-size:0.9rem;background:#f0fdf4;">
+                            <button onclick="saveToken()" style="padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Güncelle</button>
+                        </div>
+                    </div>`;
+            }
+        }
+
         renderTeachers();
         renderClasses();
         renderStudents();
