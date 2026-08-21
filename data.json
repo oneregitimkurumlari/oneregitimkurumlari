@@ -26,5 +26,16 @@
       "courseType": "math",
       "id": "mt241baltsfdj"
     }
+  ],
+  "students": [
+    {
+      "username": "FURKAN",
+      "name": "Furkan",
+      "surname": "Öner",
+      "studentClass": "PİHOS",
+      "email": "",
+      "password": "Kayseri38",
+      "id": "mt31cfckndyj5"
+    }
   ]
 }
