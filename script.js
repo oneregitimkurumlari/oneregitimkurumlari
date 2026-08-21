@@ -24,9 +24,13 @@ function getDuration(start, end) {
 
 async function loadData() {
     try {
-        const res = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
+        const token = localStorage.getItem("github_token") || "";
+        const headers = token ? { "Authorization": "token " + token } : {};
+        const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json`, { headers });
         if (!res.ok) throw new Error("Veri yüklenemedi");
-        const json = await res.json();
+        const meta = await res.json();
+        const decoded = decodeURIComponent(escape(atob(meta.content)));
+        const json = JSON.parse(decoded);
         cachedData.teachers = json.teachers || [];
         cachedData.classes = json.classes || [];
         cachedData.students = json.students || [];
