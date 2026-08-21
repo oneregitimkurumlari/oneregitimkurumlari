@@ -118,13 +118,28 @@ async function saveRemoteData() {
         return false;
     }
     const meta = await metaRes.json();
+
+    const decoded = decodeURIComponent(escape(atob(meta.content)));
+    const serverData = JSON.parse(decoded);
+
+    function mergeArrays(serverArr, localArr) {
+        const merged = new Map();
+        for (const item of (serverArr || [])) merged.set(item.id, item);
+        for (const item of (localArr || [])) merged.set(item.id, item);
+        return Array.from(merged.values());
+    }
+
+    remoteData.teachers = mergeArrays(serverData.teachers, remoteData.teachers);
+    remoteData.classes = mergeArrays(serverData.classes, remoteData.classes);
+    remoteData.students = mergeArrays(serverData.students, remoteData.students);
+    remoteData.homeworks = mergeArrays(serverData.homeworks, remoteData.homeworks || []);
     remoteData.sha = meta.sha;
 
     const content = btoa(unescape(encodeURIComponent(JSON.stringify({
         teachers: remoteData.teachers,
         classes: remoteData.classes,
         students: remoteData.students,
-        homeworks: remoteData.homeworks || []
+        homeworks: remoteData.homeworks
     }, null, 2))));
 
     try {
