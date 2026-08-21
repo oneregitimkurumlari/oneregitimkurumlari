@@ -677,13 +677,52 @@ document.addEventListener("DOMContentLoaded", () => {
             const ext = file.name.split(".").pop().toLowerCase();
             const fileType = ext === "pdf" ? "pdf" : ["doc","docx"].includes(ext) ? "word" : ["xls","xlsx"].includes(ext) ? "excel" : "other";
             fileData = { fileName: file.name, fileType: fileType };
+
+            const loading = document.createElement("div");
+            loading.style.cssText = "position:fixed;inset:0;background:rgba(255,255,255,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:1.1rem;";
+            loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:12px;"></i> Dosya yükleniyor...';
+            document.body.appendChild(loading);
+
+            try {
+                const fileContent = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result.split(",")[1]);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+
+                const filePath = "uploads/" + Date.now() + "_" + file.name;
+                const uploadRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${filePath}`, {
+                    method: "PUT",
+                    headers: {
+                        "Authorization": "token " + GITHUB_TOKEN,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        message: "Ödev dosyası yüklendi: " + file.name,
+                        content: fileContent
+                    })
+                });
+
+                if (uploadRes.ok) {
+                    const uploadData = await uploadRes.json();
+                    fileData.fileUrl = uploadData.content.html_url;
+                    fileData.filePath = filePath;
+                } else {
+                    const err = await uploadRes.json();
+                    console.error("Dosya yükleme hatası:", err);
+                }
+            } catch (err) {
+                console.error("Dosya okuma hatası:", err);
+            }
+            loading.remove();
         }
 
         const homeworkData = {
             title: document.getElementById("homeworkTitle").value.trim(),
             subject: document.getElementById("homeworkSubject").value.trim(),
             description: document.getElementById("homeworkDesc").value.trim(),
-            fileUrl: document.getElementById("homeworkFileUrl").value.trim(),
+            fileUrl: document.getElementById("homeworkFileUrl").value.trim() || fileData.fileUrl || "",
             ...fileData,
             teacherId: ""
         };
