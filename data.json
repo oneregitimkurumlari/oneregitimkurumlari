@@ -40,5 +40,17 @@
       "id": "mt31e6ibbrrz4"
     }
   ],
-  "homeworks": []
+  "homeworks": [
+    {
+      "title": "BURSLULUK SINAVI",
+      "subject": "TÜM DERS",
+      "description": "",
+      "fileUrl": "",
+      "fileName": "oner-egitim-pihos2025-bursluluk-4-word-eklenmis-filigransiz (1).pdf",
+      "fileType": "pdf",
+      "teacherId": "mt240345im9aa",
+      "id": "mt33z32uyj8hx",
+      "createdAt": "2026-08-21"
+    }
+  ]
 }
