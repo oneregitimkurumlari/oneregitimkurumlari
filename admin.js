@@ -280,6 +280,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td>${t.username || "-"}</td>
                 <td>${t.branch}</td>
                 <td>${t.email || "-"}</td>
+                <td>${t.password ? '<span style="color:#10b981;"><i class="fas fa-lock"></i> Kayıtlı</span>' : '<span style="color:var(--text-light);">-</span>'}</td>
                 <td class="actions-cell">
                     <button class="btn-edit" onclick="editTeacher('${t.id}')"><i class="fas fa-edit"></i></button>
                     <button class="btn-delete" onclick="deleteTeacher('${t.id}')"><i class="fas fa-trash"></i></button>
@@ -355,7 +356,15 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("teacherName").value = t.name;
         document.getElementById("teacherSurname").value = t.surname;
         document.getElementById("teacherUsername").value = t.username || "";
-        document.getElementById("teacherPassword").value = "";
+        const pwField = document.getElementById("teacherPassword");
+        if (t.password) {
+            pwField.placeholder = "•••••• (Şifre kayıtlı, değiştirmek için yazın)";
+            pwField.required = false;
+        } else {
+            pwField.placeholder = "En az 6 karakter";
+            pwField.required = true;
+        }
+        pwField.value = "";
         document.getElementById("teacherBranch").value = t.branch;
         document.getElementById("teacherEmail").value = t.email || "";
     };
