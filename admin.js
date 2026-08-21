@@ -73,8 +73,8 @@ function showConfirm(msg, callback) {
 async function fetchRemoteData() {
     try {
         if (GITHUB_TOKEN) {
-            const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}`, {
-                headers: { "Authorization": "token " + GITHUB_TOKEN }
+            const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
+                headers: { "Authorization": "token " + GITHUB_TOKEN, "Cache-Control": "no-cache" }
             });
             if (!res.ok) throw new Error("Veri okunamadı");
             const meta = await res.json();
@@ -107,8 +107,8 @@ async function saveRemoteData() {
         return false;
     }
 
-    const metaRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}`, {
-        headers: { "Authorization": "token " + GITHUB_TOKEN }
+    const metaRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
+        headers: { "Authorization": "token " + GITHUB_TOKEN, "Cache-Control": "no-cache" }
     });
     if (!metaRes.ok) {
         const err = await metaRes.json();
