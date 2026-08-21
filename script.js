@@ -24,7 +24,7 @@ function getDuration(start, end) {
 
 async function loadData() {
     try {
-        const res = await fetch(DATA_URL + "?t=" + Date.now());
+        const res = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
         if (!res.ok) throw new Error("Veri yüklenemedi");
         const json = await res.json();
         cachedData.teachers = json.teachers || [];
