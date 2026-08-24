@@ -28,6 +28,7 @@
     min-height: 100vh;
     background: linear-gradient(135deg, var(--navy) 0%, var(--primary-dark) 100%);
     padding: 20px;
+    position: relative;
 }
 
 .site-login-box {
@@ -38,6 +39,44 @@
     width: 100%;
     max-width: 420px;
     text-align: center;
+}
+
+.apk-download-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 22px;
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.apk-download-btn i {
+    font-size: 1.25rem;
+}
+
+.apk-download-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.5);
+    color: white;
+}
+
+.apk-float {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    z-index: 10;
+}
+
+.apk-header-btn span {
+    font-size: 0.9rem;
 }
 
 .site-login-box .login-logo {
@@ -893,6 +932,21 @@ body {
         display: block;
     }
 
+    .apk-header-btn span {
+        display: none;
+    }
+
+    .apk-header-btn {
+        padding: 10px 12px;
+    }
+
+    .apk-float {
+        top: 14px;
+        right: 14px;
+        padding: 10px 14px;
+        font-size: 0.85rem;
+    }
+
     .nav.active {
         display: flex;
         flex-direction: column;
@@ -1040,4 +1094,84 @@ body {
 
 .homework-file:hover {
     background: var(--primary-dark);
+}
+
+/* ===== Tablet uyumlulugu ===== */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .container {
+        padding: 0 24px;
+    }
+
+    .section {
+        padding: 60px 0;
+    }
+
+    .hero {
+        padding: 48px 32px;
+    }
+
+    .hero h2 {
+        font-size: 2.2rem;
+    }
+
+    .schedule-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .homework-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .about-grid,
+    .contact-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+
+    .day-btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+
+    .schedule-card {
+        padding: 20px;
+    }
+}
+
+@media (min-width: 1025px) and (max-width: 1366px) {
+    .schedule-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .homework-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Dokunmatik cihazlar icin daha buyuk dokunma alanlari */
+@media (pointer: coarse) {
+    .day-btn,
+    .btn,
+    .schedule-btn,
+    .homework-file,
+    .nav-link {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .schedule-card,
+    .homework-card {
+        cursor: default;
+    }
+
+    .schedule-card:hover,
+    .homework-card:hover {
+        transform: none;
+    }
 }

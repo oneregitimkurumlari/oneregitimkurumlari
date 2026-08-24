@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.oneregitim.kurumlari",
+    "sha256_cert_fingerprints": ["B7:28:49:BD:77:42:88:19:8B:B1:54:29:E7:FA:FA:62:D0:99:59:29:89:72:32:A2:A2:99:33:99:07:2D:49:5A"]
+  }
+}]
