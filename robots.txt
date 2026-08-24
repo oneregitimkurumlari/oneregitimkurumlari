@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /oneregitimkurumlari/admin.html
+Disallow: /oneregitimkurumlari/teacher.html
+Disallow: /oneregitimkurumlari/data.json
+
+Sitemap: https://oneregitimkurumlari.github.io/oneregitimkurumlari/sitemap.xml
