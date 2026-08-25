@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="transition.css">
+    <script>if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')</script>
 </head>
 <body>
 
@@ -76,6 +77,7 @@
                 <h2 id="sectionTitle">Dashboard</h2>
             </div>
             <span class="admin-info"><i class="fas fa-user-shield"></i> Yönetici</span>
+            <button class="dark-toggle" id="darkToggle" title="Koyu/Acik Mod"><i class="fas fa-moon"></i></button>
         </div>
 
         <div class="content-area">
@@ -496,5 +498,20 @@
 
 <script src="admin.js?v=2"></script>
 <script src="transition.js"></script>
+<script>
+(function(){
+    var dt=document.getElementById('darkToggle');
+    if(dt)dt.addEventListener('click',function(){
+        document.documentElement.classList.toggle('dark');
+        var d=document.documentElement.classList.contains('dark');
+        localStorage.setItem('theme',d?'dark':'light');
+        dt.querySelector('i').className=d?'fas fa-sun':'fas fa-moon';
+    });
+    if(document.documentElement.classList.contains('dark')){
+        var d=document.getElementById('darkToggle');
+        if(d)d.querySelector('i').className='fas fa-sun';
+    }
+})();
+</script>
 </body>
 </html>

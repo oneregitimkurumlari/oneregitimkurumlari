@@ -1306,3 +1306,59 @@ body {
     color: #d4af37;
     margin-top: 4px;
 }
+
+/* ---------- Dark Mode Toggle ---------- */
+.dark-toggle {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    color: var(--primary);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    transition: var(--transition);
+    line-height: 1;
+    flex-shrink: 0;
+}
+.dark-toggle:hover { background: var(--primary-light); }
+
+/* ---------- Dark Mode (Student) ---------- */
+body.dark { background: var(--navy); color: #e2e8f0; }
+
+body.dark .header { background: rgba(16, 19, 31, 0.95); border-bottom-color: var(--border); }
+body.dark .nav-link { color: #cbd5e1; }
+body.dark .nav-link:hover { color: var(--primary); }
+
+body.dark .hero { background: linear-gradient(135deg, var(--navy) 0%, #1a1205 100%); }
+body.dark .hero-content h2 { color: #f1f5f9; }
+
+body.dark .section { background: transparent; }
+body.dark .section-title { color: #f1f5f9; }
+
+body.dark .schedule-card,
+body.dark .homework-card { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+body.dark .schedule-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
+
+body.dark .course-card { background: #1e293b; border-color: #334155; }
+body.dark .course-card h3 { color: #f1f5f9; }
+body.dark .course-card p { color: #94a3b8; }
+
+body.dark .about-content { color: #e2e8f0; }
+body.dark .about-content h2 { color: #f1f5f9; }
+
+body.dark .footer { background: #0a0d16; }
+body.dark .footer p { color: #94a3b8; }
+body.dark .footer .footer-designed { color: #a07d18; }
+
+body.dark .table-container { background: #1e293b; border-color: #334155; }
+body.dark th { background: var(--navy); }
+body.dark td { color: #e2e8f0; border-color: #334155; }
+body.dark tr { border-bottom-color: #334155; }
+
+body.dark .modal-content { background: #1e293b; color: #e2e8f0; }
+
+body.dark .tags { background: #1e293b; border-color: #334155; }
+body.dark .tag { background: #334155; color: #cbd5e1; }
+
+body.dark .stats-bar { background: #1a1205; }
+body.dark .stat-item { color: #f1f5f9; }

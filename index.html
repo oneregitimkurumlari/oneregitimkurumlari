@@ -19,6 +19,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="transition.css">
+    <script>if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')</script>
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -81,6 +82,7 @@
         <a href="#" class="apk-download-btn apk-header-btn" id="installBtnHeader">
             <i class="fas fa-download"></i> <span>İndir</span>
         </a>
+        <button class="dark-toggle" id="darkToggle" title="Koyu/Acik Mod"><i class="fas fa-moon"></i></button>
         <button class="menu-toggle" id="menuToggle">
             <i class="fas fa-bars"></i>
         </button>
@@ -330,6 +332,17 @@
     if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
         var a = document.getElementById('androidInstallBtn');
         if (a) { a.style.display = 'none'; }
+    }
+    var dt = document.getElementById('darkToggle');
+    if (dt) dt.addEventListener('click', function () {
+        document.documentElement.classList.toggle('dark');
+        var d = document.documentElement.classList.contains('dark');
+        localStorage.setItem('theme', d ? 'dark' : 'light');
+        dt.querySelector('i').className = d ? 'fas fa-sun' : 'fas fa-moon';
+    });
+    if (document.documentElement.classList.contains('dark')) {
+        var dti = document.getElementById('darkToggle');
+        if (dti) dti.querySelector('i').className = 'fas fa-sun';
     }
 })();
 </script>
