@@ -1,14 +1,14 @@
 {
-  "name": "Öner Eğitim Kurumları",
-  "short_name": "Öner Eğitim",
-  "description": "Öner Eğitim Kurumları online ders platformu",
+  "name": "ONLİNE PİHOS",
+  "short_name": "PİHOS",
+  "description": "ONLİNE PİHOS online ders platformu",
   "lang": "tr",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#0f172a",
-  "theme_color": "#0891b2",
+  "background_color": "#10131f",
+  "theme_color": "#c09020",
   "icons": [
     {
       "src": "icon-192.png",

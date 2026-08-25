@@ -1,18 +1,18 @@
 :root {
-    --primary: #0891b2;
-    --primary-dark: #0e7490;
-    --primary-light: #e0f7fa;
-    --navy: #0f172a;
+    --primary: #c09020;
+    --primary-dark: #8f6c12;
+    --primary-light: #faf3dd;
+    --navy: #10131f;
     --navy-light: #1e293b;
-    --secondary: #06b6d4;
-    --accent: #22d3ee;
+    --secondary: #d4af37;
+    --accent: #e3c05a;
     --text-dark: #0f172a;
     --text-medium: #475569;
     --text-light: #94a3b8;
     --bg-white: #ffffff;
-    --bg-light: #f0fdfa;
+    --bg-light: #fdfaf2;
     --bg-card: #ffffff;
-    --border: #ccfbf1;
+    --border: #eee3c8;
     --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
@@ -47,13 +47,13 @@
     justify-content: center;
     gap: 10px;
     padding: 12px 22px;
-    background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+    background: linear-gradient(135deg, #c09020 0%, #8f6c12 100%);
     color: white;
     font-size: 0.95rem;
     font-weight: 700;
     text-decoration: none;
     border-radius: var(--radius-sm);
-    box-shadow: 0 4px 14px rgba(8, 145, 178, 0.4);
+    box-shadow: 0 4px 14px rgba(192, 144, 32, 0.4);
     transition: var(--transition);
     white-space: nowrap;
     flex-shrink: 0;
@@ -67,7 +67,7 @@
 
 .apk-download-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(8, 145, 178, 0.5);
+    box-shadow: 0 6px 20px rgba(192, 144, 32, 0.5);
     color: white;
 }
 
@@ -85,7 +85,7 @@
 }
 
 .apk-header-btn:hover {
-    box-shadow: 0 4px 14px rgba(8, 145, 178, 0.45);
+    box-shadow: 0 4px 14px rgba(192, 144, 32, 0.45);
 }
 
 .apk-header-btn span {
@@ -565,7 +565,7 @@ body {
 .schedule-card.biology { border-left-color: #10b981; }
 .schedule-card.chemistry { border-left-color: #f59e0b; }
 .schedule-card.english { border-left-color: #ef4444; }
-.schedule-card.history { border-left-color: #06b6d4; }
+.schedule-card.history { border-left-color: var(--secondary); }
 .schedule-card.computer { border-left-color: #ec4899; }
 
 .schedule-header {
@@ -707,7 +707,7 @@ body {
 .course-card:nth-child(3) .course-icon { background: #d1fae5; color: #059669; }
 .course-card:nth-child(4) .course-icon { background: #fef3c7; color: #d97706; }
 .course-card:nth-child(5) .course-icon { background: #fee2e2; color: #dc2626; }
-.course-card:nth-child(6) .course-icon { background: #cffafe; color: #0891b2; }
+.course-card:nth-child(6) .course-icon { background: #f5ead0; color: #8f6c12; }
 
 .course-card h3 {
     font-size: 1.15rem;
@@ -1285,4 +1285,24 @@ body {
     .homework-card:hover {
         transform: none;
     }
+}
+
+.designed-by {
+    font-size: 0.72rem;
+    font-style: italic;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: #a07d18;
+    margin-top: 2px;
+}
+
+.logo-text .designed-by {
+    font-size: 0.62rem;
+}
+
+.footer-designed {
+    font-size: 0.75rem;
+    font-style: italic;
+    color: #d4af37;
+    margin-top: 4px;
 }

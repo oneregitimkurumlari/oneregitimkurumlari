@@ -1,7 +1,7 @@
 :root {
-    --primary: #0891b2;
-    --primary-dark: #0e7490;
-    --primary-light: #e0f7fa;
+    --primary: #c09020;
+    --primary-dark: #8f6c12;
+    --primary-light: #faf3dd;
     --navy: #0f172a;
     --navy-light: #1e293b;
     --danger: #ef4444;
@@ -271,4 +271,8 @@ tr:hover { background:var(--bg-light); }
     .table-container { border-radius:var(--radius-sm); }
     th, td { padding:8px 10px; font-size:0.75rem; }
     .btn-edit, .btn-delete { padding:8px 10px; font-size:0.75rem; min-height:36px; }
+}
+
+.designed-by {
+    font-size:0.7rem; font-style:italic; font-weight:500; letter-spacing:0.06em; color:#a07d18; margin:-4px 0 8px;
 }
