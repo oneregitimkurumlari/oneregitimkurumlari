@@ -32,7 +32,7 @@ body { font-family:'Inter',sans-serif; color:var(--text-dark); background:var(--
     background:white; padding:48px 40px; border-radius:var(--radius);
     box-shadow:var(--shadow-lg); width:100%; max-width:420px; text-align:center;
 }
-.login-logo { height:80px; width:80px; object-fit:contain; border-radius:12px; margin-bottom:16px; }
+.login-logo { height:110px; width:110px; object-fit:contain; border-radius:16px; margin-bottom:16px; }
 .login-box h1 { font-size:1.5rem; font-weight:700; color:var(--navy); margin-bottom:4px; }
 .login-box p { font-size:0.9rem; color:var(--text-light); margin-bottom:32px; }
 

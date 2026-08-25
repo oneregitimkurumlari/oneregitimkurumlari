@@ -166,11 +166,11 @@
 }
 
 .site-login-box .login-logo {
-    height: 80px;
-    width: 80px;
+    height: 140px;
+    width: 140px;
     object-fit: contain;
-    border-radius: 12px;
-    margin-bottom: 16px;
+    border-radius: 18px;
+    margin-bottom: 20px;
 }
 
 .site-login-box h1 {
@@ -305,10 +305,10 @@ body {
 }
 
 .logo-img {
-    height: 50px;
-    width: 50px;
+    height: 64px;
+    width: 64px;
     object-fit: contain;
-    border-radius: 8px;
+    border-radius: 10px;
 }
 
 .logo-text h1 {
@@ -868,10 +868,10 @@ body {
 }
 
 .footer-logo-img {
-    height: 40px;
-    width: 40px;
+    height: 56px;
+    width: 56px;
     object-fit: contain;
-    border-radius: 6px;
+    border-radius: 10px;
 }
 
 .footer p {
