@@ -118,12 +118,10 @@
 
 <div class="drive-section">
     <div class="drive-header">
-        <h3><i class="fas fa-video"></i> Ders Kayıtları (Drive)</h3>
-        <p>Bu dersin kayıtları otomatik olarak aşağıda listelenir.</p>
+        <h3><i class="fas fa-video"></i> Ders Kayıtları</h3>
+        <p>Bu dersin kayıtları aşağıda listelenir.</p>
     </div>
-    <iframe class="drive-frame"
-        src="https://drive.google.com/embeddedfolderview?id=1DXa_5ytoaOTyBLMn6nvmMCkzfdBzzYFj#list"
-        allowfullscreen></iframe>
+    <div id="recListSection" style="display:none;background:#0a0d16;border:1px solid var(--border);border-radius:12px;padding:16px;"></div>
 </div>
 
 <script>
@@ -184,6 +182,7 @@ function renderRoom(cls) {
         <span><i class="fas fa-clock"></i> ${cls.startTime} - ${cls.endTime}</span>
         <span><i class="fas fa-user"></i> ${cls.dayLabel || ""}</span>`;
     document.getElementById("stageTitle").textContent = cls.title;
+    renderRecList(cls);
     const roomName = "oneregitim-" + (cls.id || "ders");
     const jitsiUrl = "https://sfu.mirotalk.com/join?room=" + encodeURIComponent(roomName) + "&name=" + encodeURIComponent(myName || "Misafir") + "&audio=1&video=1";
 
@@ -196,6 +195,24 @@ function renderRoom(cls) {
         const lm = document.getElementById("jitsiLoading");
         if (lm) lm.style.display = "none";
     }, 5000);
+}
+
+function renderRecList(cls) {
+    const section = document.getElementById("recListSection");
+    if (!section) return;
+    const recs = cls.recordings || [];
+    if (recs.length === 0) { section.style.display = "none"; return; }
+    section.style.display = "block";
+    section.innerHTML = "<div style=\"font-weight:700;margin-bottom:12px;color:var(--text-light);font-size:0.95rem;\"><i class=\"fas fa-video\"></i> Kayıtlar (" + recs.length + ")</div>" +
+        recs.slice().reverse().map(r => {
+            const t = new Date(r.createdAt);
+            const dateStr = isNaN(t.getTime()) ? "" : "<span style=\"color:var(--text-light);font-size:0.75rem;\">" + t.toLocaleDateString("tr-TR") + "</span>";
+            return "<div style=\"display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:8px;\">" +
+                "<i class=\"fas fa-play-circle\" style=\"color:#22c55e;font-size:1.3rem;\"></i>" +
+                "<div style=\"flex:1;min-width:0;\"><div style=\"font-weight:700;font-size:0.88rem;\">" + (r.title || "Kayıt") + "</div>" + dateStr + "</div>" +
+                "<a href=\"" + r.url + "\" target=\"_blank\" style=\"padding:8px 14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.85rem;white-space:nowrap;\">İzle</a>" +
+                "</div>";
+        }).join("");
 }
 
 function loadAttendees(clsId) {
@@ -366,6 +383,7 @@ async function uploadToDrive(blob, cls) {
         setRecStatus("Kayıt yüklendi → " + link, "live");
         showRecLink(link);
         addRecLinkToList(link);
+        pushRecordingToData(link, cls);
     } catch (err) {
         console.error("gofile yükleme hatası:", err);
         downloadRecordedBlob(blob, cls);
@@ -407,6 +425,34 @@ function downloadRecordedBlob(blob, cls) {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+async function pushRecordingToData(link, cls) {
+    try {
+        const token = localStorage.getItem("github_token") || "";
+        if (!token) { console.warn("Kayıt eklendi ama data.json'a yazılamadı (token yok)"); return; }
+        const metaRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json?t=${Date.now()}`, {
+            headers: { "Authorization": "token " + token, "Cache-Control": "no-cache" }, cache: "no-store"
+        });
+        if (!metaRes.ok) { console.warn("data.json okunamadı (HTTP " + metaRes.status + ")"); return; }
+        const meta = await metaRes.json();
+        const server = JSON.parse(decodeURIComponent(escape(atob(meta.content))));
+        const c = (server.classes || []).find(x => x.id === cls.id);
+        if (c) {
+            if (!Array.isArray(c.recordings)) c.recordings = [];
+            c.recordings.push({ id: "rec" + Date.now(), title: cls.title || "Kayıt", url: link, createdAt: new Date().toISOString() });
+            c.recordingUrl = link;
+        }
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(server))));
+        const res = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json`, {
+            method: "PUT",
+            headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Kayıt eklendi: " + (cls.title || ""), content: content, sha: meta.sha })
+        }, 25000);
+        if (res.ok) console.log("Kayıt data.json'a eklendi.");
+    } catch (err) {
+        console.warn("Kayıt data.json'a yazılamadı:", err.message);
+    }
 }
 
 async function addRecordingToClass(token, classId, recordingUrl) {
