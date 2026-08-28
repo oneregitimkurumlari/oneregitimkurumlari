@@ -219,10 +219,35 @@ function getRecordings() {
                 time: c.startTime + " - " + c.endTime,
                 instructor: teacher ? teacher.name + " " + teacher.surname : "Bilinmiyor",
                 courseType: c.courseType || "math",
-                link: c.meetLink || ""
+                link: c.meetLink || "",
+                recordingUrl: c.recordingUrl || ""
             };
         })
         .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+}
+
+function recordingRawUrl(url) {
+    if (!url) return "";
+    const m = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/(?:blob|raw)\/([^\/]+)\/(.+)/);
+    if (m) return "https://raw.githubusercontent.com/" + m[1] + "/" + m[2] + "/" + m[3] + "/" + m[4];
+    return url;
+}
+
+function recordingBody(r) {
+    if (r.recordingUrl) {
+        const src = recordingRawUrl(r.recordingUrl);
+        return `
+        <video controls preload="metadata" class="recording-video" src="${src}">
+            Tarayıcınız video desteklemiyor.
+        </video>
+        <div class="recording-view-toolbar">
+            <a href="${r.recordingUrl}" target="_blank" class="schedule-btn btn-join recording-watch"><i class="fas fa-external-link-alt"></i> Kaydı Yeni Sekmede Görüntüle</a>
+        </div>`;
+    }
+    if (r.link) {
+        return `<a href="${r.link}" target="_blank" class="schedule-btn btn-join recording-watch"><i class="fas fa-video"></i> Kaydı İzle</a>`;
+    }
+    return "";
 }
 
 function recordingCard(r, idx) {
@@ -238,7 +263,7 @@ function recordingCard(r, idx) {
                 <span><i class="fas fa-user"></i> ${r.instructor}</span>
             </div>
         </div>
-        ${r.link ? `<a href="${r.link}" target="_blank" class="schedule-btn btn-join recording-watch"><i class="fas fa-video"></i> Kaydı İzle</a>` : ""}
+        ${recordingBody(r)}
     </div>`;
 }
 

@@ -6,6 +6,8 @@ let GITHUB_TOKEN = localStorage.getItem("github_token") || "";
 let remoteData = { teachers: [], classes: [], students: [], homeworks: [], sha: "" };
 let deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
 
+let recState = { recording: false, classId: null, mediaRecorder: null, chunks: [], stream: null, startedAt: null };
+
 function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -360,6 +362,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td class="actions-cell">
                     <button class="btn-edit" onclick="editClass('${c.id}')"><i class="fas fa-edit"></i></button>
                     <button class="btn-delete" onclick="deleteClass('${c.id}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn-record" onclick="startLiveClass('${c.id}')"><i class="fas fa-record-vinyl"></i> Ders Başlat</button>
                 </td>
             </tr>
         `).join("");
@@ -594,3 +597,158 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 });
+
+/* ============ Ders Kayıt Sistemi (Ekran Kaydı) ============ */
+function findClass(id) {
+    return (remoteData.classes || []).find(c => c.id === id);
+}
+
+window.startLiveClass = async function(id) {
+    const cls = findClass(id);
+    if (!cls) { showToast("Ders bulunamadı!", true); return; }
+
+    if (recState.recording) {
+        showToast("Zaten kayıt devam ediyor. Önce mevcut kaydı bitirin.", true);
+        return;
+    }
+
+    if (!GITHUB_TOKEN) {
+        showToast("Kayıt yüklemek için Ayarlardan GitHub Token girilmelidir!", true);
+        return;
+    }
+
+    // Meet linkini yeni sekmede aç
+    if (cls.meetLink) window.open(cls.meetLink, "_blank");
+
+    try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        recState.stream = stream;
+        recState.classId = id;
+        recState.chunks = [];
+        recState.startedAt = Date.now();
+
+        const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9"
+            : MediaRecorder.isTypeSupported("video/webm") ? "video/webm" : "";
+        const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+        recState.mediaRecorder = mr;
+        mr.ondataavailable = (e) => { if (e.data && e.data.size > 0) recState.chunks.push(e.data); };
+        mr.onstop = () => { uploadAndFinishRecording(); };
+        mr.start(1000);
+
+        recState.recording = true;
+        document.getElementById("recordingPanel").style.display = "flex";
+        document.getElementById("recordingDetail").textContent = cls.title + " - " + (cls.description || "");
+        document.getElementById("recordingStatus").querySelector("span").textContent = "Kayıt Başladı";
+        document.getElementById("recordingPanel").scrollIntoView({ behavior: "smooth" });
+
+        stream.getVideoTracks()[0].addEventListener("ended", () => {
+            if (recState.recording && recState.mediaRecorder) {
+                recState.mediaRecorder.stop();
+            }
+        });
+
+        showToast("Kayıt başladı. Ders bitince 'Dersi Bitir' demeyi unutmayın.");
+    } catch (err) {
+        console.error("Ekran kaydı başlatılamadı:", err);
+        showToast("Ekran kaydı başlatılamadı. Tarayıcı izni verdiğinizden emin olun.", true);
+        if (recState.stream) { recState.stream.getTracks().forEach(t => t.stop()); }
+    }
+};
+
+document.addEventListener("DOMContentLoaded", function () {
+    var stopBtn = document.getElementById("stopRecordBtn");
+    if (stopBtn) stopBtn.addEventListener("click", stopLiveClass);
+});
+
+window.stopLiveClass = function() {
+    if (!recState.recording || !recState.mediaRecorder) { showToast("Aktif kayıt yok.", true); return; }
+    document.getElementById("recordingStatus").querySelector("span").textContent = "Kayıt durduruluyor & yükleniyor...";
+    recState.mediaRecorder.stop();
+};
+
+async function uploadAndFinishRecording() {
+    const cls = findClass(recState.classId);
+    const blob = new Blob(recState.chunks, { type: "video/webm" });
+    const classId = recState.classId;
+    const startedTime = new Date(recState.startedAt);
+
+    // stream tüm parçalarını durdur
+    if (recState.stream) recState.stream.getTracks().forEach(t => t.stop());
+    recState.recording = false;
+
+    // Kayıt sıfırla (UI'da uploading göstermek için daha sonra paneli gizle)
+    recordStopUI(classId);
+
+    if (!cls || blob.size < 1000) {
+        showToast("Kayıt dosyası boş, yüklenmedi.", true);
+        return;
+    }
+
+    showUploading(classId);
+
+    try {
+        const reader = new FileReader();
+        const base64 = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result.split(",")[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+
+        const stamp = startedTime.getTime();
+        const safeTitle = (cls.title || "ders").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+        const filePath = "recordings/" + stamp + "_" + safeTitle + ".webm";
+
+        const uploadRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/${filePath}`, {
+            method: "PUT",
+            headers: { "Authorization": "token " + GITHUB_TOKEN, "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Ders kaydı yüklendi: " + cls.title, content: base64 })
+        }, 120000);
+
+        hideUploading();
+
+        if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            const recordingUrl = uploadData.content.html_url;
+            await addRecordingToClass(classId, recordingUrl);
+            showToast("Kayıt yüklendi ve ders kayıtlarına eklendi!");
+        } else {
+            const err = await uploadRes.json();
+            console.error("Kayıt yükleme hatası:", err);
+            showToast("Kayıt yüklenemedi. Dosya GitHub limitlerini aştı olabilir (max 100MB).", true);
+        }
+    } catch (err) {
+        hideUploading();
+        console.error("Kayıt yükleme hatası:", err);
+        showToast("Kayıt yüklenemedi: " + err.message, true);
+    }
+}
+
+function recordStopUI(classId) {
+    document.getElementById("recordingPanel").style.display = "none";
+    renderClasses(currentTeacher);
+}
+
+function showUploading(classId) {
+    const cls = findClass(classId);
+    const panel = document.getElementById("recordingPanel");
+    panel.style.display = "flex";
+    document.getElementById("recordingStatus").querySelector("span").textContent = "Kayıt yükleniyor...";
+    document.getElementById("recordingDetail").textContent = (cls ? cls.title + " " : "") + "— yükleme devam ediyor";
+    document.getElementById("stopRecordBtn").disabled = true;
+}
+
+function hideUploading() {
+    document.getElementById("recordingPanel").style.display = "none";
+    var stopBtn = document.getElementById("stopRecordBtn");
+    if (stopBtn) stopBtn.disabled = false;
+}
+
+async function addRecordingToClass(classId, recordingUrl) {
+    const idx = (remoteData.classes || []).findIndex(c => c.id === classId);
+    if (idx === -1) return false;
+    remoteData.classes[idx].recordingUrl = recordingUrl;
+    remoteData.classes[idx].recordingAt = new Date().toISOString();
+    const ok = await saveRemoteData();
+    renderClasses(currentTeacher);
+    return ok;
+}
