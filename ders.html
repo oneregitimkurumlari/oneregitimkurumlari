@@ -161,9 +161,9 @@ function renderRoom(cls) {
     document.getElementById("stageTitle").textContent = cls.title;
     document.getElementById("stageDesc").textContent = cls.description || "Bugünkü derse hoş geldiniz.";
     const roomName = "oneregitim-" + (cls.id || "ders");
-    const jitsiUrl = "https://meet.jit.si/" + encodeURIComponent(roomName);
+    const jitsiUrl = "https://sfu.mirotalk.com/join/" + encodeURIComponent(roomName);
     const jFrame = document.getElementById("jitsiFrame");
-    jFrame.src = jitsiUrl + "#userInfo.displayName=" + encodeURIComponent(myName || "Misafir");
+    jFrame.src = jitsiUrl;
     document.getElementById("jitsiWrap").style.display = "block";
     document.getElementById("joinMeetLink").href = jitsiUrl;
     window.setTimeout(() => {
