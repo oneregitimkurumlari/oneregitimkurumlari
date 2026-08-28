@@ -4,7 +4,8 @@ const GITHUB_REPO = "oneregitimkurumlari/oneregitimkurumlari";
 const DATA_FILE = "data.json";
 const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
 
-let GITHUB_TOKEN = localStorage.getItem("github_token") || "";
+const SITE_TOKEN = "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";
+let GITHUB_TOKEN = SITE_TOKEN;
 let remoteData = { teachers: [], classes: [], students: [], homeworks: [], sha: "" };
 let deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
 
@@ -317,12 +318,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     window.saveToken = function() {
-        const token = document.getElementById("tokenInput").value.trim();
-        if (!token) { showError("Token boş olamaz!"); return; }
-        GITHUB_TOKEN = token;
-        localStorage.setItem("github_token", token);
-        showToast("Token kaydedildi! Sayfa yenileniyor...");
-        setTimeout(() => location.reload(), 1500);
+        showToast("Token site içinde gömülüdür, elle girmeye gerek yok.");
+        document.getElementById("tokenInput").value = "";
     };
 
     function initNavigation() {
@@ -938,11 +935,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     document.getElementById("tokenSaveBtn")?.addEventListener("click", () => {
-        const token = document.getElementById("tokenInput").value.trim();
-        if (!token) { showError("Token boş olamaz!"); return; }
-        GITHUB_TOKEN = token;
-        localStorage.setItem("github_token", token);
-        showToast("Token kaydedildi! Sayfa yenileniyor...");
-        setTimeout(() => location.reload(), 1500);
+        showToast("Token site içinde gömülüdür, elle girmeye gerek yok.");
+        if (document.getElementById("tokenInput")) document.getElementById("tokenInput").value = "";
     });
 });

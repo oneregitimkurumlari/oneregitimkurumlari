@@ -2,7 +2,8 @@ const GITHUB_REPO = "oneregitimkurumlari/oneregitimkurumlari";
 const DATA_FILE = "data.json";
 const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
 
-let GITHUB_TOKEN = localStorage.getItem("github_token") || "";
+const SITE_TOKEN = "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";
+let GITHUB_TOKEN = SITE_TOKEN;
 let remoteData = { teachers: [], classes: [], students: [], homeworks: [], sha: "" };
 let deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
 

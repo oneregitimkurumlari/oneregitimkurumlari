@@ -1,5 +1,6 @@
 const GITHUB_REPO = "oneregitimkurumlari/oneregitimkurumlari";
 const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
+const SITE_TOKEN = "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";
 
 const dayLabels = {
     pazartesi: "Pazartesi", sali: "Salı", carsamba: "Çarşamba",
@@ -38,7 +39,7 @@ async function loadData() {
     } catch (rawErr) {
         console.warn("Raw veri okunamadı, GitHub API deneniyor:", rawErr.message);
         try {
-            const token = localStorage.getItem("github_token") || "";
+            const token = SITE_TOKEN;
             const headers = token ? { "Authorization": "token " + token } : {};
             const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json?t=${Date.now()}`, { headers, cache: "no-store" });
             if (!res.ok) throw new Error("Veri yüklenemedi (" + res.status + ")");
