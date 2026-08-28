@@ -535,7 +535,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td>${dayLabels[c.day] || c.day}</td>
                 <td>${formatDate(c.date)}</td>
                 <td>${formatTime(c.startTime, c.endTime)}</td>
-                <td><a href="${c.meetLink}" target="_blank" class="meet-link">${c.meetLink}</a></td>
+                <td>${c.meetLink ? '<a href="' + c.meetLink + '" target="_blank" class="meet-link">' + c.meetLink + '</a>' : '<span style="color:var(--text-light);font-size:0.8rem;">—</span>'}</td>
                 <td><button class="btn-rec" onclick="openRecordModal('${c.id}')"><i class="fas fa-video"></i> Kayıtlar<span class="rec-count">${recs.length}</span></button></td>
                 <td class="actions-cell">
                     <button class="btn-edit" onclick="editClass('${c.id}')"><i class="fas fa-edit"></i></button>
