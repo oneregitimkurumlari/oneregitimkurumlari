@@ -143,7 +143,16 @@ let recState = { recording: false, mediaRecorder: null, chunks: [], stream: null
 const SITE_TOKEN = "";
 
 async function getGitHubToken() {
-    return localStorage.getItem("github_token") || SITE_TOKEN || "";
+    let token = localStorage.getItem("github_token");
+    if (token) return token;
+    if (myRole !== "teacher") return "";
+    token = prompt("Kaydı data.json'a kaydetmek için GitHub Token'ı girin");
+    if (token) {
+        token = token.trim();
+        localStorage.setItem("github_token", token);
+        return token;
+    }
+    return "";
 }
 
 async function loadData() {
@@ -429,7 +438,7 @@ function downloadRecordedBlob(blob, cls) {
 
 async function pushRecordingToData(link, cls) {
     try {
-        const token = localStorage.getItem("github_token") || "";
+        const token = await getGitHubToken();
         if (!token) { console.warn("Kayıt eklendi ama data.json'a yazılamadı (token yok)"); return; }
         const metaRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json?t=${Date.now()}`, {
             headers: { "Authorization": "token " + token, "Cache-Control": "no-cache" }, cache: "no-store"
