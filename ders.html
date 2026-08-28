@@ -102,7 +102,14 @@
             <button class="rec-btn rec-start" id="startRecBtn"><i class="fas fa-circle"></i> Kaydı Başlat</button>
             <button class="rec-btn rec-stop" id="stopRecBtn" style="display:none;"><i class="fas fa-stop"></i> Dersi Bitir & İndir</button>
             <div class="rec-status" id="recStatus"></div>
-            <p style="font-size:0.8rem;color:var(--text-light);margin-top:10px;">Kayıt indirilir. Dosyayı aşağıdaki <strong>Ders Kayıtları (Drive)</strong> klasörüne (veya ana Drive kayıt klasörüne) yükleyin — kayıt otomatik görünür.</p>
+            <div style="margin-top:12px;padding:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;" id="tokenBox">
+                <div style="font-size:0.8rem;font-weight:700;color:var(--text-light);margin-bottom:6px;">GitHub Token <span id="tokenState"></span></div>
+                <div style="display:flex;gap:8px;">
+                    <input type="password" id="tokenInputBox" placeholder="ghp_..." autocomplete="off" style="flex:1;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;background:var(--bg-light);color:var(--text);min-width:0;">
+                    <button id="tokenSaveBtn" style="padding:9px 14px;border:none;border-radius:8px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;cursor:pointer;font-weight:700;">Kaydet</button>
+                </div>
+                <div style="font-size:0.72rem;color:var(--text-light);margin-top:6px;" id="tokenInfo">Token gerektiğinde yazıp "Kaydet"e basın. Sonraki sefere sorulmaz.</div>
+            </div>
         </div>
 
         <div class="room-card">
@@ -212,6 +219,33 @@ function getClassId() {
     return params.get("ders");
 }
 
+function setupTokenBox() {
+    const box = document.getElementById("tokenBox");
+    if (!box || myRole !== "teacher") return;
+    const input = document.getElementById("tokenInputBox");
+    const state = document.getElementById("tokenState");
+    const info = document.getElementById("tokenInfo");
+    document.getElementById("tokenSaveBtn").onclick = () => {
+        const v = input.value.trim();
+        if (!v) { info.textContent = "Lütfen token yazın."; info.style.color = "#ef4444"; return; }
+        localStorage.setItem("github_token", v);
+        input.value = "";
+        info.textContent = "Token kaydedildi ✓";
+        info.style.color = "#22c55e";
+        state.textContent = "• girildi";
+        state.style.color = "#22c55e";
+    };
+    const tok = localStorage.getItem("github_token");
+    if (tok) {
+        state.textContent = "• girildi";
+        state.style.color = "#22c55e";
+        info.textContent = "Token mevcut. Kaydı başlatınca otomatik eklenecek.";
+    } else {
+        state.textContent = "• girilmedi";
+        state.style.color = "#ef4444";
+    }
+}
+
 function renderRoom(cls) {
     document.title = cls.title + " - Canlı Ders Odası";
     document.getElementById("roomMeta").innerHTML = `
@@ -221,6 +255,7 @@ function renderRoom(cls) {
         <span><i class="fas fa-user"></i> ${cls.dayLabel || ""}</span>`;
     document.getElementById("stageTitle").textContent = cls.title;
     renderRecList(cls);
+    if (myRole === "teacher") setupTokenBox();
     const roomName = "oneregitim-" + (cls.id || "ders");
     const jitsiUrl = "https://sfu.mirotalk.com/join?room=" + encodeURIComponent(roomName) + "&name=" + encodeURIComponent(myName || "Misafir") + "&audio=1&video=1";
 
