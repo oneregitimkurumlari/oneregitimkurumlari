@@ -73,6 +73,7 @@
         <nav class="nav">
             <a href="#program" class="nav-link">Ders Programı</a>
             <a href="#dersler" class="nav-link">Dersler</a>
+            <a href="#kayitlar" class="nav-link">Ders Kayıtları</a>
             <a href="#odevler" class="nav-link">Ödevler</a>
             <a href="#hakkimizda" class="nav-link">Hakkımızda</a>
             <a href="#iletisim" class="nav-link">İletişim</a>
@@ -162,6 +163,20 @@
             <p>Sunulan eğitim programları</p>
         </div>
         <div class="courses-grid" id="coursesGrid">
+        </div>
+    </div>
+</section>
+
+<section class="section section-alt" id="kayitlar">
+    <div class="container">
+        <div class="section-header">
+            <h2>Ders Kayıtları</h2>
+            <p>Geçmiş derslerinizin kayıtları (son 5 ders)</p>
+        </div>
+        <div class="recordings-grid" id="recordingsGrid">
+        </div>
+        <div class="recordings-footer">
+            <button class="btn btn-secondary" id="allRecordingsBtn"><i class="fas fa-history"></i> Tüm Geçmiş Dersler</button>
         </div>
     </div>
 </section>
@@ -269,6 +284,17 @@
     <div class="modal-content">
         <button class="modal-close" id="modalClose">&times;</button>
         <div class="modal-body" id="modalBody">
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="allRecordingsModal">
+    <div class="modal-content modal-content-lg">
+        <button class="modal-close" id="allRecordingsClose">&times;</button>
+        <div class="modal-body">
+            <h3><i class="fas fa-history"></i> Geçmiş Dersler</h3>
+            <div class="recordings-list" id="allRecordingsList">
+            </div>
         </div>
     </div>
 </div>

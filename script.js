@@ -192,6 +192,88 @@ function renderHomework() {
 
 function joinClass(link) { if (link) window.open(link, "_blank"); }
 
+function isClassPast(c) {
+    const today = new Date();
+    const todayStr = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0") + "-" + String(today.getDate()).padStart(2, "0");
+    if (!c.date) return false;
+    if (c.date < todayStr) return true;
+    if (c.date > todayStr) return false;
+    const [eh, em] = (c.endTime || "23:59").split(":").map(Number);
+    const endMin = eh * 60 + em;
+    const nowMin = today.getHours() * 60 + today.getMinutes();
+    return nowMin > endMin;
+}
+
+function getRecordings() {
+    return cachedData.classes
+        .filter(c => isClassPast(c))
+        .map(c => {
+            const teacher = cachedData.teachers.find(t => t.id === c.teacherId);
+            const subject = c.description || c.title;
+            return {
+                id: c.id,
+                title: c.title,
+                subject: subject,
+                date: c.date || "",
+                dayLabel: c.dayLabel || c.day || "",
+                time: c.startTime + " - " + c.endTime,
+                instructor: teacher ? teacher.name + " " + teacher.surname : "Bilinmiyor",
+                courseType: c.courseType || "math",
+                link: c.meetLink || ""
+            };
+        })
+        .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+}
+
+function recordingCard(r, idx) {
+    return `
+    <div class="recording-card ${r.courseType}">
+        <div class="recording-rank">${idx}</div>
+        <div class="recording-info">
+            <h3>${r.title}</h3>
+            <p class="recording-subject">${r.subject}</p>
+            <div class="recording-meta">
+                <span><i class="fas fa-calendar"></i> ${r.date}</span>
+                <span><i class="fas fa-clock"></i> ${r.time}</span>
+                <span><i class="fas fa-user"></i> ${r.instructor}</span>
+            </div>
+        </div>
+        ${r.link ? `<a href="${r.link}" target="_blank" class="schedule-btn btn-join recording-watch"><i class="fas fa-video"></i> Kaydı İzle</a>` : ""}
+    </div>`;
+}
+
+function renderRecordings() {
+    const grid = document.getElementById("recordingsGrid");
+    const list = getRecordings();
+
+    if (list.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column:1/-1;text-align:center;padding:50px 20px;color:var(--text-light);">
+                <i class="fas fa-video-slash" style="font-size:3rem;margin-bottom:16px;display:block;"></i>
+                <p style="font-size:1.05rem;">Henüz tamamlanmış ders kaydı yok</p>
+                <p style="font-size:0.9rem;">Ders bitince kaydı otomatik olarak burada görünecek.</p>
+            </div>`;
+        return;
+    }
+
+    const top5 = list.slice(0, 5);
+    grid.innerHTML = top5.map((r, i) => recordingCard(r, i + 1)).join("");
+}
+
+function showAllRecordings() {
+    const listEl = document.getElementById("allRecordingsList");
+    const list = getRecordings();
+    document.getElementById("allRecordingsModal").classList.add("active");
+
+    if (list.length === 0) {
+        listEl.innerHTML = `<p style="text-align:center;color:var(--text-light);padding:40px 0;">Henüz tamamlanmış ders kaydı yok.</p>`;
+        return;
+    }
+    listEl.innerHTML = list.map((r, i) => recordingCard(r, i + 1)).join("");
+}
+
+function closeAllRecordings() { document.getElementById("allRecordingsModal").classList.remove("active"); }
+
 function showDownloadToast(msg, isError) {
     const t = document.createElement("div");
     t.textContent = msg;
@@ -256,6 +338,7 @@ function showSite() {
 function initSite() {
     renderSchedule();
     renderCourses();
+    renderRecordings();
     renderHomework();
 
     document.querySelectorAll(".day-btn").forEach(btn => {
@@ -270,11 +353,18 @@ function initSite() {
         document.querySelector(".nav").classList.toggle("active");
     });
 
+    var allBtn = document.getElementById("allRecordingsBtn");
+    if (allBtn) allBtn.addEventListener("click", showAllRecordings);
+    var allClose = document.getElementById("allRecordingsClose");
+    if (allClose) allClose.addEventListener("click", closeAllRecordings);
+    var allModal = document.getElementById("allRecordingsModal");
+    if (allModal) allModal.addEventListener("click", (e) => { if (e.target.id === "allRecordingsModal") closeAllRecordings(); });
+
     document.getElementById("modalClose").addEventListener("click", closeModal);
     document.getElementById("classModal").addEventListener("click", (e) => {
         if (e.target.id === "classModal") closeModal();
     });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeModal(); closeAllRecordings(); } });
     document.querySelectorAll(".nav-link").forEach(link => {
         link.addEventListener("click", () => document.querySelector(".nav").classList.remove("active"));
     });
