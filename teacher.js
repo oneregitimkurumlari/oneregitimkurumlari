@@ -597,31 +597,42 @@ async function uploadAndFinishRecording() {
     showUploading(classId);
 
     try {
-        const reader = new FileReader();
-        const base64 = await new Promise((resolve, reject) => {
-            reader.onload = () => resolve(reader.result.split(",")[1]);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-
         const stamp = startedTime.getTime();
+        const fname = "kayit_" + stamp + ".webm";
 
         hideUploading();
 
+        let recordingUrl = null;
         try {
-            const fd = new FormData();
-            fd.append("file", blob, "kayit_" + stamp + ".webm");
-            const up = await fetch("https://upload.gofile.io/uploadfile", { method: "POST", body: fd });
-            const upData = await up.json();
-            if (upData.status === "ok" && upData.data && upData.data.downloadPage) {
-                const recordingUrl = upData.data.downloadPage;
-                await addRecordingToClass(classId, recordingUrl);
-                showToast("Kayıt yüklendi ve ders kayıtlarına eklendi!");
+            const upUrl = "https://firebasestorage.googleapis.com/v0/b/one-egitim.appspot.com/o?uploadType=media&name=recordings%2F" + encodeURIComponent(fname);
+            const upRes = await fetch(upUrl, { method: "POST", body: blob });
+            if (upRes.ok) {
+                recordingUrl = "https://firebasestorage.googleapis.com/v0/b/one-egitim.appspot.com/o/recordings%2F" + encodeURIComponent(fname) + "?alt=media";
             } else {
-                showToast("Kayıt yüklenemedi.", true);
+                console.warn("Firebase Storage yükleme başarısız (HTTP " + upRes.status + "), gofile deneniyor.");
             }
         } catch (err) {
-            console.error("Kayıt yükleme hatası:", err);
+            console.warn("Firebase Storage yükleme hatası:", err.message, "→ gofile deneniyor.");
+        }
+
+        if (!recordingUrl) {
+            try {
+                const fd = new FormData();
+                fd.append("file", blob, fname);
+                const up = await fetch("https://upload.gofile.io/uploadfile", { method: "POST", body: fd });
+                const upData = await up.json();
+                if (upData.status === "ok" && upData.data && upData.data.downloadPage) {
+                    recordingUrl = upData.data.downloadPage;
+                }
+            } catch (err) {
+                console.error("gofile yükleme hatası:", err);
+            }
+        }
+
+        if (recordingUrl) {
+            await addRecordingToClass(classId, recordingUrl);
+            showToast("Kayıt yüklendi ve ders kayıtlarına eklendi!");
+        } else {
             showToast("Kayıt yüklenemedi.", true);
         }
     } catch (err) {
