@@ -68,8 +68,6 @@
         @media (max-width: 900px) { .drive-frame { height: 420px; } }
         @media (max-width: 900px) { .room-main { grid-template-columns: 1fr; } }
     </style>
-    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </head>
 <body>
 
@@ -439,76 +437,16 @@ function updateRecUi() {
 
 const FIREBASE_STORAGE_BUCKET = "one-egitim.appspot.com";
 
-let gapiLoadedFlag = false;
-let gisLoadedFlag = false;
-let gapiInited = false;
-let gisInited = false;
-let gapiClientInited = false;
-let driveAccessToken = null;
-const GOOGLE_CLIENT_ID = "989501478590-b693esov2sdsmbjjh8hco706gup46lnq.apps.googleusercontent.com";
-const GAPI_SCOPE = "https://www.googleapis.com/auth/drive.file";
-
-function gapiLoaded() { gapiLoadedFlag = true; maybeInitGoogle(); }
-function gisLoaded() { gisLoadedFlag = true; maybeInitGoogle(); }
-function maybeInitGoogle() {
-    if (!gapiLoadedFlag || !gisLoadedFlag) return;
-    gapi.load("client", () => {
-        gapi.client.load("https://www.googleapis.com/discovery/v1/apis/drive/v3/rest")
-            .then(() => { gapiClientInited = true; })
-            .catch(e => console.warn("Drive API yüklenemedi:", e));
-    });
-}
-
-function getDriveToken() {
-    return new Promise((resolve, reject) => {
-        if (driveAccessToken) return resolve(driveAccessToken);
-        const client = google.accounts.oauth2.initTokenClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: GAPI_SCOPE,
-            callback: (resp) => {
-                if (resp && resp.access_token) {
-                    driveAccessToken = resp.access_token;
-                    resolve(resp.access_token);
-                } else {
-                    reject(new Error(resp && resp.error ? resp.error : "Google girişi iptal edildi"));
-                }
-            },
-            error_callback: () => reject(new Error("Google OAuth hatası"))
-        });
-        client.requestAccessToken();
-    });
-}
-
-async function uploadRecordingToDrive(blob, fname) {
-    const token = await getDriveToken();
-
-    const resumable = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable", {
-        method: "POST",
-        headers: {
-            "Authorization": "Bearer " + token,
-            "Content-Type": "application/json; charset=UTF-8",
-            "X-Upload-Content-Type": "video/webm",
-            "X-Upload-Content-Length": blob.size
-        },
-        body: JSON.stringify({ name: fname, mimeType: "video/webm" })
-    });
-    if (!resumable.ok) throw new Error("Drive oturumu açılamadı (" + resumable.status + ")");
-    const sessionUrl = resumable.headers.get("Location");
-    if (!sessionUrl) throw new Error("Drive oturum URL'si alınamadı");
-
-    const up = await fetch(sessionUrl, { method: "PUT", body: blob });
-    if (!up.ok) throw new Error("Drive yükleme başarısız (" + up.status + ")");
-    const meta = await up.json();
-    const fileId = meta.id;
-    if (!fileId) throw new Error("Drive dosya ID'si alınamadı");
-
-    await fetch("https://www.googleapis.com/drive/v3/files/" + fileId + "/permissions", {
-        method: "POST",
-        headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
-        body: JSON.stringify({ role: "reader", type: "anyone" })
-    });
-
-    return "https://drive.google.com/file/d/" + fileId + "/preview";
+async function uploadRecordingToCatbox(blob, fname) {
+    const fd = new FormData();
+    fd.append("reqtype", "fileupload");
+    fd.append("fileToUpload", blob, fname);
+    const res = await fetch("https://catbox.moe/user/api.php", { method: "POST", body: fd });
+    const text = await res.text();
+    if (!res.ok || !/^https?:\/\/files\.catbox\.moe\//.test(text.trim())) {
+        throw new Error(text.trim() && text.trim() !== "" ? "catbox reddetti: " + text.trim() : "catbox yükleme başarısız (" + res.status + ")");
+    }
+    return text.trim();
 }
 
 async function uploadToDrive(blob, cls) {
@@ -517,15 +455,11 @@ async function uploadToDrive(blob, cls) {
 
     let link = null;
 
-    if (gapiClientInited) {
-        try {
-            setRecStatus("Kayıt Google Drive'a yükleniyor...", "info");
-            link = await uploadRecordingToDrive(blob, fname);
-        } catch (e) {
-            console.warn("Drive yükleme başarısız:", e.message, "→ Firebase Storage deneniyor.");
-        }
-    } else {
-        console.warn("Google Drive hazır değil, ikinci seçenek deneniyor.");
+    try {
+        setRecStatus("Kayıt yükleniyor...", "info");
+        link = await uploadRecordingToCatbox(blob, fname);
+    } catch (e) {
+        console.warn("catbox yükleme başarısız:", e.message, "→ Firebase Storage deneniyor.");
     }
 
     if (!link) {

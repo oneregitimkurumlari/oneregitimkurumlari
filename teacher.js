@@ -604,15 +604,29 @@ async function uploadAndFinishRecording() {
 
         let recordingUrl = null;
         try {
-            const upUrl = "https://firebasestorage.googleapis.com/v0/b/one-egitim.appspot.com/o?uploadType=media&name=recordings%2F" + encodeURIComponent(fname);
-            const upRes = await fetch(upUrl, { method: "POST", body: blob });
-            if (upRes.ok) {
-                recordingUrl = "https://firebasestorage.googleapis.com/v0/b/one-egitim.appspot.com/o/recordings%2F" + encodeURIComponent(fname) + "?alt=media";
-            } else {
-                console.warn("Firebase Storage yükleme başarısız (HTTP " + upRes.status + "), gofile deneniyor.");
-            }
+            const fd = new FormData();
+            fd.append("reqtype", "fileupload");
+            fd.append("fileToUpload", blob, fname);
+            const up = await fetch("https://catbox.moe/user/api.php", { method: "POST", body: fd });
+            const text = await up.text();
+            if (up.ok && /^https?:\/\/files\.catbox\.moe\//.test(text.trim())) recordingUrl = text.trim();
+            else console.warn("catbox reddetti:", text.trim(), "→ Storage deneniyor.");
         } catch (err) {
-            console.warn("Firebase Storage yükleme hatası:", err.message, "→ gofile deneniyor.");
+            console.warn("catbox hatası:", err.message, "→ Storage deneniyor.");
+        }
+
+        if (!recordingUrl) {
+            try {
+                const upUrl = "https://firebasestorage.googleapis.com/v0/b/one-egitim.appspot.com/o?uploadType=media&name=recordings%2F" + encodeURIComponent(fname);
+                const upRes = await fetch(upUrl, { method: "POST", body: blob });
+                if (upRes.ok) {
+                    recordingUrl = "https://firebasestorage.googleapis.com/v0/b/one-egitim.appspot.com/o/recordings%2F" + encodeURIComponent(fname) + "?alt=media";
+                } else {
+                    console.warn("Firebase Storage yükleme başarısız (HTTP " + upRes.status + "), gofile deneniyor.");
+                }
+            } catch (err) {
+                console.warn("Firebase Storage yükleme hatası:", err.message, "→ gofile deneniyor.");
+            }
         }
 
         if (!recordingUrl) {
