@@ -1,9 +1,7 @@
-const GITHUB_REPO = "oneregitimkurumlari/oneregitimkurumlari";
-const DATA_FILE = "data.json";
-const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
+const FIREBASE_URL = "https://one-egitim-default-rtdb.firebaseio.com";
+const DATA_URL = FIREBASE_URL + "/.json";
 
-let GITHUB_TOKEN = localStorage.getItem("github_token") || "";
-let remoteData = { teachers: [], classes: [], students: [], homeworks: [], sha: "" };
+let remoteData = { teachers: [], classes: [], students: [], homeworks: [] };
 let deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
 
 let recState = { recording: false, classId: null, mediaRecorder: null, chunks: [], stream: null, startedAt: null };
@@ -93,27 +91,6 @@ function showConfirm(msg, callback) {
 
 async function fetchRemoteData() {
     try {
-        if (GITHUB_TOKEN) {
-            try {
-                const res = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
-                    headers: { "Authorization": "token " + GITHUB_TOKEN, "Cache-Control": "no-cache" },
-                    cache: "no-store"
-                });
-                if (!res.ok) throw new Error("API " + res.status);
-                const meta = await res.json();
-                remoteData.sha = meta.sha;
-                const decoded = decodeURIComponent(escape(atob(meta.content)));
-                const json = JSON.parse(decoded);
-                remoteData.teachers = json.teachers || [];
-                remoteData.classes = json.classes || [];
-                remoteData.students = json.students || [];
-                remoteData.homeworks = json.homeworks || [];
-                deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
-                return true;
-            } catch (apiErr) {
-                console.warn("GitHub API hatası, raw fallback deneniyor:", apiErr.message);
-            }
-        }
         const res = await fetchWithTimeout(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
         if (!res.ok) throw new Error("Veri okunamadı");
         const json = await res.json();
@@ -130,26 +107,11 @@ async function fetchRemoteData() {
 }
 
 async function saveRemoteData() {
-    if (!GITHUB_TOKEN) {
-        showError("GitHub Token tanımlanmamış!");
-        return false;
-    }
-
     showSaveOverlay();
 
     try {
-        const metaRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
-            headers: { "Authorization": "token " + GITHUB_TOKEN },
-            cache: "no-store"
-        });
-        if (!metaRes.ok) {
-            const err = await metaRes.json().catch(() => ({}));
-            showError("SHA alınamadı: " + (err.message || metaRes.status) + (metaRes.status === 401 ? " - Token geçersiz veya süresi dolmuş!" : ""));
-            return false;
-        }
-        const meta = await metaRes.json();
-        const decoded = decodeURIComponent(escape(atob(meta.content)));
-        const serverData = JSON.parse(decoded);
+        const metaRes = await fetchWithTimeout(FIREBASE_URL + "/.json", { cache: "no-store" });
+        const serverData = metaRes.ok ? await metaRes.json() : {};
 
         function mergeArrays(serverArr, localArr, delSet) {
             const merged = new Map();
@@ -164,45 +126,31 @@ async function saveRemoteData() {
         remoteData.classes = mergeArrays(serverData.classes, remoteData.classes, deletedIds.classes);
         remoteData.students = mergeArrays(serverData.students, remoteData.students, deletedIds.students);
         remoteData.homeworks = mergeArrays(serverData.homeworks, remoteData.homeworks || [], deletedIds.homeworks);
-        remoteData.sha = meta.sha;
 
-        const content = btoa(unescape(encodeURIComponent(JSON.stringify({
+        const payload = {
             teachers: remoteData.teachers,
             classes: remoteData.classes,
             students: remoteData.students,
             homeworks: remoteData.homeworks
-        }, null, 2))));
+        };
 
-        const res = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}`, {
+        const res = await fetchWithTimeout(FIREBASE_URL + "/.json", {
             method: "PUT",
-            headers: {
-                "Authorization": "token " + GITHUB_TOKEN,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                message: "Ogretmen paneli guncellendi - " + new Date().toISOString(),
-                content: content,
-                sha: remoteData.sha
-            })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
         }, 30000);
 
         if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            let msg = "Kayit basarisiz: " + (err.message || "HTTP " + res.status);
-            if (res.status === 401 || res.status === 403) msg += " - Token gecersiz/Yetki yok. Yonetim panelinden yeni token girin.";
-            if (res.status === 409) msg += " - Versiyon cakismasi, tekrar deneyin.";
-            showError(msg);
+            showError("Kayit basarisiz: HTTP " + res.status);
             return false;
         }
 
-        const result = await res.json();
-        remoteData.sha = result.content.sha;
         deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
         return true;
     } catch (e) {
         console.error("Kayit hatasi:", e);
         const msg = e.name === "AbortError"
-            ? "Kayit basarisiz: Istek zaman asimina ugradi (ag cok yavas veya GitHub'a erisilemiyor)"
+            ? "Kayit basarisiz: Istek zaman asimina ugradi (ag cok yavas)"
             : "Kayit basarisiz: " + e.message;
         showError(msg);
         return false;
@@ -266,34 +214,6 @@ document.addEventListener("DOMContentLoaded", () => {
     async function initPanel(teacherId) {
         await fetchRemoteData();
         currentTeacher = teacherId;
-
-        if (!GITHUB_TOKEN) {
-            let existingBanner = document.getElementById("tokenBanner");
-            if (!existingBanner) {
-                const banner = document.createElement("div");
-                banner.id = "tokenBanner";
-                banner.style.cssText = "background:#f59e0b;color:#78350f;padding:14px 20px;font-size:0.85rem;font-weight:600;text-align:center;";
-                banner.innerHTML = `<i class="fas fa-exclamation-triangle"></i> GitHub Token tanımlı değil. Ders/ödev kaydetmek ve Teams linkini güncellemek için aşağıya token'ı yapıştırın:
-                    <div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-                        <input type="password" id="teacherTokenInput" placeholder="github_pat_..." style="padding:8px 12px;border:1px solid #78350f;border-radius:6px;font-size:0.8rem;min-width:260px;">
-                        <button id="teacherTokenSave" style="padding:8px 16px;background:#78350f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;">Kaydet</button>
-                    </div>
-                    <p style="font-size:0.75rem;margin-top:8px;">Token, GitHub hesabından oluşturulur (Settings > Developer settings > Personal access tokens). Yönetici panelinden de girilebilir — aynı token burada geçerlidir.</p>`;
-                document.querySelector(".main-content").insertBefore(banner, document.querySelector(".content-area"));
-
-                document.getElementById("teacherTokenSave").addEventListener("click", () => {
-                    const t = document.getElementById("teacherTokenInput").value.trim();
-                    if (!t) return;
-                    localStorage.setItem("github_token", t);
-                    GITHUB_TOKEN = t;
-                    showToast("Token kaydedildi!");
-                    banner.remove();
-                });
-            }
-        } else {
-            const existingBanner = document.getElementById("tokenBanner");
-            if (existingBanner) existingBanner.remove();
-        }
 
         renderClasses(teacherId);
         renderHomework(teacherId);
@@ -533,27 +453,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     reader.readAsDataURL(file);
                 });
 
-                const filePath = "uploads/" + Date.now() + "_" + file.name;
-                const uploadRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${filePath}`, {
-                    method: "PUT",
-                    headers: {
-                        "Authorization": "token " + GITHUB_TOKEN,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        message: "Ödev dosyası yüklendi: " + file.name,
-                        content: fileContent
-                    })
-                });
-
-                if (uploadRes.ok) {
-                    const uploadData = await uploadRes.json();
-                    fileData.fileUrl = uploadData.content.html_url;
-                    fileData.filePath = filePath;
-                } else {
-                    const err = await uploadRes.json();
-                    console.error("Dosya yükleme hatası:", err);
-                }
+                fileData.fileContent = fileContent;
+                fileData.fileName = file.name;
             } catch (err) {
                 console.error("Dosya okuma hatası:", err);
             }
@@ -623,11 +524,6 @@ window.startLiveClass = async function(id) {
 
     if (recState.recording) {
         showToast("Zaten kayıt devam ediyor. Önce mevcut kaydı bitirin.", true);
-        return;
-    }
-
-    if (!GITHUB_TOKEN) {
-        showToast("Kayıt yüklemek için Ayarlardan GitHub Token girilmelidir!", true);
         return;
     }
 
@@ -709,26 +605,24 @@ async function uploadAndFinishRecording() {
         });
 
         const stamp = startedTime.getTime();
-        const safeTitle = (cls.title || "ders").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
-        const filePath = "recordings/" + stamp + "_" + safeTitle + ".webm";
-
-        const uploadRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/${filePath}`, {
-            method: "PUT",
-            headers: { "Authorization": "token " + GITHUB_TOKEN, "Content-Type": "application/json" },
-            body: JSON.stringify({ message: "Ders kaydı yüklendi: " + cls.title, content: base64 })
-        }, 120000);
 
         hideUploading();
 
-        if (uploadRes.ok) {
-            const uploadData = await uploadRes.json();
-            const recordingUrl = uploadData.content.html_url;
-            await addRecordingToClass(classId, recordingUrl);
-            showToast("Kayıt yüklendi ve ders kayıtlarına eklendi!");
-        } else {
-            const err = await uploadRes.json();
+        try {
+            const fd = new FormData();
+            fd.append("file", blob, "kayit_" + stamp + ".webm");
+            const up = await fetch("https://upload.gofile.io/uploadfile", { method: "POST", body: fd });
+            const upData = await up.json();
+            if (upData.status === "ok" && upData.data && upData.data.downloadPage) {
+                const recordingUrl = upData.data.downloadPage;
+                await addRecordingToClass(classId, recordingUrl);
+                showToast("Kayıt yüklendi ve ders kayıtlarına eklendi!");
+            } else {
+                showToast("Kayıt yüklenemedi.", true);
+            }
+        } catch (err) {
             console.error("Kayıt yükleme hatası:", err);
-            showToast("Kayıt yüklenemedi. Dosya GitHub limitlerini aştı olabilir (max 100MB).", true);
+            showToast("Kayıt yüklenemedi.", true);
         }
     } catch (err) {
         hideUploading();

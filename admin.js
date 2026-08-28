@@ -1,11 +1,9 @@
 const ADMIN_USER = "oneregitim";
 const ADMIN_PASS = "oneregitim123";
-const GITHUB_REPO = "oneregitimkurumlari/oneregitimkurumlari";
-const DATA_FILE = "data.json";
-const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
+const FIREBASE_URL = "https://one-egitim-default-rtdb.firebaseio.com";
+const DATA_URL = FIREBASE_URL + "/.json";
 
-let GITHUB_TOKEN = localStorage.getItem("github_token") || "";
-let remoteData = { teachers: [], classes: [], students: [], homeworks: [], sha: "" };
+let remoteData = { teachers: [], classes: [], students: [], homeworks: [] };
 let deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
 
 function normalizeClassRecordings(c) {
@@ -103,27 +101,6 @@ function showConfirm(msg, callback) {
 
 async function fetchRemoteData() {
     try {
-        if (GITHUB_TOKEN) {
-            try {
-                const res = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
-                    headers: { "Authorization": "token " + GITHUB_TOKEN, "Cache-Control": "no-cache" },
-                    cache: "no-store"
-                });
-                if (!res.ok) throw new Error("API " + res.status);
-                const meta = await res.json();
-                remoteData.sha = meta.sha;
-                const decoded = decodeURIComponent(escape(atob(meta.content)));
-                const json = JSON.parse(decoded);
-                remoteData.teachers = json.teachers || [];
-                remoteData.classes = (json.classes || []).map(normalizeClassRecordings);
-                remoteData.students = json.students || [];
-                remoteData.homeworks = json.homeworks || [];
-                deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
-                return true;
-            } catch (apiErr) {
-                console.warn("GitHub API hatası, raw fallback deneniyor:", apiErr.message);
-            }
-        }
         const res = await fetchWithTimeout(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
         if (!res.ok) throw new Error("Veri okunamadı");
         const json = await res.json();
@@ -140,26 +117,11 @@ async function fetchRemoteData() {
 }
 
 async function saveRemoteData() {
-    if (!GITHUB_TOKEN) {
-        showError("GitHub Token tanımlanmamış! Ayarlar sekmesinden girin.");
-        return false;
-    }
-
     showSaveOverlay();
 
     try {
-        const metaRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}?t=${Date.now()}`, {
-            headers: { "Authorization": "token " + GITHUB_TOKEN },
-            cache: "no-store"
-        });
-        if (!metaRes.ok) {
-            const err = await metaRes.json().catch(() => ({}));
-            showError("SHA alınamadı: " + (err.message || metaRes.status) + (metaRes.status === 401 ? " - Token geçersiz veya süresi dolmuş!" : ""));
-            return false;
-        }
-        const meta = await metaRes.json();
-        const decoded = decodeURIComponent(escape(atob(meta.content)));
-        const serverData = JSON.parse(decoded);
+        const metaRes = await fetchWithTimeout(FIREBASE_URL + "/.json", { cache: "no-store" });
+        const serverData = metaRes.ok ? await metaRes.json() : {};
 
         function mergeArrays(serverArr, localArr, delSet) {
             const merged = new Map();
@@ -174,45 +136,31 @@ async function saveRemoteData() {
         remoteData.classes = mergeArrays(serverData.classes, remoteData.classes, deletedIds.classes);
         remoteData.students = mergeArrays(serverData.students, remoteData.students, deletedIds.students);
         remoteData.homeworks = mergeArrays(serverData.homeworks, remoteData.homeworks || [], deletedIds.homeworks);
-        remoteData.sha = meta.sha;
 
-        const content = btoa(unescape(encodeURIComponent(JSON.stringify({
+        const payload = {
             teachers: remoteData.teachers,
             classes: remoteData.classes,
             students: remoteData.students,
             homeworks: remoteData.homeworks
-        }, null, 2))));
+        };
 
-        const res = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}`, {
+        const res = await fetchWithTimeout(FIREBASE_URL + "/.json", {
             method: "PUT",
-            headers: {
-                "Authorization": "token " + GITHUB_TOKEN,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                message: "Yonetim paneli guncellendi - " + new Date().toISOString(),
-                content: content,
-                sha: remoteData.sha
-            })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
         }, 30000);
 
         if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            let msg = "Kayit basarisiz: " + (err.message || "HTTP " + res.status);
-            if (res.status === 401 || res.status === 403) msg += " - Token gecersiz/Yetki yok. Ayarlardan yeni token girin.";
-            if (res.status === 409) msg += " - Versiyon cakismasi, tekrar deneyin.";
-            showError(msg);
+            showError("Kayit basarisiz: HTTP " + res.status);
             return false;
         }
 
-        const result = await res.json();
-        remoteData.sha = result.content.sha;
         deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
         return true;
     } catch (e) {
         console.error("Kayit hatasi:", e);
         const msg = e.name === "AbortError"
-            ? "Kayit basarisiz: Istek zaman asimina ugradi (ag cok yavas veya GitHub'a erisilemiyor)"
+            ? "Kayit basarisiz: Istek zaman asimina ugradi (ag cok yavas)"
             : "Kayit basarisiz: " + e.message;
         showError(msg);
         return false;
@@ -262,59 +210,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const ok = await fetchRemoteData();
         loading.remove();
 
-        if (!GITHUB_TOKEN) {
-            let existingBanner = document.getElementById("tokenBanner");
-            if (!existingBanner) {
-                const banner = document.createElement("div");
-                banner.id = "tokenBanner";
-                banner.style.cssText = "background:#f59e0b;color:#78350f;padding:12px 20px;font-size:0.85rem;font-weight:600;text-align:center;cursor:pointer;";
-                banner.innerHTML = '<i class="fas fa-exclamation-triangle"></i> GitHub Token tanımlanmamış! Kaydetme çalışmaz. Ayarlar\'a tıklayarak token girin.';
-                banner.addEventListener("click", () => {
-                    document.querySelectorAll(".sidebar-btn").forEach(b => b.classList.remove("active"));
-                    document.querySelector('.sidebar-btn[data-section="settings"]').classList.add("active");
-                    document.querySelectorAll(".section-page").forEach(p => p.classList.remove("active"));
-                    document.getElementById("settingsPage").classList.add("active");
-                    document.getElementById("sectionTitle").textContent = "Ayarlar";
-                });
-                document.querySelector(".main-content").insertBefore(banner, document.querySelector(".content-area"));
-            }
-        } else {
-            const existingBanner = document.getElementById("tokenBanner");
-            if (existingBanner) existingBanner.remove();
-        }
-
-        if (ok && GITHUB_TOKEN) {
+        if (ok) {
             const sp = document.getElementById("settingsPage");
             if (sp) {
                 sp.innerHTML = `
                     <div style="background:white;padding:40px;border-radius:12px;box-shadow:var(--shadow);text-align:center;max-width:600px;margin:0 auto;">
                         <i class="fas fa-check-circle" style="font-size:3rem;color:#10b981;margin-bottom:16px;display:block;"></i>
-                        <h3 style="margin-bottom:12px;">GitHub Bağlantısı Aktif</h3>
-                        <p style="color:var(--text-medium);margin-bottom:20px;">Token kayıtlı ve çalışıyor. Veriler otomatik olarak GitHub'a kaydediliyor.</p>
-                        <div style="display:flex;gap:8px;max-width:400px;margin:0 auto;">
-                            <input type="password" id="tokenInput" value="${GITHUB_TOKEN}" style="flex:1;padding:10px 14px;border:2px solid #10b981;border-radius:8px;font-size:0.9rem;background:#f0fdf4;">
-                            <button onclick="saveToken()" style="padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Güncelle</button>
-                        </div>
-                    </div>`;
-            }
-        } else if (!GITHUB_TOKEN) {
-            const sp = document.getElementById("settingsPage");
-            if (sp) {
-                sp.innerHTML = `
-                    <div style="background:white;padding:40px;border-radius:12px;box-shadow:var(--shadow);text-align:center;max-width:600px;margin:0 auto;">
-                        <i class="fas fa-key" style="font-size:3rem;color:var(--warning);margin-bottom:16px;display:block;"></i>
-                        <h3 style="margin-bottom:12px;">GitHub Token Gerekli</h3>
-                        <p style="color:var(--text-medium);margin-bottom:20px;">Verilerin kaydedilmesi ve tüm cihazlardan görüntülenebilmesi için bir GitHub Personal Access Token gerekiyor.</p>
-                        <ol style="text-align:left;max-width:400px;margin:0 auto 20px;color:var(--text-medium);line-height:2;">
-                            <li><a href="https://github.com/settings/tokens" target="_blank">GitHub Token sayfasına</a> git</li>
-                            <li><strong>"Generate new token (classic)"</strong> tıkla</li>
-                            <li><strong>repo</strong> iznini işaretle</li>
-                            <li>Oluşturulan tokenı aşağıya yapıştır</li>
-                        </ol>
-                        <div style="display:flex;gap:8px;max-width:400px;margin:0 auto;">
-                            <input type="password" id="tokenInput" placeholder="GitHub Token" style="flex:1;padding:10px 14px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;">
-                            <button onclick="saveToken()" style="padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Kaydet</button>
-                        </div>
+                        <h3 style="margin-bottom:12px;">Veritabanı Bağlantısı Aktif</h3>
+                        <p style="color:var(--text-medium);">Veriler Firebase üzerinden senkronize ediliyor. Ders ve kayıt ekleme/silme tüm cihazlarda otomatik olarak güncellenir.</p>
                     </div>`;
             }
         }
@@ -328,8 +231,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     window.saveToken = function() {
-        showToast("Token site içinde gömülüdür, elle girmeye gerek yok.");
-        document.getElementById("tokenInput").value = "";
+        showToast("Veriler Firebase üzerinden otomatik senkronize ediliyor, token gerekmez.");
+        const ti = document.getElementById("tokenInput");
+        if (ti) ti.value = "";
     };
 
     function initNavigation() {
@@ -892,27 +796,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     reader.readAsDataURL(file);
                 });
 
-                const filePath = "uploads/" + Date.now() + "_" + file.name;
-                const uploadRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${filePath}`, {
-                    method: "PUT",
-                    headers: {
-                        "Authorization": "token " + GITHUB_TOKEN,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        message: "Ödev dosyası yüklendi: " + file.name,
-                        content: fileContent
-                    })
-                });
-
-                if (uploadRes.ok) {
-                    const uploadData = await uploadRes.json();
-                    fileData.fileUrl = uploadData.content.html_url;
-                    fileData.filePath = filePath;
-                } else {
-                    const err = await uploadRes.json();
-                    console.error("Dosya yükleme hatası:", err);
-                }
+                fileData.fileContent = fileContent;
+                fileData.fileName = file.name;
             } catch (err) {
                 console.error("Dosya okuma hatası:", err);
             }

@@ -145,8 +145,8 @@
 </div>
 
 <script>
-const GITHUB_REPO = "oneregitimkurumlari/oneregitimkurumlari";
-const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
+const FIREBASE_URL = "https://one-egitim-default-rtdb.firebaseio.com";
+const DATA_URL = FIREBASE_URL + "/.json";
 const DRIVE_FOLDER_ID = "1DXa_5ytoaOTyBLMn6nvmMCkzfdBzzYFj";
 
 function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
@@ -334,18 +334,10 @@ async function addMeToAttendees(clsId) {
     if (!myRole) return;
 
     try {
-        const token = await getGitHubToken();
-        if (!token) {
-            loadAttendees(clsId);
-            return;
-        }
-        const metaRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json?t=${Date.now()}`, {
-            headers: { "Authorization": "token " + token },
-            cache: "no-store"
-        });
+        const metaRes = await fetchWithTimeout(FIREBASE_URL + "/.json", { cache: "no-store" });
         if (!metaRes.ok) { loadAttendees(clsId); return; }
-        const meta = await metaRes.json();
-        const server = JSON.parse(decodeURIComponent(escape(atob(meta.content))));
+        const server = await metaRes.json();
+        if (!server) { loadAttendees(clsId); return; }
         if (!server._attendees) server._attendees = {};
         if (!server._attendees[clsId]) server._attendees[clsId] = [];
 
@@ -354,11 +346,10 @@ async function addMeToAttendees(clsId) {
         if (!exists) {
             arr.push({ name: myName, role: myRole, time: new Date().toISOString() });
             cachedData = server;
-            const content = btoa(unescape(encodeURIComponent(JSON.stringify(server))));
-            await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json`, {
+            await fetchWithTimeout(FIREBASE_URL + "/.json", {
                 method: "PUT",
-                headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
-                body: JSON.stringify({ message: "Ders katılımcısı: " + myName, content: content, sha: meta.sha })
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(server)
             }, 25000);
         }
         loadAttendees(clsId);
@@ -372,12 +363,6 @@ async function addMeToAttendees(clsId) {
 async function startRecording(cls) {
     if (!myRole || myRole !== "teacher") return;
     if (recState.recording) return;
-
-    const token = await getGitHubToken();
-    if (!token) {
-        setRecStatus("Kayıt için GitHub Token gerekli (Ayarlar'dan).", "info");
-        return;
-    }
 
     try {
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
@@ -506,52 +491,47 @@ function downloadRecordedBlob(blob, cls) {
 async function pushRecordingToData(link, cls) {
     try {
         setRecStatus("Kayıt öğrenci listesine ekleniyor...", "info");
-        const token = await getGitHubToken();
-        if (!token) { setRecStatus("Kayıt data.json'a yazılamadı: token yok.", "info"); console.warn("Kayıt eklendi ama data.json'a yazılamadı (token yok)"); return; }
-        const metaRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json?t=${Date.now()}`, {
-            headers: { "Authorization": "token " + token, "Cache-Control": "no-cache" }, cache: "no-store"
-        });
-        if (!metaRes.ok) { setRecStatus("data.json'a yazma hazırlanamadı (HTTP " + metaRes.status + ")", "info"); console.warn("data.json okunamadı (HTTP " + metaRes.status + ")"); return; }
-        const meta = await metaRes.json();
-        const server = JSON.parse(decodeURIComponent(escape(atob(meta.content))));
+        const metaRes = await fetchWithTimeout(FIREBASE_URL + "/.json", { cache: "no-store" });
+        if (!metaRes.ok) { setRecStatus("Kayıt eklenemedi (HTTP " + metaRes.status + ")", "info"); return; }
+        const server = await metaRes.json();
+        if (!server) { setRecStatus("Kayıt eklenemedi: veri boş.", "info"); return; }
         const c = (server.classes || []).find(x => x.id === cls.id);
         if (c) {
             if (!Array.isArray(c.recordings)) c.recordings = [];
             c.recordings.push({ id: "rec" + Date.now(), title: cls.title || "Kayıt", url: link, createdAt: new Date().toISOString() });
             c.recordingUrl = link;
         }
-        const content = btoa(unescape(encodeURIComponent(JSON.stringify(server))));
-        const res = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json`, {
+        const res = await fetchWithTimeout(FIREBASE_URL + "/.json", {
             method: "PUT",
-            headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
-            body: JSON.stringify({ message: "Kayıt eklendi: " + (cls.title || ""), content: content, sha: meta.sha })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(server)
         }, 25000);
-        if (res.ok) { console.log("Kayıt data.json'a eklendi."); setRecStatus("Kayıt öğrenci listesine eklendi ✓", "live"); }
-        else { setRecStatus("data.json'a yazılamadı (HTTP " + res.status + ")", "info"); console.warn("PUT basarısız HTTP " + res.status); }
+        if (res.ok) { console.log("Kayıt eklendi."); setRecStatus("Kayıt öğrenci listesine eklendi ✓", "live"); }
+        else { setRecStatus("Kayıt eklenemedi (HTTP " + res.status + ")", "info"); }
     } catch (err) {
-        console.warn("Kayıt data.json'a yazılamadı:", err.message, err.stack);
-        setRecStatus("data.json'a yazılamadı: " + err.message, "info");
+        console.warn("Kayıt eklenemedi:", err.message);
+        setRecStatus("Kayıt eklenemedi: " + err.message, "info");
     }
 }
 
 async function addRecordingToClass(token, classId, recordingUrl) {
-    const metaRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json?t=${Date.now()}`, {
-        headers: { "Authorization": "token " + token }, cache: "no-store"
-    });
-    if (!metaRes.ok) return;
-    const meta = await metaRes.json();
-    const server = JSON.parse(decodeURIComponent(escape(atob(meta.content))));
-    const cls = (server.classes || []).find(c => c.id === classId);
-    if (cls) {
-        cls.recordingUrl = recordingUrl;
-        cls.recordingAt = new Date().toISOString();
-    }
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(server))));
-    await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json`, {
-        method: "PUT",
-        headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
-        body: JSON.stringify({ message: "Kayıt eklendi: " + (cls ? cls.title : classId), content: content, sha: meta.sha })
-    }, 25000);
+    try {
+        const metaRes = await fetchWithTimeout(FIREBASE_URL + "/.json", { cache: "no-store" });
+        if (!metaRes.ok) return;
+        const server = await metaRes.json();
+        const cls = (server.classes || []).find(c => c.id === classId);
+        if (cls) {
+            cls.recordingUrl = recordingUrl;
+            cls.recordingAt = new Date().toISOString();
+            if (!Array.isArray(cls.recordings)) cls.recordings = [];
+            cls.recordings.push({ id: "rec" + Date.now(), title: cls.title || "Kayıt", url: recordingUrl, createdAt: new Date().toISOString() });
+        }
+        await fetchWithTimeout(FIREBASE_URL + "/.json", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(server)
+        }, 25000);
+    } catch (e) { console.warn("addRecordingToClass:", e.message); }
 }
 
 function setRecStatus(msg, type) {

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PİHOS Kursu Instagram Gönderisi</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            font-family: 'Poppins', sans-serif;
+            padding: 20px;
+        }
+        
+        .instagram-post {
+            width: 1080px;
+            height: 1080px;
+            background: linear-gradient(145deg, #0a193b 0%, #117181 50%, #61b0b5 100%);
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        
+        .top-section {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 35%;
+            background: linear-gradient(180deg, #0a193b 0%, transparent 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 40px;
+        }
+        
+        .logo-container {
+            width: 250px;
+            height: 250px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .logo-icon {
+            width: 120px;
+            height: 120px;
+            position: relative;
+        }
+        
+        .graduation-cap {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .title-section {
+            text-align: center;
+            padding: 15px 40px;
+        }
+        
+        .main-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+        
+        .main-title span {
+            color: #83c5ca;
+        }
+        
+        .sub-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #83c5ca;
+            letter-spacing: 1px;
+        }
+        
+        .tagline {
+            font-size: 14px;
+            font-weight: 400;
+            color: #ffffff;
+            font-style: italic;
+            margin-top: 5px;
+        }
+        
+        .content-section {
+            position: absolute;
+            top: 42%;
+            left: 0;
+            right: 0;
+            padding: 0 40px;
+        }
+        
+        .highlight-box {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 20px 25px;
+            margin-bottom: 15px;
+            border-left: 5px solid #117181;
+        }
+        
+        .highlight-text {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0a193b;
+            text-align: center;
+            line-height: 1.4;
+        }
+        
+        .highlight-text span {
+            color: #117181;
+            font-weight: 800;
+        }
+        
+        .turkey-badge {
+            background: #117181;
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+        
+        .feature-box {
+            display: flex;
+            align-items: center;
+            background: rgba(17, 113, 129, 0.9);
+            border-radius: 10px;
+            padding: 12px 18px;
+            margin-bottom: 12px;
+        }
+        
+        .feature-icon {
+            width: 45px;
+            height: 45px;
+            background: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 22px;
+        }
+        
+        .feature-text {
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        
+        .bottom-section {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(0deg, #0a193b 0%, transparent 100%);
+            padding: 25px 40px;
+        }
+        
+        .contact-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+        }
+        
+        .phone-section, .address-section {
+            flex: 1;
+        }
+        
+        .section-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #83c5ca;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        
+        .phone-number {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+        
+        .address-text {
+            font-size: 12px;
+            font-weight: 400;
+            color: #ffffff;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="instagram-post">
+        <div class="top-section">
+            <div class="logo-container">
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="logo-icon">
+                    <!-- Location pin -->
+                    <path d="M100 180 L40 100 Q20 60 60 40 Q80 30 100 50 Q120 30 140 40 Q180 60 160 100 Z" fill="#83c5ca"/>
+                    <!-- Globe -->
+                    <circle cx="100" cy="90" r="45" fill="#117181"/>
+                    <ellipse cx="100" cy="90" rx="45" ry="45" fill="none" stroke="#ffffff" stroke-width="2"/>
+                    <ellipse cx="100" cy="90" rx="25" ry="45" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+                    <line x1="55" y1="90" x2="145" y2="90" stroke="#ffffff" stroke-width="1.5"/>
+                    <line x1="100" y1="45" x2="100" y2="135" stroke="#ffffff" stroke-width="1.5"/>
+                    <!-- Graduation cap -->
+                    <polygon points="100,25 140,50 100,75 60,50" fill="#0a193b"/>
+                    <rect x="95" y="50" width="10" height="25" fill="#0a193b"/>
+                    <line x1="60" y1="50" x2="55" y2="80" stroke="#0a193b" stroke-width="3"/>
+                    <circle cx="55" cy="82" r="4" fill="#0a193b"/>
+                </svg>
+            </div>
+            <div class="title-section">
+                <div class="main-title">Öner <span>Eğitim</span> Segem</div>
+                <div class="sub-title">Sosyal Etkinlik ve Gelişim Merkezi</div>
+                <div class="tagline">"Kazandıran Adres"</div>
+            </div>
+        </div>
+        
+        <div class="content-section">
+            <div class="turkey-badge">
+                🇹🇷 TÜRKİYE'DE İLK | KAYSERİ'DE TEK 🇹🇷
+            </div>
+            
+            <div class="highlight-box">
+                <div class="highlight-text">
+                    📚 <span>PİHOS</span> (Proje İmam Hatip Ortaokulu Sınavı) Hazırlık Kursu
+                </div>
+            </div>
+            
+            <div class="feature-box">
+                <div class="feature-icon">🎓</div>
+                <div class="feature-text">Proje Okullarına Hazırlık</div>
+            </div>
+            
+            <div class="feature-box">
+                <div class="feature-icon">📚</div>
+                <div class="feature-text">Deneme Sınavları ve Soru Bankası</div>
+            </div>
+            
+            <div class="feature-box">
+                <div class="feature-icon">👨‍🏫</div>
+                <div class="feature-text">Alanında Uzman Eğitmen Kadrosu</div>
+            </div>
+        </div>
+        
+        <div class="bottom-section">
+            <div class="contact-info">
+                <div class="phone-section">
+                    <div class="section-label">📞 İLETİŞİM</div>
+                    <div class="phone-number">+90 535 646 85 54</div>
+                </div>
+                <div class="address-section">
+                    <div class="section-label">📍 ADRES</div>
+                    <div class="address-text">
+                        Sahabiye Mah. Ahi Evran Cad. F-33<br>
+                        BİM Market Üstü<br>
+                        38010 Kayseri
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

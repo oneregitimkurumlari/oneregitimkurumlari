@@ -1,6 +1,5 @@
-const GITHUB_REPO = "oneregitimkurumlari/oneregitimkurumlari";
-const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
-const SITE_TOKEN = "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";
+const FIREBASE_URL = "https://one-egitim-default-rtdb.firebaseio.com";
+const DATA_URL = FIREBASE_URL + "/.json";
 
 const dayLabels = {
     pazartesi: "Pazartesi", sali: "Salı", carsamba: "Çarşamba",
@@ -37,15 +36,11 @@ async function loadData() {
         const json = await res.json();
         applyJson(json);
     } catch (rawErr) {
-        console.warn("Raw veri okunamadı, GitHub API deneniyor:", rawErr.message);
+        console.warn("Veri okunamadı:", rawErr.message);
         try {
-            const token = SITE_TOKEN;
-            const headers = token ? { "Authorization": "token " + token } : {};
-            const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json?t=${Date.now()}`, { headers, cache: "no-store" });
+            const res = await fetch(DATA_URL, { cache: "no-store" });
             if (!res.ok) throw new Error("Veri yüklenemedi (" + res.status + ")");
-            const meta = await res.json();
-            const decoded = decodeURIComponent(escape(atob(meta.content)));
-            applyJson(JSON.parse(decoded));
+            applyJson(await res.json());
         } catch (e) {
             console.error("Veri yüklenemedi:", e);
             cachedData = { teachers: [], classes: [], students: [], homeworks: [] };
