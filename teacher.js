@@ -362,7 +362,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td class="actions-cell">
                     <button class="btn-edit" onclick="editClass('${c.id}')"><i class="fas fa-edit"></i></button>
                     <button class="btn-delete" onclick="deleteClass('${c.id}')"><i class="fas fa-trash"></i></button>
-                    <button class="btn-record" onclick="startLiveClass('${c.id}')"><i class="fas fa-record-vinyl"></i> Ders Başlat</button>
+                    <a href="ders.html?ders=${c.id}" class="btn-record"><i class="fas fa-record-vinyl"></i> Derse Başla</a>
                 </td>
             </tr>
         `).join("");

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canlı Ders Odası - ONLİNE PİHOS</title>
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="stylesheet" href="styles.css?v=5">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script>if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')</script>
+    <style>
+        body { background: var(--bg-light); }
+        .room-topbar { background: var(--navy); color: #fff; padding: 14px 20px; }
+        .room-topbar-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .room-topbar h1 { font-size: 1.1rem; margin: 0; }
+        .room-topbar .room-sub { font-size: 0.85rem; color: #94a3b8; margin-top: 2px; }
+        .room-meta { display: flex; gap: 16px; font-size: 0.85rem; color: #cbd5e1; flex-wrap: wrap; }
+        .room-meta span { display: inline-flex; align-items: center; gap: 6px; }
+        .room-meta i { color: var(--primary); }
+        .room-main { max-width: 1200px; margin: 20px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+        .room-stage { background: #0a0d16; border-radius: var(--radius); padding: 20px; min-height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; position: relative; }
+        .room-stage .stage-msg { text-align: center; }
+        .stage-msg i { font-size: 4rem; color: #334155; margin-bottom: 16px; display: block; }
+        .stage-msg .live-badge { display: inline-flex; align-items: center; gap: 8px; background: #dc2626; color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; margin-bottom: 20px; }
+        .stage-msg .live-badge i { font-size: 0.9rem; margin: 0; color: #fff; }
+        .join-meet-btn { margin-top: 24px; background: linear-gradient(135deg, #c09020 0%, #8f6c12 100%); color: #fff; border: none; padding: 12px 24px; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; }
+        .join-meet-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(192,144,32,0.4); }
+        .room-panel { display: flex; flex-direction: column; gap: 16px; }
+        .room-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+        .room-card h3 { font-size: 1rem; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+        .room-card h3 i { color: var(--primary); }
+        .attendee-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+        .attendee-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; background: var(--bg-light); font-size: 0.9rem; }
+        .attendee-item .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; flex-shrink: 0; }
+        .role-badge { font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+        .role-badge.role-student { background: #e0f2fe; color: #0369a1; }
+        .role-badge.role-teacher { background: #fde68a; color: #92400e; }
+        html.dark .role-badge.role-student { background: #0c4a6e; color: #bae6fd; }
+        html.dark .role-badge.role-teacher { background: #78350f; color: #fde68a; }
+        .rec-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 0.95rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .rec-btn.rec-start { background: linear-gradient(135deg,#c09020 0%,#8f6c12 100%); color: #fff; }
+        .rec-btn.rec-stop { background: linear-gradient(135deg,#ef4444 0%,#b91c1c 100%); color: #fff; }
+        .rec-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .rec-status { text-align: center; font-size: 0.9rem; margin-top: 10px; padding: 10px; border-radius: 8px; }
+        .rec-status.live { background: #fee2e2; color: #b91c1c; font-weight: 700; animation: recBlink2 1.2s infinite; }
+        .rec-status.info { background: var(--primary-light); color: var(--primary-dark); }
+        @keyframes recBlink2 { 0%,100%{opacity:1} 50%{opacity:0.6} }
+        .teacher-only { display: none; }
+        body.is-teacher .teacher-only { display: block; }
+        @media (max-width: 900px) { .room-main { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="room-topbar">
+    <div class="room-topbar-inner">
+        <div>
+            <h1><i class="fas fa-video"></i> Canlı Ders Odası</h1>
+            <div class="room-meta" id="roomMeta"></div>
+        </div>
+        <a href="index.html" style="color:#cbd5e1;text-decoration:none;font-size:0.85rem;"><i class="fas fa-arrow-left"></i> Siteye Dön</a>
+    </div>
+</div>
+
+<div class="room-main">
+    <div class="room-stage">
+        <div class="stage-msg">
+            <span class="live-badge"><i class="fas fa-circle"></i> CANLI DERS</span>
+            <h2 id="stageTitle">Ders yükleniyor...</h2>
+            <p id="stageDesc"></p>
+            <a href="#" id="joinMeetLink" class="join-meet-btn" target="_blank"><i class="fas fa-video"></i> Görüşmeye Katıl</a>
+        </div>
+    </div>
+
+    <div class="room-panel">
+
+        <div class="room-card teacher-only">
+            <h3><i class="fas fa-record-vinyl"></i> Ders Kaydı</h3>
+            <button class="rec-btn rec-start" id="startRecBtn"><i class="fas fa-circle"></i> Kaydı Başlat</button>
+            <button class="rec-btn rec-stop" id="stopRecBtn" style="display:none;"><i class="fas fa-stop"></i> Dersi Bitir & Kaydet</button>
+            <div class="rec-status" id="recStatus"></div>
+        </div>
+
+        <div class="room-card">
+            <h3><i class="fas fa-users"></i> Katılımcılar</h3>
+            <ul class="attendee-list" id="attendeeList">
+                <li style="color:var(--text-light);font-size:0.85rem;">Katılımcılar burada listelenecek</li>
+            </ul>
+            <p style="font-size:0.75rem;color:var(--text-light);margin-top:10px;">Senin adın <strong id="myLabel">misafir</strong> olarak görünüyor.</p>
+        </div>
+
+    </div>
+</div>
+
+<script>
+const GITHUB_REPO = "oneregitimkurumlari/oneregitimkurumlari";
+const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
+
+function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+let cachedData = { teachers: [], classes: [], students: [], homeworks: [], sha: "" };
+let myRole = null;
+let myName = "";
+let recState = { recording: false, mediaRecorder: null, chunks: [], stream: null, startedAt: null };
+
+async function getGitHubToken() {
+    return localStorage.getItem("github_token") || "";
+}
+
+async function loadData() {
+    try {
+        const res = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        cachedData = await res.json();
+    } catch (e) {
+        console.error("Veri yüklenemedi:", e);
+    }
+}
+
+function identify() {
+    if (sessionStorage.getItem("teacherLogged") === "true") {
+        myRole = "teacher";
+        myName = sessionStorage.getItem("teacherName") || "Öğretmen";
+    } else if (sessionStorage.getItem("siteLogged") === "true") {
+        myRole = "student";
+        myName = sessionStorage.getItem("siteUser") || "Öğrenci";
+    }
+    document.body.classList.toggle("is-teacher", myRole === "teacher");
+    document.getElementById("myLabel").textContent = myName || "Misafir";
+    return myRole;
+}
+
+function getClassId() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("ders");
+}
+
+function renderRoom(cls) {
+    document.title = cls.title + " - Canlı Ders Odası";
+    document.getElementById("roomMeta").innerHTML = `
+        <span><i class="fas fa-book"></i> ${cls.title}</span>
+        <span><i class="fas fa-calendar"></i> ${cls.date || ""}</span>
+        <span><i class="fas fa-clock"></i> ${cls.startTime} - ${cls.endTime}</span>
+        <span><i class="fas fa-user"></i> ${cls.dayLabel || ""}</span>`;
+    document.getElementById("stageTitle").textContent = cls.title;
+    document.getElementById("stageDesc").textContent = cls.description || "Bugünkü derse hoş geldiniz.";
+    document.getElementById("joinMeetLink").href = cls.meetLink || "#";
+    if (!cls.meetLink) document.getElementById("joinMeetLink").style.display = "none";
+}
+
+function loadAttendees(clsId) {
+    const list = (cachedData._attendees || {})[clsId] || [];
+    const el = document.getElementById("attendeeList");
+    el.innerHTML = "";
+    if (list.length === 0) {
+        el.innerHTML = '<li style="color:var(--text-light);font-size:0.85rem;">Henüz kimse katılmadı</li>';
+        return;
+    }
+    list.forEach(a => {
+        const role = a.role === "teacher" ? "role-teacher" : "role-student";
+        const roleLabel = a.role === "teacher" ? "öğretmen" : "öğrenci";
+        const li = document.createElement("li");
+        li.className = "attendee-item";
+        const initial = (a.name || "?").trim().charAt(0).toUpperCase();
+        li.innerHTML = `<span class="avatar">${initial}</span>
+            <span style="flex:1;">${escapeHtml(a.name)}</span>
+            <span class="role-badge ${role}">${roleLabel}</span>`;
+        el.appendChild(li);
+    });
+}
+
+function escapeHtml(s) {
+    const div = document.createElement("div");
+    div.textContent = s;
+    return div.innerHTML;
+}
+
+async function addMeToAttendees(clsId) {
+    if (!myName) {
+        const params = new URLSearchParams(window.location.search);
+        const name = params.get("name");
+        if (name) { myName = name; myRole = myRole || "student"; }
+    }
+    if (!myRole) {
+        const ask = confirm("Adınızı girin ve katılın:");
+        if (ask !== false) {
+            myName = prompt("Adınız:") || "Misafir";
+            myRole = "student";
+        }
+    }
+    if (!myRole) return;
+
+    try {
+        const token = await getGitHubToken();
+        if (!token) {
+            loadAttendees(clsId);
+            return;
+        }
+        const metaRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json?t=${Date.now()}`, {
+            headers: { "Authorization": "token " + token },
+            cache: "no-store"
+        });
+        if (!metaRes.ok) { loadAttendees(clsId); return; }
+        const meta = await metaRes.json();
+        const server = JSON.parse(decodeURIComponent(escape(atob(meta.content))));
+        if (!server._attendees) server._attendees = {};
+        if (!server._attendees[clsId]) server._attendees[clsId] = [];
+
+        const arr = server._attendees[clsId];
+        const exists = arr.find(a => a.name === myName && a.role === myRole);
+        if (!exists) {
+            arr.push({ name: myName, role: myRole, time: new Date().toISOString() });
+            cachedData = server;
+            const content = btoa(unescape(encodeURIComponent(JSON.stringify(server))));
+            await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json`, {
+                method: "PUT",
+                headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
+                body: JSON.stringify({ message: "Ders katılımcısı: " + myName, content: content, sha: meta.sha })
+            }, 25000);
+        }
+        loadAttendees(clsId);
+    } catch (e) {
+        console.error("Katılımcı eklenemedi:", e);
+        loadAttendees(clsId);
+    }
+}
+
+/* ---------- Kayıt (sadece öğretmen) ---------- */
+async function startRecording(cls) {
+    if (!myRole || myRole !== "teacher") return;
+    if (recState.recording) return;
+
+    const token = await getGitHubToken();
+    if (!token) {
+        setRecStatus("Kayıt için GitHub Token gerekli (Ayarlar'dan).", "info");
+        return;
+    }
+
+    try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        recState.stream = stream;
+        recState.classId = cls.id;
+        recState.chunks = [];
+        recState.startedAt = Date.now();
+
+        const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9"
+            : MediaRecorder.isTypeSupported("video/webm") ? "video/webm" : "";
+        const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+        recState.mediaRecorder = mr;
+        mr.ondataavailable = (e) => { if (e.data && e.data.size > 0) recState.chunks.push(e.data); };
+        mr.onstop = () => uploadRecording(cls);
+        mr.start(1000);
+        recState.recording = true;
+
+        document.getElementById("startRecBtn").style.display = "none";
+        document.getElementById("stopRecBtn").style.display = "inline-flex";
+        setRecStatus("Kayıt başladı — ekranınız kaydediliyor.", "live");
+
+        stream.getVideoTracks()[0].addEventListener("ended", () => {
+            if (recState.recording && recState.mediaRecorder) recState.mediaRecorder.stop();
+        });
+    } catch (err) {
+        console.error("Kayıt başlatılamadı:", err);
+        setRecStatus("Kayıt başlatılamadı. Tarayıcı izni verin.", "info");
+        if (recState.stream) recState.stream.getTracks().forEach(t => t.stop());
+    }
+}
+
+async function stopRecording(cls) {
+    if (!recState.recording || !recState.mediaRecorder) return;
+    setRecStatus("Kayıt durduruluyor & yükleniyor...", "info");
+    recState.mediaRecorder.stop();
+}
+
+async function uploadRecording(cls) {
+    const blob = new Blob(recState.chunks, { type: "video/webm" });
+    const classId = recState.classId;
+    const startedTime = new Date(recState.startedAt);
+    if (recState.stream) recState.stream.getTracks().forEach(t => t.stop());
+    recState.recording = false;
+
+    document.getElementById("startRecBtn").style.display = "inline-flex";
+    document.getElementById("stopRecBtn").style.display = "none";
+
+    if (blob.size < 1000) { setRecStatus("Kayıt dosyası boş, yüklenmedi.", "info"); return; }
+
+    try {
+        const token = await getGitHubToken();
+        if (!token) { setRecStatus("GitHub Token yok, yüklenemedi.", "info"); return; }
+
+        const reader = new FileReader();
+        const base64 = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result.split(",")[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+
+        const safeTitle = (cls.title || "ders").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+        const filePath = "recordings/" + startedTime.getTime() + "_" + safeTitle + ".webm";
+
+        const upRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/${filePath}`, {
+            method: "PUT",
+            headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Ders kaydı: " + cls.title, content: base64 })
+        }, 120000);
+
+        if (upRes.ok) {
+            const upData = await upRes.json();
+            const recordingUrl = upData.content.html_url;
+            await addRecordingToClass(token, classId, recordingUrl);
+            setRecStatus("Kayıt yüklendi ve Ders Kayıtlarına eklendi!", "info");
+            setTimeout(() => setRecStatus("", "info"), 4000);
+        } else {
+            setRecStatus("Kayıt yüklenemedi (dosya 100MB sınırını aştı olabilir).", "info");
+        }
+    } catch (err) {
+        console.error("Yükleme hatası:", err);
+        setRecStatus("Kayıt yüklenemedi: " + err.message, "info");
+    }
+}
+
+async function addRecordingToClass(token, classId, recordingUrl) {
+    const metaRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json?t=${Date.now()}`, {
+        headers: { "Authorization": "token " + token }, cache: "no-store"
+    });
+    if (!metaRes.ok) return;
+    const meta = await metaRes.json();
+    const server = JSON.parse(decodeURIComponent(escape(atob(meta.content))));
+    const cls = (server.classes || []).find(c => c.id === classId);
+    if (cls) {
+        cls.recordingUrl = recordingUrl;
+        cls.recordingAt = new Date().toISOString();
+    }
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(server))));
+    await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json`, {
+        method: "PUT",
+        headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Kayıt eklendi: " + (cls ? cls.title : classId), content: content, sha: meta.sha })
+    }, 25000);
+}
+
+function setRecStatus(msg, type) {
+    const el = document.getElementById("recStatus");
+    el.textContent = msg;
+    el.className = "rec-status " + (type || "info");
+    if (!msg) el.className = "rec-status";
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+    identify();
+    await loadData();
+    const clsId = getClassId();
+    if (!clsId) {
+        document.getElementById("stageTitle").textContent = "Ders bulunamadı";
+        document.getElementById("roomMeta").innerHTML = "<span>Geçersiz ders bağlantısı</span>";
+        return;
+    }
+    const cls = cachedData.classes.find(c => c.id === clsId);
+    if (cls) renderRoom(cls);
+    else {
+        document.getElementById("stageTitle").textContent = "Ders bulunamadı";
+        return;
+    }
+
+    if (myRole === "teacher") {
+        document.getElementById("startRecBtn").addEventListener("click", () => startRecording(cls));
+        document.getElementById("stopRecBtn").addEventListener("click", () => stopRecording(cls));
+    }
+
+    if (myRole) addMeToAttendees(clsId);
+    else loadAttendees(clsId);
+});
+</script>
+</body>
+</html>

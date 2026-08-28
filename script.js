@@ -102,7 +102,7 @@ function renderSchedule(filter = "tum") {
                 <span><i class="fas fa-door-open"></i> ${item.classroom}</span>
             </div>
             <div class="schedule-actions">
-                <button class="schedule-btn btn-join" onclick="joinClass('${item.link}')">
+                <button class="schedule-btn btn-join" onclick="joinClass('${item.link}', '${item.id}')">
                     <i class="fas fa-video"></i> Derse Katıl
                 </button>
                 <button class="schedule-btn btn-details" onclick="showDetails('${item.id}')">
@@ -190,7 +190,11 @@ function renderHomework() {
     }).join("");
 }
 
-function joinClass(link) { if (link) window.open(link, "_blank"); }
+function joinClass(link, id) {
+    var params = new URLSearchParams();
+    if (id) params.set("ders", id);
+    window.location.href = "ders.html?" + params.toString();
+}
 
 function isClassPast(c) {
     const today = new Date();
@@ -344,7 +348,7 @@ function showDetails(id) {
         <div class="modal-detail"><i class="fas fa-info-circle"></i><span><strong>Açıklama:</strong> ${item.description}</span></div>
         <div class="modal-detail"><i class="fas fa-video"></i><span><strong>Google Meet:</strong> <a href="${item.link}" target="_blank" style="color:var(--primary);text-decoration:underline;font-family:monospace;font-size:0.85rem;">${item.link}</a></span></div>
         <div class="modal-actions">
-            <a href="${item.link}" target="_blank" class="btn btn-secondary"><i class="fas fa-video"></i> Derse Katıl</a>
+            <a href="ders.html?ders=${item.id}" class="btn btn-secondary"><i class="fas fa-video"></i> Derse Katıl</a>
             <button class="btn btn-details" onclick="closeModal()">Kapat</button>
         </div>`;
     modal.classList.add("active");
