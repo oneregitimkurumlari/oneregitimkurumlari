@@ -302,6 +302,7 @@
                                 <th>Tarih</th>
                                 <th>Saat</th>
                                 <th>Microsoft Teams</th>
+                                <th>Kayıtlar</th>
                                 <th>İşlemler</th>
                             </tr>
                         </thead>
@@ -310,6 +311,24 @@
                     <div class="empty-state" id="emptyClasses">
                         <i class="fas fa-video"></i>
                         <p>Henüz canlı ders eklenmemiş</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-overlay" id="recordModal" style="display:none;">
+                <div class="modal-box">
+                    <div class="modal-header">
+                        <h3 id="recordModalTitle">Ders Kayıtları</h3>
+                        <button class="modal-close" id="recordModalClose" onclick="closeRecordModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="recordClassLabel" style="margin:0 0 10px;color:var(--text-light);font-size:0.9rem;"></p>
+                        <div id="recordList" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;"></div>
+                        <div class="record-add-row">
+                            <input type="text" id="recTitleInput" placeholder="Kayıt başlığı (örn: 28 Ağustos Matematik)" style="flex:1;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;background:var(--bg-light);color:var(--text);">
+                            <input type="url" id="recLinkInput" placeholder="Video linki (gofile.io/d/...)" style="flex:1.4;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;background:var(--bg-light);color:var(--text);">
+                            <button class="btn-save" id="recordAddBtn" onclick="recordModalAdd()"><i class="fas fa-plus"></i> Ekle</button>
+                        </div>
                     </div>
                 </div>
             </div>

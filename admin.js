@@ -8,6 +8,17 @@ let GITHUB_TOKEN = localStorage.getItem("github_token") || "";
 let remoteData = { teachers: [], classes: [], students: [], homeworks: [], sha: "" };
 let deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
 
+function normalizeClassRecordings(c) {
+    if (!c) return c;
+    if (!Array.isArray(c.recordings)) {
+        c.recordings = [];
+        if (c.recordingUrl) {
+            c.recordings.push({ id: generateId(), title: "Kayıt", url: c.recordingUrl, createdAt: new Date().toISOString() });
+        }
+    }
+    return c;
+}
+
 function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -104,7 +115,7 @@ async function fetchRemoteData() {
                 const decoded = decodeURIComponent(escape(atob(meta.content)));
                 const json = JSON.parse(decoded);
                 remoteData.teachers = json.teachers || [];
-                remoteData.classes = json.classes || [];
+                remoteData.classes = (json.classes || []).map(normalizeClassRecordings);
                 remoteData.students = json.students || [];
                 remoteData.homeworks = json.homeworks || [];
                 deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
@@ -117,7 +128,7 @@ async function fetchRemoteData() {
         if (!res.ok) throw new Error("Veri okunamadı");
         const json = await res.json();
         remoteData.teachers = json.teachers || [];
-        remoteData.classes = json.classes || [];
+        remoteData.classes = (json.classes || []).map(normalizeClassRecordings);
         remoteData.students = json.students || [];
         remoteData.homeworks = json.homeworks || [];
         deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
@@ -515,6 +526,7 @@ document.addEventListener("DOMContentLoaded", () => {
         tbody.innerHTML = classes.map((c, i) => {
             const teacher = remoteData.teachers.find(t => t.id === c.teacherId);
             const teacherName = teacher ? teacher.name + " " + teacher.surname : "Bilinmiyor";
+            const recs = c.recordings || [];
             return `
             <tr>
                 <td>${i + 1}</td>
@@ -524,6 +536,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td>${formatDate(c.date)}</td>
                 <td>${formatTime(c.startTime, c.endTime)}</td>
                 <td><a href="${c.meetLink}" target="_blank" class="meet-link">${c.meetLink}</a></td>
+                <td><button class="btn-rec" onclick="openRecordModal('${c.id}')"><i class="fas fa-video"></i> Kayıtlar<span class="rec-count">${recs.length}</span></button></td>
                 <td class="actions-cell">
                     <button class="btn-edit" onclick="editClass('${c.id}')"><i class="fas fa-edit"></i></button>
                     <button class="btn-delete" onclick="deleteClass('${c.id}')"><i class="fas fa-trash"></i></button>
@@ -615,6 +628,87 @@ document.addEventListener("DOMContentLoaded", () => {
                 updateDashboard();
                 showToast("Ders silindi!");
             }
+        });
+    };
+
+    let currentRecordClassId = null;
+    window.openRecordModal = function(classId) {
+        const c = remoteData.classes.find(x => x.id === classId);
+        if (!c) return;
+        currentRecordClassId = classId;
+        document.getElementById("recordClassLabel").textContent = "Ders: " + c.title;
+        renderRecordList();
+        document.getElementById("recordModal").style.display = "flex";
+    };
+
+    window.closeRecordModal = function() {
+        document.getElementById("recordModal").style.display = "none";
+        currentRecordClassId = null;
+    };
+
+    function renderRecordList() {
+        const c = remoteData.classes.find(x => x.id === currentRecordClassId);
+        const list = document.getElementById("recordList");
+        if (!c || !c.recordings || c.recordings.length === 0) {
+            list.innerHTML = '<p style="color:var(--text-light);font-size:0.85rem;margin:0;">Henüz kayıt eklenmemiş.</p>';
+            return;
+        }
+        list.innerHTML = c.recordings.map(r => `
+            <div class="record-item">
+                <div class="rec-info">
+                    <span class="rec-title">${r.title || "Kayıt"}</span>
+                    <a class="rec-link" href="${r.url}" target="_blank">${r.url}</a>
+                </div>
+                <div class="rec-btns">
+                    <button class="btn-edit" onclick="recordModalEdit('${r.id}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-delete" onclick="recordModalDelete('${r.id}')"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>`).join("");
+    }
+
+    window.recordModalAdd = async function() {
+        const title = document.getElementById("recTitleInput").value.trim();
+        const url = document.getElementById("recLinkInput").value.trim();
+        if (!url) { showToast("Video linki gerekli!"); return; }
+        const c = remoteData.classes.find(x => x.id === currentRecordClassId);
+        if (!c) return;
+        if (!c.recordings) c.recordings = [];
+        c.recordings.push({ id: generateId(), title: title || "Kayıt", url, createdAt: new Date().toISOString() });
+        c.recordingUrl = url;
+        const ok = await saveRemoteData();
+        if (ok) {
+            showToast("Kayıt eklendi!");
+            document.getElementById("recTitleInput").value = "";
+            document.getElementById("recLinkInput").value = "";
+            renderRecordList();
+            renderClasses();
+        }
+    };
+
+    window.recordModalEdit = async function(recId) {
+        const c = remoteData.classes.find(x => x.id === currentRecordClassId);
+        if (!c) return;
+        const r = (c.recordings || []).find(x => x.id === recId);
+        if (!r) return;
+        const title = prompt("Kayıt başlığını düzenle:", r.title || "");
+        if (title === null) return;
+        const url = prompt("Kayıt linkini düzenle:", r.url || "");
+        if (url === null) return;
+        r.title = title.trim() || r.title;
+        r.url = url.trim() || r.url;
+        c.recordingUrl = r.url;
+        const ok = await saveRemoteData();
+        if (ok) { showToast("Kayıt güncellendi!"); renderRecordList(); renderClasses(); }
+    };
+
+    window.recordModalDelete = async function(recId) {
+        const c = remoteData.classes.find(x => x.id === currentRecordClassId);
+        if (!c) return;
+        showConfirm("Bu kaydı silmek istediğinize emin misiniz?", async () => {
+            c.recordings = (c.recordings || []).filter(x => x.id !== recId);
+            c.recordingUrl = (c.recordings && c.recordings.length) ? c.recordings[c.recordings.length - 1].url : "";
+            const ok = await saveRemoteData();
+            if (ok) { showToast("Kayıt silindi!"); renderRecordList(); renderClasses(); }
         });
     };
 

@@ -360,3 +360,25 @@ html.dark .recording-panel { background:#1e293b; border-color:#c09020; }
 
 .recording-detail { color:var(--text-medium); font-size:0.9rem; }
 .recording-actions .btn-danger { display:inline-flex; align-items:center; gap:8px; }
+
+.btn-rec { padding:6px 10px; background:#2563eb; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:0.8rem; min-height:32px; }
+.btn-rec:hover { background:#1d4ed8; }
+.rec-count { display:inline-block; margin-left:4px; background:#fff; color:#2563eb; font-weight:700; font-size:0.75rem; padding:0 5px; border-radius:10px; }
+
+.modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.6); display:flex; align-items:flex-start; justify-content:center; padding:40px 16px; z-index:1000; }
+.modal-box { background:#fff; border-radius:14px; width:100%; max-width:560px; box-shadow:0 10px 40px rgba(0,0,0,0.25); overflow:hidden; }
+.modal-header { display:flex; align-items:center; justify-content:space-between; padding:18px 20px; background:var(--navy); color:#fff; }
+.modal-header h3 { margin:0; display:flex; align-items:center; gap:8px; font-size:1.05rem; }
+.modal-close { background:none; border:none; color:#fff; font-size:1.5rem; line-height:1; cursor:pointer; padding:0 4px; }
+.modal-body { padding:20px; }
+.record-item { display:flex; align-items:center; gap:10px; background:var(--bg-light); border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
+.record-item .rec-info { flex:1; min-width:0; }
+.record-item .rec-title { font-weight:700; font-size:0.88rem; display:block; }
+.record-item .rec-link { font-size:0.75rem; color:var(--text-light); word-break:break-all; text-decoration:none; }
+.record-item .rec-link:hover { text-decoration:underline; color:var(--primary); }
+.record-item .rec-btns { display:flex; gap:6px; flex-shrink:0; }
+.record-add-row { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+html.dark .modal-box { background:#1e293b; }
+html.dark .modal-header { background:#0f172a; }
+html.dark .record-item { background:#0f172a; border-color:#334155; }
+html.dark .record-add-row input { background:#0f172a; border-color:#334155; color:#e2e8f0; }
