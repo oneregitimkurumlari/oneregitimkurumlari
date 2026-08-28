@@ -353,21 +353,15 @@ function updateRecUi() {
 async function uploadToDrive(blob, cls) {
     setRecStatus("Kayıt gofile.io'ya yükleniyor...", "info");
     try {
-        const serversRes = await fetch("https://api.gofile.io/servers");
-        if (!serversRes.ok) throw new Error("Kullanıcı sunucusu alınamadı (HTTP " + serversRes.status + ")");
-        const serversData = await serversRes.json();
-        const server = (serversData.data && serversData.data.servers && serversData.data.servers[0])
-            ? serversData.data.servers[0].name : "store1";
-
         const safeTitle = (cls.title || "ders").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
         const fname = new Date(recState.startedAt).getTime() + "_" + safeTitle + ".webm";
         const fd = new FormData();
         fd.append("file", blob, fname);
 
-        const upRes = await fetch("https://" + server + ".gofile.io/contents", { method: "POST", body: fd });
+        const upRes = await fetch("https://upload.gofile.io/uploadfile", { method: "POST", body: fd });
         if (!upRes.ok) throw new Error("Yükleme başarısız (HTTP " + upRes.status + ")");
         const upData = await upRes.json();
-        if (!upData.data || !upData.data.downloadPage) throw new Error("Yükleme linki alınamadı");
+        if (upData.status !== "ok" || !upData.data || !upData.data.downloadPage) throw new Error("Yükleme linki alınamadı");
         const link = upData.data.downloadPage;
         setRecStatus("Kayıt yüklendi → " + link, "live");
         showRecLink(link);
