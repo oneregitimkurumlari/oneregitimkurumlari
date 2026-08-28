@@ -10,7 +10,25 @@
       "id": "mt240345im9aa"
     }
   ],
-  "classes": [],
+  "classes": [
+    {
+      "title": "matematik",
+      "teacherId": "mt240345im9aa",
+      "day": "sali",
+      "dayLabel": "Salı",
+      "date": "2026-08-28",
+      "startTime": "20:14",
+      "endTime": "21:14",
+      "meetLink": "",
+      "classroom": "-",
+      "description": "",
+      "capacity": 25,
+      "type": "Canlı Ders",
+      "status": "upcoming",
+      "courseType": "math",
+      "id": "mtd7nxvhfutf0"
+    }
+  ],
   "students": [
     {
       "username": "FURKAN",
