@@ -24,13 +24,15 @@
         .stage-msg i { font-size: 4rem; color: #334155; margin-bottom: 16px; display: block; }
         .stage-msg .live-badge { display: inline-flex; align-items: center; gap: 8px; background: #dc2626; color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; margin-bottom: 20px; }
         .stage-msg .live-badge i { font-size: 0.9rem; margin: 0; color: #fff; }
-        .join-meet-btn { margin-top: 24px; background: linear-gradient(135deg, #c09020 0%, #8f6c12 100%); color: #fff; border: none; padding: 12px 24px; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; }
-        .join-meet-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(192,144,32,0.4); }
         .jitsi-wrap { position: relative; width: 100%; }
-        .jitsi-frame { width: 100%; height: 560px; border: 0; border-radius: 12px; background: #000; display: block; }
+        .fullscreen-btn { position: absolute; top: 12px; right: 12px; z-index: 20; background: rgba(0,0,0,0.55); color: #fff; border: none; width: 42px; height: 42px; border-radius: 10px; font-size: 1.05rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .2s; backdrop-filter: blur(4px); }
+        .fullscreen-btn:hover { background: rgba(0,0,0,0.8); }
+        .jitsi-frame { width: 100%; height: 640px; border: 0; border-radius: 12px; background: #000; display: block; }
+        .jitsi-wrap:fullscreen, .jitsi-wrap:-webkit-full-screen { width: 100vw; height: 100vh; background: #000; }
+        .jitsi-wrap:fullscreen .jitsi-frame, .jitsi-wrap:-webkit-full-screen .jitsi-frame { height: 100%; width: 100%; border-radius: 0; }
         .jitsi-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #94a3b8; background: #0a0d16; border-radius: 12px; text-align: center; padding: 20px; z-index: 2; }
         .jitsi-msg i { font-size: 3rem; color: #334155; margin-bottom: 12px; display: block; }
-        @media (max-width: 900px) { .jitsi-frame { height: 420px; } }
+        @media (max-width: 900px) { .jitsi-frame { height: 480px; } }
         .room-panel { display: flex; flex-direction: column; gap: 16px; }
         .room-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
         .room-card h3 { font-size: 1rem; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
@@ -80,10 +82,9 @@
         <div class="stage-msg" id="stageMsg">
             <span class="live-badge"><i class="fas fa-circle"></i> CANLI DERS</span>
             <h2 id="stageTitle">Ders yükleniyor...</h2>
-            <p id="stageDesc"></p>
-            <a href="#" id="joinMeetLink" class="join-meet-btn" target="_blank"><i class="fas fa-video"></i> Görüşmeye Katıl</a>
         </div>
         <div class="jitsi-wrap" id="jitsiWrap" style="display:none;">
+            <button class="fullscreen-btn" id="fullscreenBtn" title="Tam Ekran"><i class="fas fa-expand"></i></button>
             <div class="jitsi-msg" id="jitsiLoading"><i class="fas fa-video"></i> Görüşme odası hazırlanıyor...</div>
             <iframe class="jitsi-frame" id="jitsiFrame" allow="camera; microphone; fullscreen; display-capture" allowfullscreen></iframe>
         </div>
@@ -177,7 +178,6 @@ function renderRoom(cls) {
         <span><i class="fas fa-clock"></i> ${cls.startTime} - ${cls.endTime}</span>
         <span><i class="fas fa-user"></i> ${cls.dayLabel || ""}</span>`;
     document.getElementById("stageTitle").textContent = cls.title;
-    document.getElementById("stageDesc").textContent = cls.description || "Bugünkü derse hoş geldiniz.";
     const roomName = "oneregitim-" + (cls.id || "ders");
     const jitsiUrl = "https://sfu.mirotalk.com/join?room=" + encodeURIComponent(roomName) + "&name=" + encodeURIComponent(myName || "Misafir") + "&audio=1&video=1";
 
@@ -186,12 +186,10 @@ function renderRoom(cls) {
     const jFrame = document.getElementById("jitsiFrame");
     jFrame.src = jitsiUrl;
     document.getElementById("jitsiWrap").style.display = "block";
-    document.getElementById("joinMeetLink").href = jitsiUrl;
     window.setTimeout(() => {
         const lm = document.getElementById("jitsiLoading");
         if (lm) lm.style.display = "none";
     }, 5000);
-    if (!cls.meetLink) document.getElementById("joinMeetLink").textContent = "Görüşmeyi Yeni Sekmede Aç";
 }
 
 function loadAttendees(clsId) {
@@ -390,6 +388,23 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (myRole) addMeToAttendees(clsId);
     else loadAttendees(clsId);
+
+    const fsBtn = document.getElementById("fullscreenBtn");
+    fsBtn.addEventListener("click", () => {
+        const el = document.getElementById("jitsiWrap");
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+            if (document.exitFullscreen) document.exitFullscreen();
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            fsBtn.querySelector("i").className = "fas fa-expand";
+        } else {
+            if (el.requestFullscreen) el.requestFullscreen();
+            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+            fsBtn.querySelector("i").className = "fas fa-compress";
+        }
+    });
+    document.addEventListener("fullscreenchange", () => {
+        fsBtn.querySelector("i").className = document.fullscreenElement ? "fas fa-compress" : "fas fa-expand";
+    });
 });
 </script>
 </body>
