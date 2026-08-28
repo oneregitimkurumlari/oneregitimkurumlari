@@ -503,11 +503,11 @@ function downloadRecordedBlob(blob, cls) {
 async function pushRecordingToData(link, cls) {
     try {
         const token = await getGitHubToken();
-        if (!token) { console.warn("Kayıt eklendi ama data.json'a yazılamadı (token yok)"); return; }
+        if (!token) { setRecStatus("Kayıt data.json'a yazılamadı: token yok.", "info"); console.warn("Kayıt eklendi ama data.json'a yazılamadı (token yok)"); return; }
         const metaRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json?t=${Date.now()}`, {
             headers: { "Authorization": "token " + token, "Cache-Control": "no-cache" }, cache: "no-store"
         });
-        if (!metaRes.ok) { console.warn("data.json okunamadı (HTTP " + metaRes.status + ")"); return; }
+        if (!metaRes.ok) { setRecStatus("data.json'a yazma hazırlanamadı (HTTP " + metaRes.status + ")", "info"); console.warn("data.json okunamadı (HTTP " + metaRes.status + ")"); return; }
         const meta = await metaRes.json();
         const server = JSON.parse(decodeURIComponent(escape(atob(meta.content))));
         const c = (server.classes || []).find(x => x.id === cls.id);
@@ -522,9 +522,11 @@ async function pushRecordingToData(link, cls) {
             headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
             body: JSON.stringify({ message: "Kayıt eklendi: " + (cls.title || ""), content: content, sha: meta.sha })
         }, 25000);
-        if (res.ok) console.log("Kayıt data.json'a eklendi.");
+        if (res.ok) { console.log("Kayıt data.json'a eklendi."); setRecStatus("Kayıt öğrenci listesine eklendi ✓", "live"); }
+        else { setRecStatus("data.json'a yazılamadı (HTTP " + res.status + ")", "info"); console.warn("PUT basarısız HTTP " + res.status); }
     } catch (err) {
         console.warn("Kayıt data.json'a yazılamadı:", err.message);
+        setRecStatus("data.json'a yazılamadı: " + err.message, "info");
     }
 }
 
