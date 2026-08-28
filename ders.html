@@ -27,6 +27,10 @@
         .jitsi-wrap { position: relative; width: 100%; }
         .fullscreen-btn { position: absolute; top: 12px; right: 12px; z-index: 20; background: rgba(0,0,0,0.55); color: #fff; border: none; width: 42px; height: 42px; border-radius: 10px; font-size: 1.05rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .2s; backdrop-filter: blur(4px); }
         .fullscreen-btn:hover { background: rgba(0,0,0,0.8); }
+        .rec-ctrl-btn { display: none !important; position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 20; background: #dc2626; color: #fff; border: none; padding: 12px 24px; border-radius: 30px; font-weight: 700; font-size: 0.95rem; cursor: pointer; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.45); transition: background .2s; }
+        body.is-teacher .jitsi-wrap:fullscreen .rec-ctrl-btn, body.is-teacher .jitsi-wrap:-webkit-full-screen .rec-ctrl-btn { display: flex !important; }
+        .rec-ctrl-btn.rec-on { background: #e11d48; }
+        .rec-ctrl-btn:hover { background: #b91c1c; }
         .jitsi-frame { width: 100%; height: 640px; border: 0; border-radius: 12px; background: #000; display: block; }
         .jitsi-wrap:fullscreen, .jitsi-wrap:-webkit-full-screen { width: 100vw; height: 100vh; background: #000; }
         .jitsi-wrap:fullscreen .jitsi-frame, .jitsi-wrap:-webkit-full-screen .jitsi-frame { height: 100%; width: 100%; border-radius: 0; }
@@ -85,6 +89,7 @@
         </div>
         <div class="jitsi-wrap" id="jitsiWrap" style="display:none;">
             <button class="fullscreen-btn" id="fullscreenBtn" title="Tam Ekran"><i class="fas fa-expand"></i></button>
+            <button class="rec-ctrl-btn" id="recCtrlBtn"><i class="fas fa-circle"></i> Kaydı Başlat</button>
             <div class="jitsi-msg" id="jitsiLoading"><i class="fas fa-video"></i> Görüşme odası hazırlanıyor...</div>
             <iframe class="jitsi-frame" id="jitsiFrame" allow="camera; microphone; fullscreen; display-capture" allowfullscreen></iframe>
         </div>
@@ -298,10 +303,8 @@ async function startRecording(cls) {
         mr.start(1000);
         recState.recording = true;
 
-        document.getElementById("startRecBtn").style.display = "none";
-        document.getElementById("stopRecBtn").style.display = "inline-flex";
+        updateRecUi();
         setRecStatus("Kayıt başladı — ekranınız kaydediliyor.", "live");
-
         stream.getVideoTracks()[0].addEventListener("ended", () => {
             if (recState.recording && recState.mediaRecorder) recState.mediaRecorder.stop();
         });
@@ -323,13 +326,29 @@ function uploadRecording(cls) {
     if (recState.stream) recState.stream.getTracks().forEach(t => t.stop());
     recState.recording = false;
 
-    document.getElementById("startRecBtn").style.display = "inline-flex";
-    document.getElementById("stopRecBtn").style.display = "none";
+    updateRecUi();
 
     if (blob.size < 1000) { setRecStatus("Kayıt boş, indirilemedi.", "info"); return; }
 
     setRecStatus("Kayıt Drive'a yükleniyor...", "info");
     uploadToDrive(blob, cls);
+}
+
+function updateRecUi() {
+    const ctrl = document.getElementById("recCtrlBtn");
+    if (ctrl) {
+        if (recState.recording) {
+            ctrl.innerHTML = '<i class="fas fa-stop"></i> Kaydı Durdur';
+            ctrl.classList.add("rec-on");
+        } else {
+            ctrl.innerHTML = '<i class="fas fa-circle"></i> Kaydı Başlat';
+            ctrl.classList.remove("rec-on");
+        }
+    }
+    const sb = document.getElementById("startRecBtn");
+    const tb = document.getElementById("stopRecBtn");
+    if (sb) sb.style.display = recState.recording ? "none" : "inline-flex";
+    if (tb) tb.style.display = recState.recording ? "inline-flex" : "none";
 }
 
 async function uploadToDrive(blob, cls) {
@@ -461,6 +480,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (myRole === "teacher") {
         document.getElementById("startRecBtn").addEventListener("click", () => startRecording(cls));
         document.getElementById("stopRecBtn").addEventListener("click", () => stopRecording(cls));
+        const recCtrl = document.getElementById("recCtrlBtn");
+        if (recCtrl) recCtrl.addEventListener("click", () => {
+            if (recState.recording) stopRecording(cls);
+            else startRecording(cls);
+        });
+        updateRecUi();
     }
 
     if (myRole) addMeToAttendees(clsId);
