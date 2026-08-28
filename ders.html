@@ -152,9 +152,12 @@ const DRIVE_FOLDER_ID = "1DXa_5ytoaOTyBLMn6nvmMCkzfdBzzYFj";
 function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
-    return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+    const init = { ...options, signal: controller.signal };
+    if (init.headers && !(init.headers instanceof Headers)) init.headers = new Headers(init.headers);
+    init.headers = init.headers || new Headers();
+    init.headers.delete("accept-charset");
+    return fetch(url, init).finally(() => clearTimeout(timer));
 }
-
 let cachedData = { teachers: [], classes: [], students: [], homeworks: [], sha: "" };
 let myRole = null;
 let myName = "";
@@ -526,7 +529,7 @@ async function pushRecordingToData(link, cls) {
         if (res.ok) { console.log("Kayıt data.json'a eklendi."); setRecStatus("Kayıt öğrenci listesine eklendi ✓", "live"); }
         else { setRecStatus("data.json'a yazılamadı (HTTP " + res.status + ")", "info"); console.warn("PUT basarısız HTTP " + res.status); }
     } catch (err) {
-        console.warn("Kayıt data.json'a yazılamadı:", err.message);
+        console.warn("Kayıt data.json'a yazılamadı:", err.message, err.stack);
         setRecStatus("data.json'a yazılamadı: " + err.message, "info");
     }
 }
