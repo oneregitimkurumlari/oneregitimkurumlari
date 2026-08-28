@@ -283,15 +283,28 @@ function renderRecList(cls) {
         recs.slice().reverse().map(r => {
             const t = new Date(r.createdAt);
             const dateStr = isNaN(t.getTime()) ? "" : "<span style=\"color:var(--text-light);font-size:0.75rem;\">" + t.toLocaleDateString("tr-TR") + "</span>";
-            const isDrive = /drive\.google\.com\/file\/d\/.+\/preview/.test(r.url);
-            const player = isDrive
-                ? "<iframe src=\"" + r.url + "\" style=\"width:100%;height:280px;border:0;border-radius:8px;background:#000;\" allow=\"autoplay\" allowfullscreen></iframe>"
-                : "<video controls preload=\"none\" style=\"width:100%;border-radius:8px;background:#000;\" src=\"" + r.url + "\"><a href=\"" + r.url + "\" target=\"_blank\">Videoyu yeni sekmede aç</a></video>";
+            const url = r.url || "";
+            const isPending = url.indexOf("pending:") === 0;
+            const isDrive = /drive\.google\.com\/file\/d\/.+\/preview/.test(url);
+            const isGofilePage = url.indexOf("gofile.io/d/") !== -1;
+            let player;
+            if (isPending) {
+                player = "<div style=\"padding:18px;text-align:center;background:rgba(255,255,255,0.05);border-radius:8px;color:var(--text-light);font-size:0.85rem;\"><i class=\"fas fa-spinner fa-spin\"></i> Kayıt işleniyor — birkaç dakika içinde oynatılabilir olacak.</div>";
+            } else if (isDrive) {
+                player = "<iframe src=\"" + url + "\" style=\"width:100%;height:280px;border:0;border-radius:8px;background:#000;\" allow=\"autoplay\" allowfullscreen></iframe>";
+            } else if (isGofilePage) {
+                player = "<a href=\"" + url + "\" target=\"_blank\" rel=\"noopener\" style=\"display:block;text-align:center;padding:14px;background:rgba(255,255,255,0.06);border-radius:8px;color:#93c5fd;text-decoration:none;\">Kayıt gofile sayfasında — tıklayıp açın</a>";
+            } else {
+                player = "<video controls preload=\"none\" style=\"width:100%;border-radius:8px;background:#000;\" src=\"" + url + "\"></video>";
+            }
+            const openBtn = isPending
+                ? "<span style=\"padding:8px 14px;background:#334155;color:#cbd5e1;border-radius:8px;font-weight:700;font-size:0.85rem;\">İşleniyor</span>"
+                : "<a href=\"" + url + "\" target=\"_blank\" rel=\"noopener\" style=\"padding:8px 14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.85rem;white-space:nowrap;\">Aç</a>";
             return "<div style=\"padding:10px 12px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:8px;\">" +
                 "<div style=\"display:flex;align-items:center;gap:10px;margin-bottom:8px;\">" +
                 "<i class=\"fas fa-play-circle\" style=\"color:#22c55e;font-size:1.3rem;\"></i>" +
                 "<div style=\"flex:1;min-width:0;\"><div style=\"font-weight:700;font-size:0.88rem;\">" + (r.title || "Kayıt") + "</div>" + dateStr + "</div>" +
-                "<a href=\"" + r.url + "\" target=\"_blank\" rel=\"noopener\" style=\"padding:8px 14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.85rem;white-space:nowrap;\">Aç</a>" +
+                openBtn +
                 "</div>" +
                 player +
                 "</div>";
@@ -436,56 +449,71 @@ function updateRecUi() {
 }
 
 const FIREBASE_STORAGE_BUCKET = "one-egitim.appspot.com";
+const REC_CHUNK_SIZE = 3000000;
 
-async function uploadRecordingToCatbox(blob, fname) {
-    const fd = new FormData();
-    fd.append("reqtype", "fileupload");
-    fd.append("fileToUpload", blob, fname);
-    const res = await fetch("https://catbox.moe/user/api.php", { method: "POST", body: fd });
-    const text = await res.text();
-    if (!res.ok || !/^https?:\/\/files\.catbox\.moe\//.test(text.trim())) {
-        throw new Error(text.trim() && text.trim() !== "" ? "catbox reddetti: " + text.trim() : "catbox yükleme başarısız (" + res.status + ")");
+function firebasePut(path, obj) {
+    return fetchWithTimeout(FIREBASE_URL + "/" + path + ".json", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(obj)
+    }, 30000);
+}
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result).split(",")[1] || "");
+        fr.onerror = reject;
+        fr.readAsDataURL(blob);
+    });
+}
+
+async function uploadRecordingToQueue(blob, cls) {
+    const stamp = recState.startedAt || Date.now();
+    const fname = "rec_" + stamp + ".webm";
+    const b64 = await blobToBase64(blob);
+    const totalChunks = Math.max(1, Math.ceil(b64.length / REC_CHUNK_SIZE));
+    setRecStatus("Kayıt yükleniyor (" + totalChunks + " parça)...", "info");
+    for (let i = 0; i < totalChunks; i++) {
+        const part = b64.slice(i * REC_CHUNK_SIZE, (i + 1) * REC_CHUNK_SIZE);
+        const res = await firebasePut("rec_pending/" + stamp + "/c" + String(i).padStart(3, "0"), { d: part });
+        if (!res.ok) throw new Error("Parça yüklenemedi (HTTP " + res.status + ")");
     }
-    return text.trim();
+    const res = await firebasePut("rec_pending/" + stamp + "/meta", {
+        stamp: String(stamp), fname: fname, totalChunks: totalChunks,
+        classId: cls.id, title: cls.title || "Kayıt", status: "pending", created: new Date().toISOString()
+    });
+    if (!res.ok) throw new Error("Meta yazılamadı (HTTP " + res.status + ")");
+    return "pending:" + stamp;
+}
+
+async function uploadToGofileFallback(blob, cls) {
+    const safeTitle = (cls.title || "ders").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+    const fname = new Date(recState.startedAt).getTime() + "_" + safeTitle + ".webm";
+    const fd = new FormData();
+    fd.append("file", blob, fname);
+    const upRes = await fetch("https://upload.gofile.io/uploadfile", { method: "POST", body: fd });
+    if (!upRes.ok) throw new Error("Yükleme başarısız (HTTP " + upRes.status + ")");
+    const upData = await upRes.json();
+    if (upData.status !== "ok" || !upData.data || !upData.data.downloadPage) throw new Error("Yükleme linki alınamadı");
+    return upData.data.downloadPage;
 }
 
 async function uploadToDrive(blob, cls) {
-    const safeTitle = (cls.title || "ders").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
-    const fname = new Date(recState.startedAt).getTime() + "_" + safeTitle + ".webm";
-
     let link = null;
 
     try {
-        setRecStatus("Kayıt yükleniyor...", "info");
-        link = await uploadRecordingToCatbox(blob, fname);
+        link = await uploadRecordingToQueue(blob, cls);
+        setRecStatus("Kayıt yüklendi — birkaç dakika içinde işlenip yayınlanacak.", "live");
     } catch (e) {
-        console.warn("catbox yükleme başarısız:", e.message, "→ Firebase Storage deneniyor.");
-    }
-
-    if (!link) {
-        setRecStatus("Kayıt Firebase Storage'a yükleniyor...", "info");
-        try {
-            const upUrl = "https://firebasestorage.googleapis.com/v0/b/" + FIREBASE_STORAGE_BUCKET + "/o?uploadType=media&name=recordings%2F" + encodeURIComponent(fname);
-            const upRes = await fetch(upUrl, { method: "POST", body: blob });
-            if (upRes.ok) {
-                link = "https://firebasestorage.googleapis.com/v0/b/" + FIREBASE_STORAGE_BUCKET + "/o/recordings%2F" + encodeURIComponent(fname) + "?alt=media";
-            } else {
-                console.warn("Firebase Storage yükleme başarısız (HTTP " + upRes.status + "), gofile deneniyor.");
-            }
-        } catch (e) {
-            console.warn("Firebase Storage yükleme hatası:", e.message, "→ gofile deneniyor.");
-        }
+        console.warn("base64 yükleme başarısız:", e.message, "→ gofile deneniyor.");
     }
 
     if (!link) {
         try {
-            const fd = new FormData();
-            fd.append("file", blob, fname);
-            const upRes = await fetch("https://upload.gofile.io/uploadfile", { method: "POST", body: fd });
-            if (!upRes.ok) throw new Error("Yükleme başarısız (HTTP " + upRes.status + ")");
-            const upData = await upRes.json();
-            if (upData.status !== "ok" || !upData.data || !upData.data.downloadPage) throw new Error("Yükleme linki alınamadı");
-            link = upData.data.downloadPage;
+            setRecStatus("Kayıt gofile'a yükleniyor...", "info");
+            link = await uploadToGofileFallback(blob, cls);
+            setRecStatus("Kayıt yüklendi → " + link, "live");
         } catch (err) {
             console.error("gofile yükleme hatası:", err);
             downloadRecordedBlob(blob, cls);
@@ -494,7 +522,6 @@ async function uploadToDrive(blob, cls) {
         }
     }
 
-    setRecStatus("Kayıt yüklendi → " + link, "live");
     showRecLink(link);
     addRecLinkToList(link);
     await pushRecordingToData(link, cls);
@@ -618,6 +645,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (myRole) addMeToAttendees(clsId);
     else loadAttendees(clsId);
+
+    let recSig = JSON.stringify((cachedData.classes.find(x => x.id === clsId) || {}).recordings || []);
+    window.setInterval(async () => {
+        try {
+            const freshRes = await fetchWithTimeout(FIREBASE_URL + "/.json", { cache: "no-store" });
+            if (!freshRes.ok) return;
+            const fresh = await freshRes.json();
+            const freshCls = (fresh.classes || []).find(x => x.id === clsId);
+            if (!freshCls) return;
+            const sig = JSON.stringify(freshCls.recordings || []);
+            if (sig !== recSig) { recSig = sig; renderRecList(freshCls); }
+        } catch (e) { /* sessiz */ }
+    }, 30000);
 
     const fsBtn = document.getElementById("fullscreenBtn");
     fsBtn.addEventListener("click", () => {

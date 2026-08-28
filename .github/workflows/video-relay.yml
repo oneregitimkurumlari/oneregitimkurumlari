@@ -1,0 +1,17 @@
+name: Video Relay
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download pending recordings, commit videos, mark ready
+        run: node .github/video-relay.js
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI: "true"

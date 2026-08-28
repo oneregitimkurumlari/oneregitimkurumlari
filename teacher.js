@@ -6,6 +6,42 @@ let deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(),
 
 let recState = { recording: false, classId: null, mediaRecorder: null, chunks: [], stream: null, startedAt: null };
 
+const REC_CHUNK_SIZE = 3000000;
+
+function firebasePut(path, obj) {
+    return fetchWithTimeout(FIREBASE_URL + "/" + path + ".json", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(obj)
+    }, 30000);
+}
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result).split(",")[1] || "");
+        fr.onerror = reject;
+        fr.readAsDataURL(blob);
+    });
+}
+
+async function uploadRecordingToRepo(blob, classId, stamp) {
+    const fname = "rec_" + stamp + ".webm";
+    const b64 = await blobToBase64(blob);
+    const totalChunks = Math.max(1, Math.ceil(b64.length / REC_CHUNK_SIZE));
+    for (let i = 0; i < totalChunks; i++) {
+        const part = b64.slice(i * REC_CHUNK_SIZE, (i + 1) * REC_CHUNK_SIZE);
+        const res = await firebasePut("rec_pending/" + stamp + "/c" + String(i).padStart(3, "0"), { d: part });
+        if (!res.ok) throw new Error("Parça yüklenemedi (HTTP " + res.status + ")");
+    }
+    const res = await firebasePut("rec_pending/" + stamp + "/meta", {
+        stamp: String(stamp), fname: fname, totalChunks: totalChunks,
+        classId: classId, status: "pending", created: new Date().toISOString()
+    });
+    if (!res.ok) throw new Error("Meta yazılamadı (HTTP " + res.status + ")");
+    return "pending:" + stamp;
+}
+
 function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -604,29 +640,10 @@ async function uploadAndFinishRecording() {
 
         let recordingUrl = null;
         try {
-            const fd = new FormData();
-            fd.append("reqtype", "fileupload");
-            fd.append("fileToUpload", blob, fname);
-            const up = await fetch("https://catbox.moe/user/api.php", { method: "POST", body: fd });
-            const text = await up.text();
-            if (up.ok && /^https?:\/\/files\.catbox\.moe\//.test(text.trim())) recordingUrl = text.trim();
-            else console.warn("catbox reddetti:", text.trim(), "→ Storage deneniyor.");
+            recordingUrl = await uploadRecordingToRepo(blob, classId, stamp);
+            console.log("Kayıt işleme kuyruğuna alındı:", recordingUrl);
         } catch (err) {
-            console.warn("catbox hatası:", err.message, "→ Storage deneniyor.");
-        }
-
-        if (!recordingUrl) {
-            try {
-                const upUrl = "https://firebasestorage.googleapis.com/v0/b/one-egitim.appspot.com/o?uploadType=media&name=recordings%2F" + encodeURIComponent(fname);
-                const upRes = await fetch(upUrl, { method: "POST", body: blob });
-                if (upRes.ok) {
-                    recordingUrl = "https://firebasestorage.googleapis.com/v0/b/one-egitim.appspot.com/o/recordings%2F" + encodeURIComponent(fname) + "?alt=media";
-                } else {
-                    console.warn("Firebase Storage yükleme başarısız (HTTP " + upRes.status + "), gofile deneniyor.");
-                }
-            } catch (err) {
-                console.warn("Firebase Storage yükleme hatası:", err.message, "→ gofile deneniyor.");
-            }
+            console.warn("base64 yükleme hatası:", err.message, "→ gofile deneniyor.");
         }
 
         if (!recordingUrl) {
@@ -645,7 +662,11 @@ async function uploadAndFinishRecording() {
 
         if (recordingUrl) {
             await addRecordingToClass(classId, recordingUrl);
-            showToast("Kayıt yüklendi ve ders kayıtlarına eklendi!");
+            if (recordingUrl.indexOf("pending:") === 0) {
+                showToast("Kayıt yüklendi — birkaç dakika içinde işlenip yayınlanacak.");
+            } else {
+                showToast("Kayıt yüklendi ve ders kayıtlarına eklendi!");
+            }
         } else {
             showToast("Kayıt yüklenemedi.", true);
         }
@@ -681,6 +702,8 @@ async function addRecordingToClass(classId, recordingUrl) {
     if (idx === -1) return false;
     remoteData.classes[idx].recordingUrl = recordingUrl;
     remoteData.classes[idx].recordingAt = new Date().toISOString();
+    if (!Array.isArray(remoteData.classes[idx].recordings)) remoteData.classes[idx].recordings = [];
+    remoteData.classes[idx].recordings.push({ id: "rec" + Date.now(), title: remoteData.classes[idx].title || "Kayıt", url: recordingUrl, createdAt: new Date().toISOString() });
     const ok = await saveRemoteData();
     renderClasses(currentTeacher);
     return ok;
