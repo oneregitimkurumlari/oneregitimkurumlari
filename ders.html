@@ -124,6 +124,8 @@
 <script>
 const GITHUB_REPO = "oneregitimkurumlari/oneregitimkurumlari";
 const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
+const DRIVE_FOLDER_ID = "1DXa_5ytoaOTyBLMn6nvmMCkzfdBzzYFj";
+const DRIVE_CLIENT_ID = "";
 
 function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
     const controller = new AbortController();
@@ -326,6 +328,43 @@ function uploadRecording(cls) {
 
     if (blob.size < 1000) { setRecStatus("Kayıt boş, indirilemedi.", "info"); return; }
 
+    setRecStatus("Kayıt Drive'a yükleniyor...", "info");
+    uploadToDrive(blob, cls);
+}
+
+async function uploadToDrive(blob, cls) {
+    if (!DRIVE_CLIENT_ID) {
+        downloadRecordedBlob(blob, cls);
+        setRecStatus("Drive bağlantısı tanımlı değil. Kayıt indirildi. (Kurulumu tamamlayınca otomatik Drive'a yüklenir.)", "info");
+        return;
+    }
+    try {
+        const token = await getDriveToken();
+        if (!token) { downloadRecordedBlob(blob, cls); setRecStatus("Drive izni alınamadı — kayıt indirildi.", "info"); return; }
+
+        const safeTitle = (cls.title || "ders").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+        const fname = new Date(recState.startedAt).getTime() + "_" + safeTitle + ".webm";
+        const meta = { name: fname, mimeType: "video/webm", parents: [DRIVE_FOLDER_ID] };
+        const body = new FormData();
+        body.append("metadata", new Blob([JSON.stringify(meta)], { type: "application/json" }));
+        body.append("file", blob, fname);
+
+        const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink", {
+            method: "POST",
+            headers: { "Authorization": "Bearer " + token },
+            body
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        setRecStatus("Kayıt Drive'a yüklendi: " + (data.name || fname), "live");
+    } catch (err) {
+        console.error("Drive yükleme hatası:", err);
+        downloadRecordedBlob(blob, cls);
+        setRecStatus("Drive yükleme başarısız (" + err.message + ") — kayıt indirildi.", "info");
+    }
+}
+
+function downloadRecordedBlob(blob, cls) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -335,7 +374,45 @@ function uploadRecording(cls) {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
-    setRecStatus("Kayıt indirildi! Dosyayı Google Drive'a yükleyip linkini aşağıya yapıştırın.", "info");
+}
+
+let driveToken = null;
+async function getDriveToken() {
+    if (driveToken) return driveToken;
+    const cached = sessionStorage.getItem("drive_access_token");
+    if (cached && Date.now() < parseInt(sessionStorage.getItem("drive_token_expiry") || "0", 10)) {
+        driveToken = cached;
+        return driveToken;
+    }
+    if (typeof google === "undefined" || !google.accounts || !google.accounts.oauth2) {
+        await loadGis();
+    }
+    const token = await new Promise((resolve, reject) => {
+        const client = google.accounts.oauth2.initTokenClient({
+            client_id: DRIVE_CLIENT_ID,
+            scope: "https://www.googleapis.com/auth/drive.file",
+            callback: (resp) => {
+                if (resp && resp.access_token) resolve(resp.access_token);
+                else reject(new Error("İzin reddedildi"));
+            }
+        });
+        client.requestAccessToken();
+    });
+    driveToken = token;
+    sessionStorage.setItem("drive_access_token", token);
+    sessionStorage.setItem("drive_token_expiry", String(Date.now() + 3500 * 1000));
+    return token;
+}
+
+function loadGis() {
+    return new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = "https://accounts.google.com/gsi/client";
+        s.async = true;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error("Google oturum scripti yüklenemedi"));
+        document.head.appendChild(s);
+    });
 }
 
 async function addRecordingToClass(token, classId, recordingUrl) {
