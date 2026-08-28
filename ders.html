@@ -130,9 +130,6 @@
 const GITHUB_REPO = "oneregitimkurumlari/oneregitimkurumlari";
 const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
 const DRIVE_FOLDER_ID = "1DXa_5ytoaOTyBLMn6nvmMCkzfdBzzYFj";
-const DRIVE_CLIENT_ID = "989501478590-b693esov2sdsmbjjh8hco706gup46lnq.apps.googleusercontent.com";
-const YANDEX_CLIENT_ID = "";
-const YANDEX_FOLDER = "app:/DersKayitlari";
 
 function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
     const controller = new AbortController();
@@ -354,41 +351,56 @@ function updateRecUi() {
 }
 
 async function uploadToDrive(blob, cls) {
-    if (!YANDEX_CLIENT_ID) {
-        downloadRecordedBlob(blob, cls);
-        setRecStatus("Yandex bağlantısı tanımlı değil. Kayıt indirildi. (Yandex client ID eklenince otomatik yüklenir.)", "info");
-        return;
-    }
+    setRecStatus("Kayıt gofile.io'ya yükleniyor...", "info");
     try {
-        const token = await getYandexToken();
-        if (!token) {
-            pendingUpload = { blob, cls };
-            setRecStatus("Yandex bağlantısı gerekiyor — izin sayfasına yönlendiriliyorsunuz...", "info");
-            startYandexAuth();
-            return;
-        }
+        const serversRes = await fetch("https://api.gofile.io/servers");
+        if (!serversRes.ok) throw new Error("Kullanıcı sunucusu alınamadı (HTTP " + serversRes.status + ")");
+        const serversData = await serversRes.json();
+        const server = (serversData.data && serversData.data.servers && serversData.data.servers[0])
+            ? serversData.data.servers[0].name : "store1";
 
         const safeTitle = (cls.title || "ders").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
         const fname = new Date(recState.startedAt).getTime() + "_" + safeTitle + ".webm";
-        const path = YANDEX_FOLDER + "/" + fname;
+        const fd = new FormData();
+        fd.append("file", blob, fname);
 
-        const upRes = await fetch("https://cloud-api.yandex.net/v1/disk/resources/upload?path=" + encodeURIComponent(path) + "&overwrite=true", {
-            headers: { "Authorization": "OAuth " + token }
-        });
-        if (!upRes.ok) throw new Error("Yükleme adresi alınamadı (HTTP " + upRes.status + ")");
+        const upRes = await fetch("https://" + server + ".gofile.io/contents", { method: "POST", body: fd });
+        if (!upRes.ok) throw new Error("Yükleme başarısız (HTTP " + upRes.status + ")");
         const upData = await upRes.json();
-        const putRes = await fetch(upData.href, {
-            method: "PUT",
-            headers: { "Content-Type": "video/webm" },
-            body: blob
-        });
-        if (!putRes.ok) throw new Error("Dosya gönderilemedi (HTTP " + putRes.status + ")");
-        setRecStatus("Kayıt Yandex Disk'e yüklendi: " + fname, "live");
+        if (!upData.data || !upData.data.downloadPage) throw new Error("Yükleme linki alınamadı");
+        const link = upData.data.downloadPage;
+        setRecStatus("Kayıt yüklendi → " + link, "live");
+        showRecLink(link);
+        addRecLinkToList(link);
     } catch (err) {
-        console.error("Yandex yükleme hatası:", err);
+        console.error("gofile yükleme hatası:", err);
         downloadRecordedBlob(blob, cls);
-        setRecStatus("Yandex yükleme başarısız (" + err.message + ") — kayıt indirildi.", "info");
+        setRecStatus("gofile yükleme başarısız (" + err.message + ") — kayıt indirildi.", "info");
     }
+}
+
+function showRecLink(link) {
+    const st = document.getElementById("recStatus");
+    return st;
+}
+
+function addRecLinkToList(link) {
+    let wrap = document.getElementById("recLinksWrap");
+    if (!wrap) {
+        wrap = document.createElement("div");
+        wrap.id = "recLinksWrap";
+        wrap.style.marginTop = "10px";
+        wrap.style.maxHeight = "220px";
+        wrap.style.overflowY = "auto";
+        const card = document.querySelector(".room-card.teacher-only");
+        if (card) card.appendChild(wrap);
+    }
+    const row = document.createElement("a");
+    row.href = link;
+    row.target = "_blank";
+    row.style.cssText = "display:block;font-size:0.85rem;color:#1d4ed8;text-decoration:underline;margin:4px 0;word-break:break-all;";
+    row.textContent = "Son kayıt: " + link;
+    wrap.insertBefore(row, wrap.firstChild);
 }
 
 function downloadRecordedBlob(blob, cls) {
@@ -401,31 +413,6 @@ function downloadRecordedBlob(blob, cls) {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
-}
-
-let pendingUpload = null;
-function getYandexToken() {
-    return Promise.resolve(localStorage.getItem("yandex_token") || null);
-}
-
-function startYandexAuth() {
-    const redirect = window.location.origin + window.location.pathname.split("?")[0].split("#")[0];
-    window.location.href = "https://oauth.yandex.ru/authorize?response_type=token&client_id=" + YANDEX_CLIENT_ID
-        + "&redirect_uri=" + encodeURIComponent(redirect);
-}
-
-function finalizeYandexToken() {
-    const h = window.location.hash;
-    if (!h || h.indexOf("access_token=") === -1) return;
-    const token = new URLSearchParams(h.substring(1)).get("access_token");
-    if (!token) return;
-    localStorage.setItem("yandex_token", token);
-    history.replaceState(null, "", window.location.pathname + window.location.search);
-    if (pendingUpload) {
-        const p = pendingUpload;
-        pendingUpload = null;
-        uploadToDrive(p.blob, p.cls);
-    }
 }
 
 async function addRecordingToClass(token, classId, recordingUrl) {
@@ -456,7 +443,6 @@ function setRecStatus(msg, type) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-    finalizeYandexToken();
     identify();
     await loadData();
     const clsId = getClassId();
