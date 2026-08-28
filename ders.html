@@ -68,6 +68,8 @@
         @media (max-width: 900px) { .drive-frame { height: 420px; } }
         @media (max-width: 900px) { .room-main { grid-template-columns: 1fr; } }
     </style>
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </head>
 <body>
 
@@ -283,13 +285,17 @@ function renderRecList(cls) {
         recs.slice().reverse().map(r => {
             const t = new Date(r.createdAt);
             const dateStr = isNaN(t.getTime()) ? "" : "<span style=\"color:var(--text-light);font-size:0.75rem;\">" + t.toLocaleDateString("tr-TR") + "</span>";
+            const isDrive = /drive\.google\.com\/file\/d\/.+\/preview/.test(r.url);
+            const player = isDrive
+                ? "<iframe src=\"" + r.url + "\" style=\"width:100%;height:280px;border:0;border-radius:8px;background:#000;\" allow=\"autoplay\" allowfullscreen></iframe>"
+                : "<video controls preload=\"none\" style=\"width:100%;border-radius:8px;background:#000;\" src=\"" + r.url + "\"><a href=\"" + r.url + "\" target=\"_blank\">Videoyu yeni sekmede aç</a></video>";
             return "<div style=\"padding:10px 12px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:8px;\">" +
                 "<div style=\"display:flex;align-items:center;gap:10px;margin-bottom:8px;\">" +
                 "<i class=\"fas fa-play-circle\" style=\"color:#22c55e;font-size:1.3rem;\"></i>" +
                 "<div style=\"flex:1;min-width:0;\"><div style=\"font-weight:700;font-size:0.88rem;\">" + (r.title || "Kayıt") + "</div>" + dateStr + "</div>" +
-                "<a href=\"" + r.url + "\" target=\"_blank\" rel=\"noopener\" style=\"padding:8px 14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.85rem;white-space:nowrap;\">İndir</a>" +
+                "<a href=\"" + r.url + "\" target=\"_blank\" rel=\"noopener\" style=\"padding:8px 14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.85rem;white-space:nowrap;\">Aç</a>" +
                 "</div>" +
-                "<video controls preload=\"none\" style=\"width:100%;border-radius:8px;background:#000;\" src=\"" + r.url + "\"><a href=\"" + r.url + "\" target=\"_blank\">Videoyu yeni sekmede aç</a></video>" +
+                player +
                 "</div>";
         }).join("");
 }
@@ -433,22 +439,108 @@ function updateRecUi() {
 
 const FIREBASE_STORAGE_BUCKET = "one-egitim.appspot.com";
 
+let gapiLoadedFlag = false;
+let gisLoadedFlag = false;
+let gapiInited = false;
+let gisInited = false;
+let gapiClientInited = false;
+let driveAccessToken = null;
+const GOOGLE_CLIENT_ID = "989501478590-b693esov2sdsmbjjh8hco706gup46lnq.apps.googleusercontent.com";
+const GAPI_SCOPE = "https://www.googleapis.com/auth/drive.file";
+
+function gapiLoaded() { gapiLoadedFlag = true; maybeInitGoogle(); }
+function gisLoaded() { gisLoadedFlag = true; maybeInitGoogle(); }
+function maybeInitGoogle() {
+    if (!gapiLoadedFlag || !gisLoadedFlag) return;
+    gapi.load("client", () => {
+        gapi.client.load("https://www.googleapis.com/discovery/v1/apis/drive/v3/rest")
+            .then(() => { gapiClientInited = true; })
+            .catch(e => console.warn("Drive API yüklenemedi:", e));
+    });
+}
+
+function getDriveToken() {
+    return new Promise((resolve, reject) => {
+        if (driveAccessToken) return resolve(driveAccessToken);
+        const client = google.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_CLIENT_ID,
+            scope: GAPI_SCOPE,
+            callback: (resp) => {
+                if (resp && resp.access_token) {
+                    driveAccessToken = resp.access_token;
+                    resolve(resp.access_token);
+                } else {
+                    reject(new Error(resp && resp.error ? resp.error : "Google girişi iptal edildi"));
+                }
+            },
+            error_callback: () => reject(new Error("Google OAuth hatası"))
+        });
+        client.requestAccessToken();
+    });
+}
+
+async function uploadRecordingToDrive(blob, fname) {
+    const token = await getDriveToken();
+
+    const resumable = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable", {
+        method: "POST",
+        headers: {
+            "Authorization": "Bearer " + token,
+            "Content-Type": "application/json; charset=UTF-8",
+            "X-Upload-Content-Type": "video/webm",
+            "X-Upload-Content-Length": blob.size
+        },
+        body: JSON.stringify({ name: fname, mimeType: "video/webm" })
+    });
+    if (!resumable.ok) throw new Error("Drive oturumu açılamadı (" + resumable.status + ")");
+    const sessionUrl = resumable.headers.get("Location");
+    if (!sessionUrl) throw new Error("Drive oturum URL'si alınamadı");
+
+    const up = await fetch(sessionUrl, { method: "PUT", body: blob });
+    if (!up.ok) throw new Error("Drive yükleme başarısız (" + up.status + ")");
+    const meta = await up.json();
+    const fileId = meta.id;
+    if (!fileId) throw new Error("Drive dosya ID'si alınamadı");
+
+    await fetch("https://www.googleapis.com/drive/v3/files/" + fileId + "/permissions", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "reader", type: "anyone" })
+    });
+
+    return "https://drive.google.com/file/d/" + fileId + "/preview";
+}
+
 async function uploadToDrive(blob, cls) {
     const safeTitle = (cls.title || "ders").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
     const fname = new Date(recState.startedAt).getTime() + "_" + safeTitle + ".webm";
-    setRecStatus("Kayıt Firebase Storage'a yükleniyor...", "info");
 
     let link = null;
-    try {
-        const upUrl = "https://firebasestorage.googleapis.com/v0/b/" + FIREBASE_STORAGE_BUCKET + "/o?uploadType=media&name=recordings%2F" + encodeURIComponent(fname);
-        const upRes = await fetch(upUrl, { method: "POST", body: blob });
-        if (upRes.ok) {
-            link = "https://firebasestorage.googleapis.com/v0/b/" + FIREBASE_STORAGE_BUCKET + "/o/recordings%2F" + encodeURIComponent(fname) + "?alt=media";
-        } else {
-            console.warn("Firebase Storage yükleme başarısız (HTTP " + upRes.status + "), gofile deneniyor.");
+
+    if (gapiClientInited) {
+        try {
+            setRecStatus("Kayıt Google Drive'a yükleniyor...", "info");
+            link = await uploadRecordingToDrive(blob, fname);
+        } catch (e) {
+            console.warn("Drive yükleme başarısız:", e.message, "→ Firebase Storage deneniyor.");
         }
-    } catch (e) {
-        console.warn("Firebase Storage yükleme hatası:", e.message, "→ gofile deneniyor.");
+    } else {
+        console.warn("Google Drive hazır değil, ikinci seçenek deneniyor.");
+    }
+
+    if (!link) {
+        setRecStatus("Kayıt Firebase Storage'a yükleniyor...", "info");
+        try {
+            const upUrl = "https://firebasestorage.googleapis.com/v0/b/" + FIREBASE_STORAGE_BUCKET + "/o?uploadType=media&name=recordings%2F" + encodeURIComponent(fname);
+            const upRes = await fetch(upUrl, { method: "POST", body: blob });
+            if (upRes.ok) {
+                link = "https://firebasestorage.googleapis.com/v0/b/" + FIREBASE_STORAGE_BUCKET + "/o/recordings%2F" + encodeURIComponent(fname) + "?alt=media";
+            } else {
+                console.warn("Firebase Storage yükleme başarısız (HTTP " + upRes.status + "), gofile deneniyor.");
+            }
+        } catch (e) {
+            console.warn("Firebase Storage yükleme hatası:", e.message, "→ gofile deneniyor.");
+        }
     }
 
     if (!link) {
