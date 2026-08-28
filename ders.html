@@ -456,7 +456,7 @@ async function uploadToDrive(blob, cls) {
         setRecStatus("Kayıt yüklendi → " + link, "live");
         showRecLink(link);
         addRecLinkToList(link);
-        pushRecordingToData(link, cls);
+        await pushRecordingToData(link, cls);
     } catch (err) {
         console.error("gofile yükleme hatası:", err);
         downloadRecordedBlob(blob, cls);
@@ -502,6 +502,7 @@ function downloadRecordedBlob(blob, cls) {
 
 async function pushRecordingToData(link, cls) {
     try {
+        setRecStatus("Kayıt öğrenci listesine ekleniyor...", "info");
         const token = await getGitHubToken();
         if (!token) { setRecStatus("Kayıt data.json'a yazılamadı: token yok.", "info"); console.warn("Kayıt eklendi ama data.json'a yazılamadı (token yok)"); return; }
         const metaRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json?t=${Date.now()}`, {
