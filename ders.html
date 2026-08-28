@@ -339,7 +339,11 @@ async function uploadRecording(cls) {
             setRecStatus("Kayıt yüklendi ve Ders Kayıtlarına eklendi!", "info");
             setTimeout(() => setRecStatus("", "info"), 4000);
         } else {
-            setRecStatus("Kayıt yüklenemedi (dosya 100MB sınırını aştı olabilir).", "info");
+            let detail = "";
+            try { detail = (await upRes.json()).message || ""; } catch (_) {}
+            const mb = (blob.size / 1048576).toFixed(2);
+            console.error("GitHub upload hatası:", detail);
+            setRecStatus("Kayıt yüklenemedi (" + mb + " MB, hata: " + detail + ")", "info");
         }
     } catch (err) {
         console.error("Yükleme hatası:", err);
