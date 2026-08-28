@@ -1,1 +1,70 @@
-{"teachers":[{"name":"furkan","surname":"�ner","branch":"matematik","email":"","username":"FURKAN","password":"Kayseri38","id":"mt240345im9aa"}],"classes":[{"title":"matematik","teacherId":"mt240345im9aa","day":"pazartesi","dayLabel":"Pazartesi","date":"2026-08-24","startTime":"14:00","endTime":"15:00","meetLink":"https://meet.google.com/wym-frof-jdx","classroom":"-","description":"","capacity":25,"type":"Canlı Ders","status":"upcoming","courseType":"math","id":"mt241baltsfdj","recordingUrl":"https://github.com/oneregitimkurumlari/oneregitimkurumlari/blob/master/recordings/1787916601534_matematik.webm","recordingAt":"2026-08-28T11:30:26.073Z"}],"students":[{"username":"FURKAN","name":"Furkan","surname":"Öner","studentClass":"PİHOS","email":"","password":"Kayseri38","id":"mt31e6ibbrrz4"}],"homeworks":[{"title":"BURSLULUK SINAVI","subject":"TÜM DERS","description":"BURSLULUK SINAVI 4","fileUrl":"","fileName":"oner-egitim-pihos2025-bursluluk-4-word-eklenmis-filigransiz (2).pdf","fileType":"pdf","teacherId":"mt240345im9aa","id":"mt355v1004e0r","createdAt":"2026-08-21"},{"title":"BURSLULUK SINAVI","subject":"TÜM DERS","description":"","fileUrl":"https://github.com/oneregitimkurumlari/oneregitimkurumlari/blob/master/uploads/1787337289113_oner-egitim-pihos2025-bursluluk-4-word-eklenmis-filigransiz%20(2).pdf","fileName":"oner-egitim-pihos2025-bursluluk-4-word-eklenmis-filigransiz (2).pdf","fileType":"pdf","filePath":"uploads/1787337289113_oner-egitim-pihos2025-bursluluk-4-word-eklenmis-filigransiz (2).pdf","teacherId":"","id":"mt3ah4l1gyiet","createdAt":"2026-08-21"}],"_attendees":{"mt241baltsfdj":[{"name":"furkan �ner","role":"teacher","time":"2026-08-28T11:29:06.385Z"}]}}
+{
+  "teachers": [
+    {
+      "name": "furkan",
+      "surname": "�ner",
+      "branch": "matematik",
+      "email": "",
+      "username": "FURKAN",
+      "password": "Kayseri38",
+      "id": "mt240345im9aa"
+    }
+  ],
+  "classes": [
+    {
+      "title": "matematik",
+      "teacherId": "mt240345im9aa",
+      "day": "pazartesi",
+      "dayLabel": "Pazartesi",
+      "date": "2026-08-24",
+      "startTime": "14:00",
+      "endTime": "15:00",
+      "meetLink": "https://teams.live.com/meet/9381861118743?p=pRq2Z5hyOa7P84CV4p",
+      "classroom": "-",
+      "description": "",
+      "capacity": 25,
+      "type": "Canlı Ders",
+      "status": "upcoming",
+      "courseType": "math",
+      "id": "mt241baltsfdj",
+      "recordingUrl": "https://github.com/oneregitimkurumlari/oneregitimkurumlari/blob/master/recordings/1787916601534_matematik.webm",
+      "recordingAt": "2026-08-28T11:30:26.073Z"
+    }
+  ],
+  "students": [
+    {
+      "username": "FURKAN",
+      "name": "Furkan",
+      "surname": "Öner",
+      "studentClass": "PİHOS",
+      "email": "",
+      "password": "Kayseri38",
+      "id": "mt31e6ibbrrz4"
+    }
+  ],
+  "homeworks": [
+    {
+      "title": "BURSLULUK SINAVI",
+      "subject": "TÜM DERS",
+      "description": "BURSLULUK SINAVI 4",
+      "fileUrl": "",
+      "fileName": "oner-egitim-pihos2025-bursluluk-4-word-eklenmis-filigransiz (2).pdf",
+      "fileType": "pdf",
+      "teacherId": "mt240345im9aa",
+      "id": "mt355v1004e0r",
+      "createdAt": "2026-08-21"
+    },
+    {
+      "title": "BURSLULUK SINAVI",
+      "subject": "TÜM DERS",
+      "description": "",
+      "fileUrl": "https://github.com/oneregitimkurumlari/oneregitimkurumlari/blob/master/uploads/1787337289113_oner-egitim-pihos2025-bursluluk-4-word-eklenmis-filigransiz%20(2).pdf",
+      "fileName": "oner-egitim-pihos2025-bursluluk-4-word-eklenmis-filigransiz (2).pdf",
+      "fileType": "pdf",
+      "filePath": "uploads/1787337289113_oner-egitim-pihos2025-bursluluk-4-word-eklenmis-filigransiz (2).pdf",
+      "teacherId": "",
+      "id": "mt3ah4l1gyiet",
+      "createdAt": "2026-08-21"
+    }
+  ]
+}
