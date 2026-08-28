@@ -131,6 +131,8 @@ const GITHUB_REPO = "oneregitimkurumlari/oneregitimkurumlari";
 const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
 const DRIVE_FOLDER_ID = "1DXa_5ytoaOTyBLMn6nvmMCkzfdBzzYFj";
 const DRIVE_CLIENT_ID = "989501478590-b693esov2sdsmbjjh8hco706gup46lnq.apps.googleusercontent.com";
+const YANDEX_CLIENT_ID = "";
+const YANDEX_FOLDER = "app:/DersKayitlari";
 
 function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
     const controller = new AbortController();
@@ -352,34 +354,40 @@ function updateRecUi() {
 }
 
 async function uploadToDrive(blob, cls) {
-    if (!DRIVE_CLIENT_ID) {
+    if (!YANDEX_CLIENT_ID) {
         downloadRecordedBlob(blob, cls);
-        setRecStatus("Drive bağlantısı tanımlı değil. Kayıt indirildi. (Kurulumu tamamlayınca otomatik Drive'a yüklenir.)", "info");
+        setRecStatus("Yandex bağlantısı tanımlı değil. Kayıt indirildi. (Yandex client ID eklenince otomatik yüklenir.)", "info");
         return;
     }
     try {
-        const token = await getDriveToken();
-        if (!token) { downloadRecordedBlob(blob, cls); setRecStatus("Drive izni alınamadı — kayıt indirildi.", "info"); return; }
+        const token = await getYandexToken();
+        if (!token) {
+            pendingUpload = { blob, cls };
+            setRecStatus("Yandex bağlantısı gerekiyor — izin sayfasına yönlendiriliyorsunuz...", "info");
+            startYandexAuth();
+            return;
+        }
 
         const safeTitle = (cls.title || "ders").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
         const fname = new Date(recState.startedAt).getTime() + "_" + safeTitle + ".webm";
-        const meta = { name: fname, mimeType: "video/webm", parents: [DRIVE_FOLDER_ID] };
-        const body = new FormData();
-        body.append("metadata", new Blob([JSON.stringify(meta)], { type: "application/json" }));
-        body.append("file", blob, fname);
+        const path = YANDEX_FOLDER + "/" + fname;
 
-        const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink", {
-            method: "POST",
-            headers: { "Authorization": "Bearer " + token },
-            body
+        const upRes = await fetch("https://cloud-api.yandex.net/v1/disk/resources/upload?path=" + encodeURIComponent(path) + "&overwrite=true", {
+            headers: { "Authorization": "OAuth " + token }
         });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json();
-        setRecStatus("Kayıt Drive'a yüklendi: " + (data.name || fname), "live");
+        if (!upRes.ok) throw new Error("Yükleme adresi alınamadı (HTTP " + upRes.status + ")");
+        const upData = await upRes.json();
+        const putRes = await fetch(upData.href, {
+            method: "PUT",
+            headers: { "Content-Type": "video/webm" },
+            body: blob
+        });
+        if (!putRes.ok) throw new Error("Dosya gönderilemedi (HTTP " + putRes.status + ")");
+        setRecStatus("Kayıt Yandex Disk'e yüklendi: " + fname, "live");
     } catch (err) {
-        console.error("Drive yükleme hatası:", err);
+        console.error("Yandex yükleme hatası:", err);
         downloadRecordedBlob(blob, cls);
-        setRecStatus("Drive yükleme başarısız (" + err.message + ") — kayıt indirildi.", "info");
+        setRecStatus("Yandex yükleme başarısız (" + err.message + ") — kayıt indirildi.", "info");
     }
 }
 
@@ -395,43 +403,29 @@ function downloadRecordedBlob(blob, cls) {
     setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-let driveToken = null;
-async function getDriveToken() {
-    if (driveToken) return driveToken;
-    const cached = sessionStorage.getItem("drive_access_token");
-    if (cached && Date.now() < parseInt(sessionStorage.getItem("drive_token_expiry") || "0", 10)) {
-        driveToken = cached;
-        return driveToken;
-    }
-    if (typeof google === "undefined" || !google.accounts || !google.accounts.oauth2) {
-        await loadGis();
-    }
-    const token = await new Promise((resolve, reject) => {
-        const client = google.accounts.oauth2.initTokenClient({
-            client_id: DRIVE_CLIENT_ID,
-            scope: "https://www.googleapis.com/auth/drive.file",
-            callback: (resp) => {
-                if (resp && resp.access_token) resolve(resp.access_token);
-                else reject(new Error("İzin reddedildi"));
-            }
-        });
-        client.requestAccessToken();
-    });
-    driveToken = token;
-    sessionStorage.setItem("drive_access_token", token);
-    sessionStorage.setItem("drive_token_expiry", String(Date.now() + 3500 * 1000));
-    return token;
+let pendingUpload = null;
+function getYandexToken() {
+    return Promise.resolve(localStorage.getItem("yandex_token") || null);
 }
 
-function loadGis() {
-    return new Promise((resolve, reject) => {
-        const s = document.createElement("script");
-        s.src = "https://accounts.google.com/gsi/client";
-        s.async = true;
-        s.onload = resolve;
-        s.onerror = () => reject(new Error("Google oturum scripti yüklenemedi"));
-        document.head.appendChild(s);
-    });
+function startYandexAuth() {
+    const redirect = window.location.origin + window.location.pathname.split("?")[0].split("#")[0];
+    window.location.href = "https://oauth.yandex.ru/authorize?response_type=token&client_id=" + YANDEX_CLIENT_ID
+        + "&redirect_uri=" + encodeURIComponent(redirect);
+}
+
+function finalizeYandexToken() {
+    const h = window.location.hash;
+    if (!h || h.indexOf("access_token=") === -1) return;
+    const token = new URLSearchParams(h.substring(1)).get("access_token");
+    if (!token) return;
+    localStorage.setItem("yandex_token", token);
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+    if (pendingUpload) {
+        const p = pendingUpload;
+        pendingUpload = null;
+        uploadToDrive(p.blob, p.cls);
+    }
 }
 
 async function addRecordingToClass(token, classId, recordingUrl) {
@@ -462,6 +456,7 @@ function setRecStatus(msg, type) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+    finalizeYandexToken();
     identify();
     await loadData();
     const clsId = getClassId();
