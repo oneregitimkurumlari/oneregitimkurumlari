@@ -401,6 +401,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadData();
 
     if (sessionStorage.getItem("siteLogged") === "true") {
+        sessionStorage.removeItem("teacherLogged");
+        sessionStorage.removeItem("teacherId");
+        sessionStorage.removeItem("teacherName");
         showSite();
         initSite();
         return;
@@ -418,6 +421,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             const student = students.find(s => s.username === username && s.password === password);
 
             if (student) {
+                sessionStorage.removeItem("teacherLogged");
+                sessionStorage.removeItem("teacherId");
+                sessionStorage.removeItem("teacherName");
                 sessionStorage.setItem("siteLogged", "true");
                 sessionStorage.setItem("siteUser", student.name + " " + student.surname);
                 errorMsg.textContent = "";
