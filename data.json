@@ -10,28 +10,7 @@
       "id": "mt240345im9aa"
     }
   ],
-  "classes": [
-    {
-      "title": "matematik",
-      "teacherId": "mt240345im9aa",
-      "day": "pazartesi",
-      "dayLabel": "Pazartesi",
-      "date": "2026-08-24",
-      "startTime": "14:00",
-      "endTime": "15:00",
-      "meetLink": "https://teams.live.com/meet/9381861118743?p=pRq2Z5hyOa7P84CV4p",
-      "classroom": "-",
-      "description": "",
-      "capacity": 25,
-      "type": "Canlı Ders",
-      "status": "upcoming",
-      "courseType": "math",
-      "id": "mt241baltsfdj",
-      "recordingUrl": "",
-      "recordingAt": "2026-08-28T11:30:26.073Z",
-      "recordings": []
-    }
-  ],
+  "classes": [],
   "students": [
     {
       "username": "FURKAN",
