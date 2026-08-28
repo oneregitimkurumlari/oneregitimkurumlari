@@ -346,7 +346,7 @@ function showDetails(id) {
         <div class="modal-detail"><i class="fas fa-door-open"></i><span><strong>Sınıf:</strong> ${item.classroom}</span></div>
         <div class="modal-detail"><i class="fas fa-hourglass-half"></i><span><strong>Süre:</strong> ${item.duration}</span></div>
         <div class="modal-detail"><i class="fas fa-info-circle"></i><span><strong>Açıklama:</strong> ${item.description}</span></div>
-        <div class="modal-detail"><i class="fas fa-video"></i><span><strong>Google Meet:</strong> <a href="${item.link}" target="_blank" style="color:var(--primary);text-decoration:underline;font-family:monospace;font-size:0.85rem;">${item.link}</a></span></div>
+        <div class="modal-detail"><i class="fas fa-video"></i><span><strong>Microsoft Teams:</strong> <a href="${item.link}" target="_blank" style="color:var(--primary);text-decoration:underline;font-family:monospace;font-size:0.85rem;">${item.link}</a></span></div>
         <div class="modal-actions">
             <a href="ders.html?ders=${item.id}" class="btn btn-secondary"><i class="fas fa-video"></i> Derse Katıl</a>
             <button class="btn btn-details" onclick="closeModal()">Kapat</button>
