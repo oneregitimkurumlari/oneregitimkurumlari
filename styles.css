@@ -1398,6 +1398,17 @@ body {
     align-items: center;
 }
 .recording-view-toolbar .recording-watch { margin-top: 0; }
+.recording-pending {
+    font-size: 0.85rem;
+    color: var(--text-medium);
+    background: var(--primary-light);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.recording-pending i { color: var(--primary); }
 
 /* ---------- Dark Mode Toggle ---------- */
 .dark-toggle {

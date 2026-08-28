@@ -244,10 +244,7 @@ function recordingBody(r) {
             <a href="${r.recordingUrl}" target="_blank" class="schedule-btn btn-join recording-watch"><i class="fas fa-external-link-alt"></i> Kaydı Yeni Sekmede Görüntüle</a>
         </div>`;
     }
-    if (r.link) {
-        return `<a href="${r.link}" target="_blank" class="schedule-btn btn-join recording-watch"><i class="fas fa-video"></i> Kaydı İzle</a>`;
-    }
-    return "";
+    return `<span class="recording-pending"><i class="fas fa-hourglass-half"></i> Kayıt henüz eklenmedi</span>`;
 }
 
 function recordingCard(r, idx) {
