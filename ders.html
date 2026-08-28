@@ -161,7 +161,10 @@ function renderRoom(cls) {
     document.getElementById("stageTitle").textContent = cls.title;
     document.getElementById("stageDesc").textContent = cls.description || "Bugünkü derse hoş geldiniz.";
     const roomName = "oneregitim-" + (cls.id || "ders");
-    const jitsiUrl = "https://sfu.mirotalk.com/join/" + encodeURIComponent(roomName);
+    const jitsiUrl = "https://sfu.mirotalk.com/join?room=" + encodeURIComponent(roomName) + "&name=" + encodeURIComponent(myName || "Misafir") + "&audio=1&video=1";
+
+    document.getElementById("jitsiLoading").querySelector("i").className = "fas fa-video";
+    document.getElementById("jitsiLoading").lastChild.textContent = " Görüşme odası hazırlanıyor..."
     const jFrame = document.getElementById("jitsiFrame");
     jFrame.src = jitsiUrl;
     document.getElementById("jitsiWrap").style.display = "block";
