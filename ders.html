@@ -87,8 +87,14 @@
         <div class="room-card teacher-only">
             <h3><i class="fas fa-record-vinyl"></i> Ders Kaydı</h3>
             <button class="rec-btn rec-start" id="startRecBtn"><i class="fas fa-circle"></i> Kaydı Başlat</button>
-            <button class="rec-btn rec-stop" id="stopRecBtn" style="display:none;"><i class="fas fa-stop"></i> Dersi Bitir & Kaydet</button>
+            <button class="rec-btn rec-stop" id="stopRecBtn" style="display:none;"><i class="fas fa-stop"></i> Dersi Bitir & İndir</button>
             <div class="rec-status" id="recStatus"></div>
+            <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">
+                <label style="font-size:0.85rem;color:var(--text-light);">Kayıt linki (Google Drive):</label>
+                <input type="text" id="recLinkInput" placeholder="https://drive.google.com/file/d/... görünüm linkini yapıştırın"
+                    style="padding:10px;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;background:var(--bg-light);color:var(--text);">
+                <button class="rec-btn rec-start" id="saveRecLinkBtn" style="width:100%;"><i class="fas fa-save"></i> Kayıt Linkini Kaydet</button>
+            </div>
         </div>
 
         <div class="room-card">
@@ -117,10 +123,10 @@ let myRole = null;
 let myName = "";
 let recState = { recording: false, mediaRecorder: null, chunks: [], stream: null, startedAt: null };
 
-const SITE_TOKEN = "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";
+const SITE_TOKEN = "";
 
 async function getGitHubToken() {
-    return SITE_TOKEN;
+    return localStorage.getItem("github_token") || SITE_TOKEN || "";
 }
 
 async function loadData() {
@@ -296,59 +302,59 @@ async function startRecording(cls) {
 
 async function stopRecording(cls) {
     if (!recState.recording || !recState.mediaRecorder) return;
-    setRecStatus("Kayıt durduruluyor & yükleniyor...", "info");
+    setRecStatus("Kayıt durduruluyor...", "info");
     recState.mediaRecorder.stop();
 }
 
-async function uploadRecording(cls) {
+async function saveRecordingLink(cls) {
+    const input = document.getElementById("recLinkInput");
+    const link = (input.value || "").trim();
+    if (!link) { setRecStatus("Önce kayıt linkini yapıştırın.", "info"); return; }
+    try {
+        const token = await getGitHubToken();
+        if (!token) { setRecStatus("Bağlantı eklemek için tarayıcıda geçerli bir GitHub bağlantısı gerekli.", "info"); return; }
+        const metaRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json?t=${Date.now()}`, {
+            headers: { "Authorization": "token " + token }, cache: "no-store"
+        });
+        if (!metaRes.ok) { setRecStatus("Veri okunamadı: HTTP " + metaRes.status, "info"); return; }
+        const meta = await metaRes.json();
+        const server = JSON.parse(decodeURIComponent(escape(atob(meta.content))));
+        const c = (server.classes || []).find(x => x.id === cls.id);
+        if (c) { c.recordingUrl = link; c.recordingAt = new Date().toISOString(); }
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(server))));
+        const res = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/data.json`, {
+            method: "PUT",
+            headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Kayıt linki eklendi: " + cls.title, content: content, sha: meta.sha })
+        }, 25000);
+        setRecStatus(res.ok ? "Kayıt linki kaydedildi!" : "Link kaydedilemedi.", "info");
+        setTimeout(() => setRecStatus("", "info"), 4000);
+    } catch (err) {
+        console.error(err);
+        setRecStatus("Link kaydedilemedi: " + err.message, "info");
+    }
+}
+
+function uploadRecording(cls) {
     const blob = new Blob(recState.chunks, { type: "video/webm" });
-    const classId = recState.classId;
-    const startedTime = new Date(recState.startedAt);
     if (recState.stream) recState.stream.getTracks().forEach(t => t.stop());
     recState.recording = false;
 
     document.getElementById("startRecBtn").style.display = "inline-flex";
     document.getElementById("stopRecBtn").style.display = "none";
 
-    if (blob.size < 1000) { setRecStatus("Kayıt dosyası boş, yüklenmedi.", "info"); return; }
+    if (blob.size < 1000) { setRecStatus("Kayıt boş, indirilemedi.", "info"); return; }
 
-    try {
-        const token = await getGitHubToken();
-        if (!token) { setRecStatus("GitHub Token yok, yüklenemedi.", "info"); return; }
-
-        const reader = new FileReader();
-        const base64 = await new Promise((resolve, reject) => {
-            reader.onload = () => resolve(reader.result.split(",")[1]);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-
-        const safeTitle = (cls.title || "ders").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
-        const filePath = "recordings/" + startedTime.getTime() + "_" + safeTitle + ".webm";
-
-        const upRes = await fetchWithTimeout(`https://api.github.com/repos/${GITHUB_REPO}/contents/${filePath}`, {
-            method: "PUT",
-            headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
-            body: JSON.stringify({ message: "Ders kaydı: " + cls.title, content: base64 })
-        }, 120000);
-
-        if (upRes.ok) {
-            const upData = await upRes.json();
-            const recordingUrl = upData.content.html_url;
-            await addRecordingToClass(token, classId, recordingUrl);
-            setRecStatus("Kayıt yüklendi ve Ders Kayıtlarına eklendi!", "info");
-            setTimeout(() => setRecStatus("", "info"), 4000);
-        } else {
-            let detail = "";
-            try { detail = (await upRes.json()).message || ""; } catch (_) {}
-            const mb = (blob.size / 1048576).toFixed(2);
-            console.error("GitHub upload hatası:", detail);
-            setRecStatus("Kayıt yüklenemedi (" + mb + " MB, hata: " + detail + ")", "info");
-        }
-    } catch (err) {
-        console.error("Yükleme hatası:", err);
-        setRecStatus("Kayıt yüklenemedi: " + err.message, "info");
-    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const safeTitle = (cls.title || "ders").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+    a.download = new Date(recState.startedAt).getTime() + "_" + safeTitle + ".webm";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    setRecStatus("Kayıt indirildi! Dosyayı Google Drive'a yükleyip linkini aşağıya yapıştırın.", "info");
 }
 
 async function addRecordingToClass(token, classId, recordingUrl) {
@@ -397,6 +403,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (myRole === "teacher") {
         document.getElementById("startRecBtn").addEventListener("click", () => startRecording(cls));
         document.getElementById("stopRecBtn").addEventListener("click", () => stopRecording(cls));
+        document.getElementById("saveRecLinkBtn").addEventListener("click", () => saveRecordingLink(cls));
     }
 
     if (myRole) addMeToAttendees(clsId);
