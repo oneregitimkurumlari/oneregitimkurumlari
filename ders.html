@@ -124,6 +124,19 @@
     <div id="recListSection" style="display:none;background:#0a0d16;border:1px solid var(--border);border-radius:12px;padding:16px;"></div>
 </div>
 
+<div id="tokenModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:1000;padding:16px;">
+    <div style="background:#0f1524;border:1px solid var(--border);border-radius:14px;padding:24px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+        <div style="font-size:1.1rem;font-weight:700;margin-bottom:6px;">GitHub Token Gerekli</div>
+        <p style="font-size:0.85rem;color:var(--text-light);margin:0 0 14px 0;">Kaydı öğrencilere gösterebilmek için GitHub token'ı gerekir. Token'ı bir kez girin, sonraki kayıtlarda sorulmaz.</p>
+        <input id="tokenInput" type="password" placeholder="ghp_..." autocomplete="off"
+            style="width:100%;padding:11px;border:1px solid var(--border);border-radius:9px;font-size:0.95rem;background:var(--bg-light);color:var(--text);margin-bottom:14px;box-sizing:border-box;">
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button id="tokenCancel" style="padding:9px 16px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text);cursor:pointer;">Vazgeç</button>
+            <button id="tokenSave" style="padding:9px 18px;border:none;border-radius:8px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;cursor:pointer;font-weight:700;">Kaydet</button>
+        </div>
+    </div>
+</div>
+
 <script>
 const GITHUB_REPO = "oneregitimkurumlari/oneregitimkurumlari";
 const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/data.json`;
@@ -146,13 +159,29 @@ async function getGitHubToken() {
     let token = localStorage.getItem("github_token");
     if (token) return token;
     if (myRole !== "teacher") return "";
-    token = prompt("Kaydı data.json'a kaydetmek için GitHub Token'ı girin");
-    if (token) {
-        token = token.trim();
-        localStorage.setItem("github_token", token);
-        return token;
-    }
-    return "";
+    return new Promise((resolve) => {
+        const modal = document.getElementById("tokenModal");
+        const input = document.getElementById("tokenInput");
+        const saveBtn = document.getElementById("tokenSave");
+        const cancelBtn = document.getElementById("tokenCancel");
+        input.value = "";
+        modal.style.display = "flex";
+        setTimeout(() => input.focus(), 50);
+        const done = (value) => {
+            modal.style.display = "none";
+            saveBtn.onclick = null;
+            cancelBtn.onclick = null;
+            resolve(value);
+        };
+        saveBtn.onclick = () => {
+            const v = input.value.trim();
+            if (!v) { input.style.outline = "2px solid #ef4444"; return; }
+            localStorage.setItem("github_token", v);
+            done(v);
+        };
+        cancelBtn.onclick = () => done("");
+        input.onkeydown = (e) => { if (e.key === "Enter") saveBtn.click(); };
+    });
 }
 
 async function loadData() {
