@@ -272,9 +272,23 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!existingBanner) {
                 const banner = document.createElement("div");
                 banner.id = "tokenBanner";
-                banner.style.cssText = "background:#f59e0b;color:#78350f;padding:12px 20px;font-size:0.85rem;font-weight:600;text-align:center;";
-                banner.innerHTML = '<i class="fas fa-exclamation-triangle"></i> GitHub Token tanımlanmamış! Ders/ödev ekleyebilmek için yöneticiden token girilmesi gerekiyor.';
+                banner.style.cssText = "background:#f59e0b;color:#78350f;padding:14px 20px;font-size:0.85rem;font-weight:600;text-align:center;";
+                banner.innerHTML = `<i class="fas fa-exclamation-triangle"></i> GitHub Token tanımlı değil. Ders/ödev kaydetmek ve Teams linkini güncellemek için aşağıya token'ı yapıştırın:
+                    <div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                        <input type="password" id="teacherTokenInput" placeholder="github_pat_..." style="padding:8px 12px;border:1px solid #78350f;border-radius:6px;font-size:0.8rem;min-width:260px;">
+                        <button id="teacherTokenSave" style="padding:8px 16px;background:#78350f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;">Kaydet</button>
+                    </div>
+                    <p style="font-size:0.75rem;margin-top:8px;">Token, GitHub hesabından oluşturulur (Settings > Developer settings > Personal access tokens). Yönetici panelinden de girilebilir — aynı token burada geçerlidir.</p>`;
                 document.querySelector(".main-content").insertBefore(banner, document.querySelector(".content-area"));
+
+                document.getElementById("teacherTokenSave").addEventListener("click", () => {
+                    const t = document.getElementById("teacherTokenInput").value.trim();
+                    if (!t) return;
+                    localStorage.setItem("github_token", t);
+                    GITHUB_TOKEN = t;
+                    showToast("Token kaydedildi!");
+                    banner.remove();
+                });
             }
         } else {
             const existingBanner = document.getElementById("tokenBanner");
