@@ -31,8 +31,7 @@
         body.is-teacher .jitsi-wrap:fullscreen .rec-ctrl-btn, body.is-teacher .jitsi-wrap:-webkit-full-screen .rec-ctrl-btn { display: flex !important; }
         .rec-ctrl-btn.rec-on { background: #e11d48; }
         .rec-ctrl-btn:hover { background: #b91c1c; }
-        .jitsi-frame { width: 100%; height: 640px; border: 0; border-radius: 12px; background: #000; display: block; overflow: hidden; }
-        #jitsiFrame iframe { width: 100% !important; height: 100% !important; border: 0; border-radius: 12px; }
+        .jitsi-frame { width: 100%; height: 640px; border: 0; border-radius: 12px; background: #000; display: block; }
         .jitsi-wrap:fullscreen, .jitsi-wrap:-webkit-full-screen { width: 100vw; height: 100vh; background: #000; }
         .jitsi-wrap:fullscreen .jitsi-frame, .jitsi-wrap:-webkit-full-screen .jitsi-frame { height: 100%; width: 100%; border-radius: 0; }
         .jitsi-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #94a3b8; background: #0a0d16; border-radius: 12px; text-align: center; padding: 20px; z-index: 2; }
@@ -69,7 +68,6 @@
         @media (max-width: 900px) { .drive-frame { height: 420px; } }
         @media (max-width: 900px) { .room-main { grid-template-columns: 1fr; } }
     </style>
-    <script src="https://meet.jit.si/external_api.js"></script>
 </head>
 <body>
 
@@ -93,7 +91,7 @@
             <button class="fullscreen-btn" id="fullscreenBtn" title="Tam Ekran"><i class="fas fa-expand"></i></button>
             <button class="rec-ctrl-btn" id="recCtrlBtn"><i class="fas fa-circle"></i> Kaydı Başlat</button>
             <div class="jitsi-msg" id="jitsiLoading"><i class="fas fa-video"></i> Görüşme odası hazırlanıyor...</div>
-            <div class="jitsi-frame" id="jitsiFrame"></div>
+            <iframe class="jitsi-frame" id="jitsiFrame" allow="camera; microphone; fullscreen; display-capture" allowfullscreen></iframe>
         </div>
     </div>
 
@@ -273,96 +271,17 @@ function renderRoom(cls) {
     renderRecList(cls);
     if (myRole === "teacher") setupTokenBox();
     const roomName = "oneregitim-" + (cls.id || "ders");
+    const jitsiUrl = "https://sfu.mirotalk.com/join?room=" + encodeURIComponent(roomName) + "&name=" + encodeURIComponent(myName || "Misafir") + "&audio=1&video=1";
 
     document.getElementById("jitsiLoading").querySelector("i").className = "fas fa-video";
     document.getElementById("jitsiLoading").lastChild.textContent = " Görüşme odası hazırlanıyor..."
+    const jFrame = document.getElementById("jitsiFrame");
+    jFrame.src = jitsiUrl;
     document.getElementById("jitsiWrap").style.display = "block";
-
     window.setTimeout(() => {
         const lm = document.getElementById("jitsiLoading");
         if (lm) lm.style.display = "none";
     }, 5000);
-
-    const jFrame = document.getElementById("jitsiFrame");
-    const studentBar = ["microphone", "camera", "raisehand", "settings", "fullscreen", "tileview", "hangup"];
-    const bar = myRole === "teacher" ? undefined : studentBar;
-
-    function styleJitsiFrame(f) {
-        if (!f) return;
-        f.setAttribute("allow", "camera; microphone; display-capture; autoplay; clipboard-write; fullscreen; picture-in-picture");
-        f.style.width = "100%";
-        f.style.height = "100%";
-    }
-
-    function buildFallback() {
-        jFrame.innerHTML = "";
-        const fb = document.createElement("iframe");
-        fb.className = "jitsi-frame";
-        fb.allow = "camera; microphone; display-capture; autoplay; clipboard-write; fullscreen";
-        fb.allowfullscreen = true;
-        fb.src = "https://meet.jit.si/" + encodeURIComponent(roomName) +
-            "#config.disableDeepLinking=true&config.prejoinPageEnabled=false&config.startWithAudioMuted=true&config.interfaceConfigOverwrite.TOOLBAR_BUTTONS=" +
-            encodeURIComponent(JSON.stringify(bar || []));
-        styleJitsiFrame(fb);
-        jFrame.appendChild(fb);
-    }
-
-    try {
-        if (window.JitsiMeetExternalAPI) {
-            window.jitsiApi = new JitsiMeetExternalAPI("meet.jit.si", {
-                roomName,
-                parentNode: jFrame,
-                userInfo: { displayName: myName || "Misafir" },
-                configOverwrite: {
-                    prejoinPageEnabled: false,
-                    enableWelcomePage: false,
-                    disableDeepLinking: true,
-                    startWithAudioMuted: true,
-                    startWithVideoMuted: false,
-                    toolbarButtons: bar
-                },
-                interfaceConfigOverwrite: {
-                    TOOLBAR_BUTTONS: bar,
-                    SHOW_JITSI_WATERMARK: false,
-                    SHOW_WATERMARK: false,
-                    DEFAULT_BACKGROUND: "#0a0d16",
-                    DEFAULT_LOGO_URL: ""
-                }
-            });
-            const iv = setInterval(() => {
-                const f = window.jitsiApi && window.jitsiApi.getIframe ? window.jitsiApi.getIframe() : null;
-                if (f) { styleJitsiFrame(f); clearInterval(iv); }
-            }, 500);
-            setTimeout(() => clearInterval(iv), 15000);
-        } else {
-            buildFallback();
-        }
-    } catch (e) {
-        console.error("Jitsi yüklenemedi:", e);
-        buildFallback();
-    }
-
-    function showJitsiFallbackNotice() {
-        const lm = document.getElementById("jitsiLoading");
-        if (!lm) return;
-        lm.style.display = "flex";
-        lm.innerHTML = '<i class="fas fa-triangle-exclamation"></i>Görüşmeye bağlanılamadı' +
-            '<div style="font-size:0.8rem;margin-top:10px;">Doğrudan girmeyi deneyin:<br>' +
-            '<a href="https://meet.jit.si/' + encodeURIComponent(roomName) + '" target="_blank" rel="noopener" style="color:#38bdf8;text-decoration:underline;">Görüşmeyi yeni sekmede aç</a></div>';
-    }
-    if (window.jitsiApi && window.jitsiApi.addEventListener) {
-        window.jitsiApi.addEventListener("videoConferenceJoined", () => {
-            window.__jitsiJoined = true;
-            const lm = document.getElementById("jitsiLoading");
-            if (lm) lm.style.display = "none";
-        });
-        window.jitsiApi.addEventListener("conferenceFailed", (e) => { console.warn("Jitsi conferenceFailed:", e); showJitsiFallbackNotice(); });
-        window.jitsiApi.addEventListener("errorOccured", (e) => { console.warn("Jitsi errorOccured:", e); showJitsiFallbackNotice(); });
-        window.jitsiApi.addEventListener("errorOccurred", (e) => { console.warn("Jitsi errorOccurred:", e); showJitsiFallbackNotice(); });
-    }
-    window.setTimeout(() => {
-        if (!window.__jitsiJoined) showJitsiFallbackNotice();
-    }, 12000);
 }
 
 function renderRecList(cls) {
