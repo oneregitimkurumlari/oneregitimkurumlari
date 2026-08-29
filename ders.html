@@ -25,8 +25,6 @@
         .stage-msg .live-badge { display: inline-flex; align-items: center; gap: 8px; background: #dc2626; color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; margin-bottom: 20px; }
         .stage-msg .live-badge i { font-size: 0.9rem; margin: 0; color: #fff; }
         .jitsi-wrap { position: relative; width: 100%; }
-        .fullscreen-btn { position: absolute; top: 12px; right: 12px; z-index: 20; background: rgba(0,0,0,0.55); color: #fff; border: none; width: 42px; height: 42px; border-radius: 10px; font-size: 1.05rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .2s; backdrop-filter: blur(4px); }
-        .fullscreen-btn:hover { background: rgba(0,0,0,0.8); }
         .rec-ctrl-btn { display: none !important; position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 20; background: #dc2626; color: #fff; border: none; padding: 12px 24px; border-radius: 30px; font-weight: 700; font-size: 0.95rem; cursor: pointer; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.45); transition: background .2s; }
         body.is-teacher .jitsi-wrap:fullscreen .rec-ctrl-btn, body.is-teacher .jitsi-wrap:-webkit-full-screen .rec-ctrl-btn { display: flex !important; }
         .rec-ctrl-btn.rec-on { background: #e11d48; }
@@ -93,7 +91,6 @@
             <h2 id="stageTitle">Ders yükleniyor...</h2>
         </div>
         <div class="jitsi-wrap" id="jitsiWrap" style="display:none;">
-            <button class="fullscreen-btn" id="fullscreenBtn" title="Tam Ekran"><i class="fas fa-expand"></i></button>
             <button class="rec-ctrl-btn" id="recCtrlBtn"><i class="fas fa-circle"></i> Kaydı Başlat</button>
             <div class="jitsi-msg" id="jitsiLoading"><i class="fas fa-video"></i> Görüşme odası hazırlanıyor...</div>
             <iframe class="jitsi-frame" id="jitsiFrame" allow="camera; microphone; fullscreen; display-capture" allowfullscreen></iframe>
@@ -885,23 +882,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (myRole === "teacher") loadHands(clsId);
         } catch (e) { /* sessiz */ }
     }, 30000);
-
-    const fsBtn = document.getElementById("fullscreenBtn");
-    fsBtn.addEventListener("click", () => {
-        const el = document.getElementById("jitsiWrap");
-        if (document.fullscreenElement || document.webkitFullscreenElement) {
-            if (document.exitFullscreen) document.exitFullscreen();
-            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-            fsBtn.querySelector("i").className = "fas fa-expand";
-        } else {
-            if (el.requestFullscreen) el.requestFullscreen();
-            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-            fsBtn.querySelector("i").className = "fas fa-compress";
-        }
-    });
-    document.addEventListener("fullscreenchange", () => {
-        fsBtn.querySelector("i").className = document.fullscreenElement ? "fas fa-compress" : "fas fa-expand";
-    });
 });
 </script>
 </body>
