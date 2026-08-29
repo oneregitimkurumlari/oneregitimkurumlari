@@ -92,6 +92,7 @@
             <button class="rec-ctrl-btn" id="recCtrlBtn"><i class="fas fa-circle"></i> Kaydı Başlat</button>
             <div class="jitsi-msg" id="jitsiLoading"><i class="fas fa-video"></i> Görüşme odası hazırlanıyor...</div>
             <iframe class="jitsi-frame" id="jitsiFrame" allow="camera; microphone; fullscreen; display-capture" allowfullscreen></iframe>
+            <div id="sambaRoot" style="display:none;width:100%;height:100%;"></div>
         </div>
     </div>
 
@@ -292,6 +293,36 @@ function initHands(clsId) {
     }
 }
 
+let sambaLoaded = false;
+function loadSamba(roomUrl, root) {
+    if (!roomUrl || !roomUrl.trim()) return;
+    const startSamba = () => {
+        if (sambaLoaded || !window.DigitalSambaEmbedded) return;
+        sambaLoaded = true;
+        try {
+            const ctrl = DigitalSambaEmbedded.createControl({
+                url: roomUrl,
+                root: root,
+                roomSettings: { username: myName || "Misafir", appLanguage: "tr" }
+            });
+            ctrl.load();
+        } catch (e) {
+            const lm = document.getElementById("jitsiLoading");
+            if (lm) lm.lastChild.textContent = " Digital Samba yüklenemedi: " + e.message;
+        }
+    };
+    if (window.DigitalSambaEmbedded) { startSamba(); return; }
+    const s = document.createElement("script");
+    s.crossOrigin = "anonymous";
+    s.src = "https://unpkg.com/@digitalsamba/embedded-sdk";
+    s.onload = startSamba;
+    s.onerror = () => {
+        const lm = document.getElementById("jitsiLoading");
+        if (lm) lm.lastChild.textContent = " Digital Samba SDK yüklenemedi. İnternetinizi kontrol edin.";
+    };
+    document.head.appendChild(s);
+}
+
 function setupTokenBox() {
     const box = document.getElementById("tokenBox");
     if (!box || myRole !== "teacher") return;
@@ -331,13 +362,21 @@ function renderRoom(cls) {
     if (myRole === "teacher") setupTokenBox();
     const roomName = "oneregitim-" + (cls.id || "ders");
     const zoomUrl = new URLSearchParams(window.location.search).get("zoomurl");
+    const sambaUrl = new URLSearchParams(window.location.search).get("samba");
     const jitsiUrl = zoomUrl || ("https://sfu.mirotalk.com/join?room=" + encodeURIComponent(roomName) + "&name=" + encodeURIComponent(myName || "Misafir") + "&audio=1&video=1");
 
     document.getElementById("jitsiLoading").querySelector("i").className = "fas fa-video";
-    document.getElementById("jitsiLoading").lastChild.textContent = zoomUrl ? " Zoom toplantınıza bağlanılıyor..." : " Görüşme odası hazırlanıyor..."
-    const jFrame = document.getElementById("jitsiFrame");
-    jFrame.src = jitsiUrl;
     document.getElementById("jitsiWrap").style.display = "block";
+    if (sambaUrl) {
+        document.getElementById("jitsiFrame").style.display = "none";
+        document.getElementById("sambaRoot").style.display = "block";
+        document.getElementById("jitsiLoading").lastChild.textContent = " Digital Samba odası bağlanıyor...";
+        loadSamba(sambaUrl, document.getElementById("sambaRoot"));
+    } else {
+        document.getElementById("jitsiLoading").lastChild.textContent = zoomUrl ? " Zoom toplantınıza bağlanılıyor..." : " Görüşme odası hazırlanıyor...";
+        const jFrame = document.getElementById("jitsiFrame");
+        jFrame.src = jitsiUrl;
+    }
     window.setTimeout(() => {
         const lm = document.getElementById("jitsiLoading");
         if (lm) lm.style.display = "none";
