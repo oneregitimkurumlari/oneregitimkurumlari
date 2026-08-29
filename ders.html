@@ -117,6 +117,10 @@
             <ul class="attendee-list" id="attendeeList">
                 <li style="color:var(--text-light);font-size:0.85rem;">Katılımcılar burada listelenecek</li>
             </ul>
+            <button id="raiseHandBtn" style="display:none;margin-top:12px;width:100%;padding:11px;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:0.9rem;background:linear-gradient(135deg,#0ea5e9,#0369a1);color:#fff;align-items:center;justify-content:center;gap:8px;">
+                <i class="fas fa-hand-paper"></i> El Kaldır
+            </button>
+            <div id="handsBox" style="display:none;margin-top:10px;padding:10px;border-radius:8px;background:var(--primary-light);color:var(--primary-dark);font-size:0.85rem;line-height:1.5;"></div>
             <p style="font-size:0.75rem;color:var(--text-light);margin-top:10px;">Senin adın <strong id="myLabel">misafir</strong> olarak görünüyor.</p>
         </div>
 
@@ -231,6 +235,61 @@ function resolveRoleForClass(cls) {
 function getClassId() {
     const params = new URLSearchParams(window.location.search);
     return params.get("ders");
+}
+
+let handOn = false;
+let handKey = null;
+function myHandKey() {
+    if (handKey) return handKey;
+    handKey = (myName || "Misafir") + "-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 1e5).toString(36);
+    return handKey;
+}
+function handBtnLabel(on) {
+    return on ? '<i class="fas fa-hand-spock"></i> Elini İndir' : '<i class="fas fa-hand-paper"></i> El Kaldır';
+}
+function escapeHtmlText(v) {
+    return String(v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+async function toggleHand(clsId) {
+    const btn = document.getElementById("raiseHandBtn");
+    handOn = !handOn;
+    try {
+        const url = FIREBASE_URL + "/_hands/" + encodeURIComponent(clsId) + "/" + encodeURIComponent(myHandKey()) + ".json";
+        const res = await fetchWithTimeout(url, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(handOn ? { name: myName || "Misafir", at: new Date().toISOString(), active: true } : null)
+        });
+        if (!res.ok) throw new Error("http " + res.status);
+    } catch (e) {
+        handOn = !handOn;
+    }
+    if (btn) btn.innerHTML = handBtnLabel(handOn);
+}
+async function loadHands(clsId) {
+    const box = document.getElementById("handsBox");
+    if (!box || myRole !== "teacher") return;
+    try {
+        const res = await fetchWithTimeout(FIREBASE_URL + "/_hands/" + encodeURIComponent(clsId) + ".json", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const names = (data ? Object.values(data) : []).filter(Boolean).map(h => typeof h === "object" ? (h.name || "Misafir") : String(h));
+        if (!names.length) { box.style.display = "none"; return; }
+        box.style.display = "block";
+        box.innerHTML = '<i class="fas fa-hand-paper"></i> El kaldıranlar: <strong>' + names.map(escapeHtmlText).join(", ") + "</strong>";
+    } catch (e) { /* sessiz */ }
+}
+function initHands(clsId) {
+    const btn = document.getElementById("raiseHandBtn");
+    if (!btn) return;
+    if (myRole === "teacher") {
+        btn.style.display = "none";
+        loadHands(clsId);
+    } else {
+        btn.style.display = "flex";
+        btn.innerHTML = handBtnLabel(false);
+        btn.onclick = () => toggleHand(clsId);
+    }
 }
 
 function setupTokenBox() {
@@ -657,6 +716,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (myRole) addMeToAttendees(clsId);
     else loadAttendees(clsId);
 
+    initHands(clsId);
+
     let recSig = JSON.stringify((cachedData.classes.find(x => x.id === clsId) || {}).recordings || []);
     window.setInterval(async () => {
         try {
@@ -667,6 +728,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (!freshCls) return;
             const sig = JSON.stringify(freshCls.recordings || []);
             if (sig !== recSig) { recSig = sig; renderRecList(freshCls); }
+            if (myRole === "teacher") loadHands(clsId);
         } catch (e) { /* sessiz */ }
     }, 30000);
 
