@@ -320,10 +320,12 @@ async function embedSamba(url) {
         if (activeSambaUrl === url) return;
         activeSambaUrl = url;
         root.innerHTML = "";
+        const roomSettings = { username: myName || "Misafir", appLanguage: "tr" };
+        if (myRole !== "teacher") roomSettings.showTopbar = false;
         const ctrl = DigitalSambaEmbedded.createControl({
             url: url,
             root: root,
-            roomSettings: { username: myName || "Misafir", appLanguage: "tr" }
+            roomSettings: roomSettings
         });
         sambaController = ctrl;
         const clampStudentFrame = () => {
