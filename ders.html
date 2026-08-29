@@ -37,6 +37,9 @@
         .jitsi-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #94a3b8; background: #0a0d16; border-radius: 12px; text-align: center; padding: 20px; z-index: 2; }
         .jitsi-msg i { font-size: 3rem; color: #334155; margin-bottom: 12px; display: block; }
         #sambaRoot { width: 100%; height: 640px; }
+        .student-controls { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px 10px; background: rgba(10, 13, 22, .78); border-radius: 12px; z-index: 3; }
+        .student-controls button { width: 42px; height: 42px; border: 0; border-radius: 10px; background: #1e293b; color: #e2e8f0; cursor: pointer; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; }
+        .student-controls button:hover, .student-controls button.is-off { background: #ef4444; color: #fff; }
         @media (max-width: 900px) { .jitsi-frame { height: 480px; } #sambaRoot { height: 480px; } }
         .room-panel { display: flex; flex-direction: column; gap: 16px; }
         .room-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
@@ -94,6 +97,11 @@
             <div class="jitsi-msg" id="jitsiLoading"><i class="fas fa-video"></i> Görüşme odası hazırlanıyor...</div>
             <iframe class="jitsi-frame" id="jitsiFrame" allow="camera; microphone; fullscreen; display-capture" allowfullscreen></iframe>
             <div id="sambaRoot" style="display:none;"></div>
+            <div class="student-controls" id="studentControls" style="display:none;">
+                <button id="stuMicBtn" title="Mikrofon"><i class="fas fa-microphone"></i></button>
+                <button id="stuCamBtn" title="Kamera"><i class="fas fa-video"></i></button>
+                <button id="stuLeaveBtn" title="Odadan Ayrıl"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
         </div>
     </div>
 
@@ -321,13 +329,41 @@ async function embedSamba(url) {
         activeSambaUrl = url;
         root.innerHTML = "";
         const roomSettings = { username: myName || "Misafir", appLanguage: "tr" };
-        if (myRole !== "teacher") roomSettings.showTopbar = false;
+        if (myRole !== "teacher") {
+            roomSettings.showTopbar = false;
+            roomSettings.showToolbar = false;
+        }
         const ctrl = DigitalSambaEmbedded.createControl({
             url: url,
             root: root,
             roomSettings: roomSettings
         });
         sambaController = ctrl;
+        if (myRole !== "teacher") {
+            const micBtn = document.getElementById("stuMicBtn");
+            const camBtn = document.getElementById("stuCamBtn");
+            const leaveBtn = document.getElementById("stuLeaveBtn");
+            const bar = document.getElementById("studentControls");
+            if (bar && micBtn && camBtn && leaveBtn) {
+                bar.style.display = "flex";
+                micBtn.onclick = (e) => {
+                    e.preventDefault();
+                    try { ctrl.toggleAudio(); } catch (err) { /* sessiz */ }
+                    micBtn.classList.toggle("is-off");
+                };
+                camBtn.onclick = (e) => {
+                    e.preventDefault();
+                    try { ctrl.toggleVideo(); } catch (err) { /* sessiz */ }
+                    camBtn.classList.toggle("is-off");
+                };
+                leaveBtn.onclick = (e) => {
+                    e.preventDefault();
+                    try { if (ctrl.frame) ctrl.frame.src = "about:blank"; } catch (err) { /* sessiz */ }
+                    setTimeout(() => { try { window.close(); } catch (err) { /* sessiz */ } }, 200);
+                    setTimeout(() => { window.location.reload(); }, 900);
+                };
+            }
+        }
         const clampStudentFrame = () => {
             if (myRole === "teacher" || !ctrl.frame) return;
             try {
