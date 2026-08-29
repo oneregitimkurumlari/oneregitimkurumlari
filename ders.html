@@ -297,6 +297,7 @@ function initHands(clsId) {
 let sambaController = null;
 let activeSambaUrl = null;
 let sambaSdkPromise = null;
+let sambaResizeObserver = null;
 function ensureSambaSdk() {
     if (window.DigitalSambaEmbedded) return Promise.resolve(window.DigitalSambaEmbedded);
     if (sambaSdkPromise) return sambaSdkPromise;
@@ -325,6 +326,19 @@ async function embedSamba(url) {
             roomSettings: { username: myName || "Misafir", appLanguage: "tr" }
         });
         sambaController = ctrl;
+        const fit = () => {
+            const w = root.clientWidth || root.offsetWidth;
+            const h = root.clientHeight || root.offsetHeight;
+            if (!w || !h || !sambaController || !sambaController.frame) return;
+            sambaController.frame.width = w;
+            sambaController.frame.height = h;
+        };
+        fit();
+        if (!sambaResizeObserver && window.ResizeObserver) {
+            sambaResizeObserver = new ResizeObserver(fit);
+            sambaResizeObserver.observe(root);
+        }
+        window.addEventListener("resize", fit);
         ctrl.load();
         if (lm) lm.style.display = "none";
     } catch (e) {
