@@ -190,6 +190,7 @@ function joinClass(link, id) {
     var params = new URLSearchParams();
     if (id) params.set("ders", id);
     params.set("v", "2");
+    params.set("entry", "student");
     window.location.href = "ders.html?" + params.toString();
 }
 
@@ -345,7 +346,7 @@ function showDetails(id) {
         <div class="modal-detail"><i class="fas fa-info-circle"></i><span><strong>Açıklama:</strong> ${item.description}</span></div>
         <div class="modal-detail"><i class="fas fa-video"></i><span><strong>Microsoft Teams:</strong> <a href="${item.link}" target="_blank" style="color:var(--primary);text-decoration:underline;font-family:monospace;font-size:0.85rem;">${item.link}</a></span></div>
         <div class="modal-actions">
-            <a href="ders.html?ders=${item.id}&v=2" class="btn btn-secondary"><i class="fas fa-video"></i> Derse Katıl</a>
+            <a href="ders.html?ders=${item.id}&v=2&entry=student" class="btn btn-secondary"><i class="fas fa-video"></i> Derse Katıl</a>
             <button class="btn btn-details" onclick="closeModal()">Kapat</button>
         </div>`;
     modal.classList.add("active");

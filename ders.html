@@ -217,6 +217,17 @@ function identify() {
     return myRole;
 }
 
+function resolveRoleForClass(cls) {
+    const entry = new URLSearchParams(window.location.search).get("entry");
+    const sid = sessionStorage.getItem("teacherId");
+    const st = sessionStorage.getItem("teacherLogged") === "true";
+    const asTeacher = st && entry === "teacher" && cls && cls.teacherId && sid === cls.teacherId;
+    myRole = asTeacher ? "teacher" : "student";
+    if (!asTeacher && !sessionStorage.getItem("siteLogged")) myName = "";
+    document.body.classList.toggle("is-teacher", myRole === "teacher");
+    document.getElementById("myLabel").textContent = myName || "Misafir";
+}
+
 function getClassId() {
     const params = new URLSearchParams(window.location.search);
     return params.get("ders");
@@ -626,7 +637,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
     const cls = cachedData.classes.find(c => c.id === clsId);
-    if (cls) renderRoom(cls);
+    if (cls) { resolveRoleForClass(cls); renderRoom(cls); }
     else {
         document.getElementById("stageTitle").textContent = "Ders bulunamadı";
         return;
