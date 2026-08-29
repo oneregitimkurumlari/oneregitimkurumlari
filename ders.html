@@ -341,6 +341,28 @@ function renderRoom(cls) {
         console.error("Jitsi yüklenemedi:", e);
         buildFallback();
     }
+
+    function showJitsiFallbackNotice() {
+        const lm = document.getElementById("jitsiLoading");
+        if (!lm) return;
+        lm.style.display = "flex";
+        lm.innerHTML = '<i class="fas fa-triangle-exclamation"></i>Görüşmeye bağlanılamadı' +
+            '<div style="font-size:0.8rem;margin-top:10px;">Doğrudan girmeyi deneyin:<br>' +
+            '<a href="https://meet.jit.si/' + encodeURIComponent(roomName) + '" target="_blank" rel="noopener" style="color:#38bdf8;text-decoration:underline;">Görüşmeyi yeni sekmede aç</a></div>';
+    }
+    if (window.jitsiApi && window.jitsiApi.addEventListener) {
+        window.jitsiApi.addEventListener("videoConferenceJoined", () => {
+            window.__jitsiJoined = true;
+            const lm = document.getElementById("jitsiLoading");
+            if (lm) lm.style.display = "none";
+        });
+        window.jitsiApi.addEventListener("conferenceFailed", (e) => { console.warn("Jitsi conferenceFailed:", e); showJitsiFallbackNotice(); });
+        window.jitsiApi.addEventListener("errorOccured", (e) => { console.warn("Jitsi errorOccured:", e); showJitsiFallbackNotice(); });
+        window.jitsiApi.addEventListener("errorOccurred", (e) => { console.warn("Jitsi errorOccurred:", e); showJitsiFallbackNotice(); });
+    }
+    window.setTimeout(() => {
+        if (!window.__jitsiJoined) showJitsiFallbackNotice();
+    }, 12000);
 }
 
 function renderRecList(cls) {
