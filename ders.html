@@ -330,10 +330,11 @@ function renderRoom(cls) {
     renderRecList(cls);
     if (myRole === "teacher") setupTokenBox();
     const roomName = "oneregitim-" + (cls.id || "ders");
-    const jitsiUrl = "https://sfu.mirotalk.com/join?room=" + encodeURIComponent(roomName) + "&name=" + encodeURIComponent(myName || "Misafir") + "&audio=1&video=1";
+    const zoomUrl = new URLSearchParams(window.location.search).get("zoomurl");
+    const jitsiUrl = zoomUrl || ("https://sfu.mirotalk.com/join?room=" + encodeURIComponent(roomName) + "&name=" + encodeURIComponent(myName || "Misafir") + "&audio=1&video=1");
 
     document.getElementById("jitsiLoading").querySelector("i").className = "fas fa-video";
-    document.getElementById("jitsiLoading").lastChild.textContent = " Görüşme odası hazırlanıyor..."
+    document.getElementById("jitsiLoading").lastChild.textContent = zoomUrl ? " Zoom toplantınıza bağlanılıyor..." : " Görüşme odası hazırlanıyor..."
     const jFrame = document.getElementById("jitsiFrame");
     jFrame.src = jitsiUrl;
     document.getElementById("jitsiWrap").style.display = "block";
