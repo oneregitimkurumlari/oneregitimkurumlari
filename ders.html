@@ -83,6 +83,9 @@
         .poll-submit { margin-top: 14px; width: 100%; padding: 13px; border: none; border-radius: 10px; font-weight: 700; font-size: 1rem; cursor: pointer; background: linear-gradient(135deg,#f59e0b,#d97706); color: #fff; }
         .poll-submit:disabled { opacity: 0.5; cursor: not-allowed; }
         .poll-done-msg { font-size: 1rem; font-weight: 700; color: #22c55e; padding: 20px; }
+        #pollStudentCard .poll-opt { padding: 10px; font-size: 0.95rem; margin-bottom: 8px; }
+        #pollStudentCard .poll-textarea { min-height: 70px; font-size: 0.9rem; }
+        #pollStudentCard .poll-submit { padding: 10px; font-size: 0.9rem; }
         .drive-section { max-width: 1200px; margin: 0 auto 20px; padding: 0 20px; }
         .drive-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
         .drive-header h3 { font-size: 1.05rem; margin: 0; display: flex; align-items: center; gap: 8px; }
@@ -153,6 +156,12 @@
             </button>
             <div id="handsBox" style="display:none;margin-top:10px;padding:10px;border-radius:8px;background:var(--primary-light);color:var(--primary-dark);font-size:0.85rem;line-height:1.5;"></div>
             <p style="font-size:0.75rem;color:var(--text-light);margin-top:10px;">Senin adın <strong id="myLabel">misafir</strong> olarak görünüyor.</p>
+        </div>
+
+        <div class="room-card" id="pollStudentCard" style="display:none;">
+            <h3 id="pollStudentTitle" style="font-size:0.9rem;"></h3>
+            <div id="pollStudentBody"></div>
+            <div id="pollStudentStatus" style="margin-top:10px;font-size:0.8rem;color:var(--text-light);"></div>
         </div>
 
         <div class="room-card teacher-only" id="pollSection">
@@ -428,30 +437,36 @@ function watchPoll(clsId) {
     pollTimer = window.setInterval(tick, 3000);
 }
 function showPollOverlay(clsId, type) {
-    const ov = document.getElementById("pollOverlay");
-    const title = document.getElementById("pollOverlayTitle");
-    const body = document.getElementById("pollOverlayBody");
-    const status = document.getElementById("pollOverlayStatus");
-    if (!ov || !title || !body) return;
-    ov.style.display = "flex";
-    status.textContent = "";
+    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    const titleEl = document.getElementById(isFs ? "pollOverlayTitle" : "pollStudentTitle");
+    const bodyEl = document.getElementById(isFs ? "pollOverlayBody" : "pollStudentBody");
+    const statusEl = document.getElementById(isFs ? "pollOverlayStatus" : "pollStudentStatus");
+    if (isFs) {
+        document.getElementById("pollOverlay").style.display = "flex";
+        document.getElementById("pollStudentCard").style.display = "none";
+    } else {
+        document.getElementById("pollStudentCard").style.display = "block";
+        document.getElementById("pollOverlay").style.display = "none";
+    }
+    if (!titleEl || !bodyEl) return;
+    statusEl.textContent = "";
     if (type === "mc") {
-        title.textContent = "Şıklı Soru";
-        body.innerHTML = "";
+        titleEl.innerHTML = '<i class="fas fa-list"></i> Şıklı Soru';
+        bodyEl.innerHTML = "";
         ["A", "B", "C", "D"].forEach(opt => {
             const b = document.createElement("button");
             b.className = "poll-opt";
             b.textContent = opt;
             b.onclick = () => submitPollAnswer(clsId, opt, b);
-            body.appendChild(b);
+            bodyEl.appendChild(b);
         });
     } else {
-        title.textContent = "Açık Uçlu Soru";
-        body.innerHTML = "";
+        titleEl.innerHTML = '<i class="fas fa-pen"></i> Açık Uçlu Soru';
+        bodyEl.innerHTML = "";
         const ta = document.createElement("textarea");
         ta.className = "poll-textarea";
         ta.placeholder = "Cevabınızı yazın...";
-        body.appendChild(ta);
+        bodyEl.appendChild(ta);
         const btn = document.createElement("button");
         btn.className = "poll-submit";
         btn.textContent = "Cevabı Gönder";
@@ -460,12 +475,14 @@ function showPollOverlay(clsId, type) {
             if (!val) return;
             submitPollAnswer(clsId, val, btn);
         };
-        body.appendChild(btn);
+        bodyEl.appendChild(btn);
     }
 }
 function hidePollOverlay() {
     const ov = document.getElementById("pollOverlay");
     if (ov) ov.style.display = "none";
+    const card = document.getElementById("pollStudentCard");
+    if (card) card.style.display = "none";
 }
 async function submitPollAnswer(clsId, answer, el) {
     const key = (myName || "Misafir") + "-poll";
@@ -483,10 +500,12 @@ async function submitPollAnswer(clsId, answer, el) {
                 el.textContent = "Gönderildi ✓";
             }
         }
-        const st = document.getElementById("pollOverlayStatus");
+        const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        const st = document.getElementById(isFs ? "pollOverlayStatus" : "pollStudentStatus");
         if (st) st.textContent = "Cevabınız kaydedildi.";
     } catch (e) {
-        const st = document.getElementById("pollOverlayStatus");
+        const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        const st = document.getElementById(isFs ? "pollOverlayStatus" : "pollStudentStatus");
         if (st) { st.textContent = "Gönderilemedi, tekrar deneyin."; st.style.color = "#ef4444"; }
     }
 }
