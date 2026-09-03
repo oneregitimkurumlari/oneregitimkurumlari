@@ -369,6 +369,7 @@ function initHands(clsId) {
 let pollTimer = null;
 let pollAnswerTimer = null;
 let currentPollType = null;
+let pollAnswered = false;
 
 function setupPoll(clsId) {
     const mcBtn = document.getElementById("pollMcBtn");
@@ -434,6 +435,7 @@ function watchPoll(clsId) {
             const pollId = data ? (data.at || "") : null;
             if (pollId && pollId !== lastPollSeen) {
                 lastPollSeen = pollId;
+                pollAnswered = false;
                 showPollOverlay(clsId, data.type);
             } else if (!data && lastPollSeen) {
                 lastPollSeen = null;
@@ -445,6 +447,7 @@ function watchPoll(clsId) {
     pollTimer = window.setInterval(tick, 3000);
 }
 function showPollOverlay(clsId, type) {
+    if (pollAnswered) return;
     const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
     const card = document.getElementById("pollStudentCard");
     const fsBar = document.getElementById("pollFsBar");
@@ -484,6 +487,7 @@ function showPollOverlay(clsId, type) {
         saveBtn.style.display = "none";
         saveBtn.onclick = () => {
             if (!selectedOpt) return;
+            pollAnswered = true;
             submitPollAnswer(clsId, selectedOpt, null);
             hidePollOverlay();
         };
@@ -501,6 +505,7 @@ function showPollOverlay(clsId, type) {
         saveBtn.onclick = () => {
             const val = ta.value.trim();
             if (!val) return;
+            pollAnswered = true;
             submitPollAnswer(clsId, val, null);
             hidePollOverlay();
         };
