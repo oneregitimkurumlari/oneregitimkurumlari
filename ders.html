@@ -86,6 +86,9 @@
         #pollStudentCard .poll-opt { padding: 10px; font-size: 0.95rem; margin-bottom: 8px; }
         #pollStudentCard .poll-textarea { min-height: 70px; font-size: 0.9rem; }
         #pollStudentCard .poll-submit { padding: 10px; font-size: 0.9rem; }
+        #pollFsBar .poll-opt { padding: 10px; font-size: 0.95rem; margin-bottom: 8px; display: inline-block; width: calc(50% - 5px); }
+        #pollFsBar .poll-textarea { min-height: 60px; font-size: 0.9rem; }
+        #pollFsBar .poll-submit { padding: 10px; font-size: 0.9rem; }
         .drive-section { max-width: 1200px; margin: 0 auto 20px; padding: 0 20px; }
         .drive-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
         .drive-header h3 { font-size: 1.05rem; margin: 0; display: flex; align-items: center; gap: 8px; }
@@ -125,6 +128,11 @@
                 <button id="stuHandBtn" title="El Kaldır"><i class="fas fa-hand-paper"></i></button>
                 <button id="stuFsBtn" title="Tam Ekran"><i class="fas fa-expand"></i></button>
                 <button id="stuLeaveBtn" title="Odadan Ayrıl"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+            <div id="pollFsBar" style="display:none;position:absolute;top:0;left:0;right:0;z-index:15;background:rgba(10,13,22,.92);padding:16px 20px;border-radius:0 0 12px 12px;max-height:50%;overflow-y:auto;">
+                <div id="pollFsTitle" style="font-size:0.95rem;font-weight:700;color:#fff;margin-bottom:12px;"></div>
+                <div id="pollFsBody"></div>
+                <div id="pollFsStatus" style="margin-top:10px;font-size:0.8rem;color:#94a3b8;"></div>
             </div>
         </div>
     </div>
@@ -438,16 +446,18 @@ function watchPoll(clsId) {
 }
 function showPollOverlay(clsId, type) {
     const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-    const titleEl = document.getElementById(isFs ? "pollOverlayTitle" : "pollStudentTitle");
-    const bodyEl = document.getElementById(isFs ? "pollOverlayBody" : "pollStudentBody");
-    const statusEl = document.getElementById(isFs ? "pollOverlayStatus" : "pollStudentStatus");
+    const card = document.getElementById("pollStudentCard");
+    const fsBar = document.getElementById("pollFsBar");
     if (isFs) {
-        document.getElementById("pollOverlay").style.display = "flex";
-        document.getElementById("pollStudentCard").style.display = "none";
+        if (card) card.style.display = "none";
+        if (fsBar) fsBar.style.display = "block";
     } else {
-        document.getElementById("pollStudentCard").style.display = "block";
-        document.getElementById("pollOverlay").style.display = "none";
+        if (fsBar) fsBar.style.display = "none";
+        if (card) card.style.display = "block";
     }
+    const titleEl = document.getElementById(isFs ? "pollFsTitle" : "pollStudentTitle");
+    const bodyEl = document.getElementById(isFs ? "pollFsBody" : "pollStudentBody");
+    const statusEl = document.getElementById(isFs ? "pollFsStatus" : "pollStudentStatus");
     if (!titleEl || !bodyEl) return;
     statusEl.textContent = "";
     if (type === "mc") {
@@ -479,10 +489,10 @@ function showPollOverlay(clsId, type) {
     }
 }
 function hidePollOverlay() {
-    const ov = document.getElementById("pollOverlay");
-    if (ov) ov.style.display = "none";
     const card = document.getElementById("pollStudentCard");
+    const fsBar = document.getElementById("pollFsBar");
     if (card) card.style.display = "none";
+    if (fsBar) fsBar.style.display = "none";
 }
 async function submitPollAnswer(clsId, answer, el) {
     const key = (myName || "Misafir") + "-poll";
@@ -501,11 +511,11 @@ async function submitPollAnswer(clsId, answer, el) {
             }
         }
         const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-        const st = document.getElementById(isFs ? "pollOverlayStatus" : "pollStudentStatus");
+        const st = document.getElementById(isFs ? "pollFsStatus" : "pollStudentStatus");
         if (st) st.textContent = "Cevabınız kaydedildi.";
     } catch (e) {
         const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-        const st = document.getElementById(isFs ? "pollOverlayStatus" : "pollStudentStatus");
+        const st = document.getElementById(isFs ? "pollFsStatus" : "pollStudentStatus");
         if (st) { st.textContent = "Gönderilemedi, tekrar deneyin."; st.style.color = "#ef4444"; }
     }
 }
