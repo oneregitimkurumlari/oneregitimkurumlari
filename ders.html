@@ -470,8 +470,8 @@ function showPollOverlay(clsId, type) {
             b.className = "poll-opt";
             b.textContent = opt;
             b.onclick = () => {
-                optBtns.forEach(x => x.classList.remove("picked"));
-                b.classList.add("picked");
+                optBtns.forEach(x => { x.className = "poll-opt"; });
+                b.className = "poll-opt picked";
                 selectedOpt = opt;
                 saveBtn.style.display = "block";
             };
