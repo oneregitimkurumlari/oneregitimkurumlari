@@ -463,13 +463,31 @@ function showPollOverlay(clsId, type) {
     if (type === "mc") {
         titleEl.innerHTML = '<i class="fas fa-list"></i> Şıklı Soru';
         bodyEl.innerHTML = "";
+        let selectedOpt = null;
+        const optBtns = [];
         ["A", "B", "C", "D"].forEach(opt => {
             const b = document.createElement("button");
             b.className = "poll-opt";
             b.textContent = opt;
-            b.onclick = () => submitPollAnswer(clsId, opt, b);
+            b.onclick = () => {
+                optBtns.forEach(x => x.classList.remove("picked"));
+                b.classList.add("picked");
+                selectedOpt = opt;
+                saveBtn.style.display = "block";
+            };
             bodyEl.appendChild(b);
+            optBtns.push(b);
         });
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "poll-submit";
+        saveBtn.textContent = "Kaydet";
+        saveBtn.style.display = "none";
+        saveBtn.onclick = () => {
+            if (!selectedOpt) return;
+            submitPollAnswer(clsId, selectedOpt, null);
+            hidePollOverlay();
+        };
+        bodyEl.appendChild(saveBtn);
     } else {
         titleEl.innerHTML = '<i class="fas fa-pen"></i> Açık Uçlu Soru';
         bodyEl.innerHTML = "";
@@ -477,15 +495,16 @@ function showPollOverlay(clsId, type) {
         ta.className = "poll-textarea";
         ta.placeholder = "Cevabınızı yazın...";
         bodyEl.appendChild(ta);
-        const btn = document.createElement("button");
-        btn.className = "poll-submit";
-        btn.textContent = "Cevabı Gönder";
-        btn.onclick = () => {
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "poll-submit";
+        saveBtn.textContent = "Kaydet";
+        saveBtn.onclick = () => {
             const val = ta.value.trim();
             if (!val) return;
-            submitPollAnswer(clsId, val, btn);
+            submitPollAnswer(clsId, val, null);
+            hidePollOverlay();
         };
-        bodyEl.appendChild(btn);
+        bodyEl.appendChild(saveBtn);
     }
 }
 function hidePollOverlay() {
@@ -510,14 +529,7 @@ async function submitPollAnswer(clsId, answer, el) {
                 el.textContent = "Gönderildi ✓";
             }
         }
-        const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-        const st = document.getElementById(isFs ? "pollFsStatus" : "pollStudentStatus");
-        if (st) st.textContent = "Cevabınız kaydedildi.";
-    } catch (e) {
-        const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-        const st = document.getElementById(isFs ? "pollFsStatus" : "pollStudentStatus");
-        if (st) { st.textContent = "Gönderilemedi, tekrar deneyin."; st.style.color = "#ef4444"; }
-    }
+    } catch (e) { /* sessiz */ }
 }
 
 let sambaController = null;
