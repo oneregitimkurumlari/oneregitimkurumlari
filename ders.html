@@ -63,6 +63,26 @@
         @keyframes recBlink2 { 0%,100%{opacity:1} 50%{opacity:0.6} }
         .teacher-only { display: none; }
         body.is-teacher .teacher-only { display: block; }
+        .poll-btn { flex: 1; min-width: 120px; padding: 11px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 0.85rem; color: #fff; transition: opacity .2s; }
+        .poll-btn:hover { opacity: 0.85; }
+        .poll-mc { background: linear-gradient(135deg,#8b5cf6,#6d28d9); }
+        .poll-open { background: linear-gradient(135deg,#f59e0b,#d97706); }
+        .poll-answer-item { padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+        .poll-answer-item:last-child { border-bottom: none; }
+        .poll-answer-item .poll-name { font-weight: 700; color: var(--text); }
+        .poll-answer-item .poll-val { color: var(--primary); margin-left: 6px; }
+        #pollOverlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.72); z-index: 2000; padding: 16px; }
+        .poll-box { background: #0f1524; border: 1px solid var(--border); border-radius: 14px; padding: 28px; max-width: 400px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.5); text-align: center; }
+        .poll-box h3 { margin: 0 0 20px; font-size: 1.1rem; color: #fff; }
+        .poll-opt { width: 100%; padding: 14px; border: 2px solid #334155; border-radius: 12px; background: #1e293b; color: #e2e8f0; font-size: 1.1rem; font-weight: 700; cursor: pointer; margin-bottom: 10px; transition: all .15s; text-align: center; }
+        .poll-opt:hover { border-color: #8b5cf6; background: #1e1b4b; }
+        .poll-opt.picked { border-color: #22c55e; background: #22c55e; color: #fff; }
+        .poll-opt.picked { border-color: #8b5cf6; background: #8b5cf6; color: #fff; }
+        .poll-textarea { width: 100%; min-height: 100px; padding: 12px; border: 2px solid #334155; border-radius: 12px; background: #1e293b; color: #e2e8f0; font-size: 0.95rem; resize: vertical; box-sizing: border-box; }
+        .poll-textarea:focus { border-color: #f59e0b; outline: none; }
+        .poll-submit { margin-top: 14px; width: 100%; padding: 13px; border: none; border-radius: 10px; font-weight: 700; font-size: 1rem; cursor: pointer; background: linear-gradient(135deg,#f59e0b,#d97706); color: #fff; }
+        .poll-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+        .poll-done-msg { font-size: 1rem; font-weight: 700; color: #22c55e; padding: 20px; }
         .drive-section { max-width: 1200px; margin: 0 auto 20px; padding: 0 20px; }
         .drive-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
         .drive-header h3 { font-size: 1.05rem; margin: 0; display: flex; align-items: center; gap: 8px; }
@@ -135,6 +155,27 @@
             <p style="font-size:0.75rem;color:var(--text-light);margin-top:10px;">Senin adın <strong id="myLabel">misafir</strong> olarak görünüyor.</p>
         </div>
 
+        <div class="room-card teacher-only" id="pollSection">
+            <h3><i class="fas fa-question-circle"></i> Anket Soruları</h3>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="poll-btn poll-mc" id="pollMcBtn"><i class="fas fa-list"></i> Şıklı Soru</button>
+                <button class="poll-btn poll-open" id="pollOpenBtn"><i class="fas fa-pen"></i> Açık Uçlu Soru</button>
+            </div>
+            <div id="pollAnswers" style="display:none;margin-top:12px;">
+                <div style="font-size:0.8rem;font-weight:700;color:var(--text-light);margin-bottom:8px;">Cevaplar (<span id="pollAnswerCount">0</span>)</div>
+                <ul id="pollAnswerList" style="list-style:none;padding:0;margin:0;max-height:250px;overflow-y:auto;"></ul>
+                <button id="pollCloseBtn" style="margin-top:10px;width:100%;padding:9px;border:1px solid #ef4444;border-radius:8px;background:transparent;color:#ef4444;cursor:pointer;font-weight:700;font-size:0.85rem;">Anketi Kapat</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="pollOverlay">
+    <div class="poll-box">
+        <h3 id="pollOverlayTitle"></h3>
+        <div id="pollOverlayBody"></div>
+        <div id="pollOverlayStatus" style="margin-top:14px;font-size:0.82rem;color:var(--text-light);"></div>
     </div>
 </div>
 
@@ -305,6 +346,148 @@ function initHands(clsId) {
             stuBtn.classList.remove("is-on");
             stuBtn.onclick = () => toggleHand(clsId);
         }
+    }
+}
+
+let pollTimer = null;
+let pollAnswerTimer = null;
+let currentPollType = null;
+
+function setupPoll(clsId) {
+    const mcBtn = document.getElementById("pollMcBtn");
+    const openBtn = document.getElementById("pollOpenBtn");
+    const closeBtn = document.getElementById("pollCloseBtn");
+    if (mcBtn) mcBtn.onclick = () => startPoll(clsId, "mc");
+    if (openBtn) openBtn.onclick = () => startPoll(clsId, "open");
+    if (closeBtn) closeBtn.onclick = () => stopPoll(clsId);
+}
+async function startPoll(clsId, type) {
+    currentPollType = type;
+    try {
+        await fetchWithTimeout(FIREBASE_URL + "/_polls/" + encodeURIComponent(clsId) + ".json", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ active: { type: type, by: myName || "öğretmen", at: Date.now() } })
+        });
+        document.getElementById("pollAnswers").style.display = "block";
+        loadPollAnswers(clsId);
+        if (pollAnswerTimer) clearInterval(pollAnswerTimer);
+        pollAnswerTimer = window.setInterval(() => loadPollAnswers(clsId), 3000);
+    } catch (e) { /* sessiz */ }
+}
+async function stopPoll(clsId) {
+    currentPollType = null;
+    try {
+        await fetchWithTimeout(FIREBASE_URL + "/_polls/" + encodeURIComponent(clsId) + ".json", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(null)
+        });
+    } catch (e) { /* sessiz */ }
+    document.getElementById("pollAnswers").style.display = "none";
+    if (pollAnswerTimer) { clearInterval(pollAnswerTimer); pollAnswerTimer = null; }
+    const ov = document.getElementById("pollOverlay");
+    if (ov) ov.style.display = "none";
+}
+async function loadPollAnswers(clsId) {
+    const list = document.getElementById("pollAnswerList");
+    const cnt = document.getElementById("pollAnswerCount");
+    if (!list || !cnt) return;
+    try {
+        const res = await fetchWithTimeout(FIREBASE_URL + "/_polls/" + encodeURIComponent(clsId) + "/answers.json", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const entries = data ? Object.values(data) : [];
+        cnt.textContent = entries.length;
+        list.innerHTML = entries.map(a => {
+            const n = escapeHtmlText(a.name || "Misafir");
+            const v = escapeHtmlText(a.answer || "—");
+            return '<li class="poll-answer-item"><span class="poll-name">' + n + '</span> <span class="poll-val">' + v + '</span></li>';
+        }).join("");
+    } catch (e) { /* sessiz */ }
+}
+let lastPollSeen = null;
+function watchPoll(clsId) {
+    if (pollTimer) return;
+    const tick = async () => {
+        try {
+            const res = await fetchWithTimeout(FIREBASE_URL + "/_polls/" + encodeURIComponent(clsId) + "/active.json", { cache: "no-store" });
+            if (!res.ok) return;
+            const data = await res.json();
+            const pollId = data ? (data.at || "") : null;
+            if (pollId && pollId !== lastPollSeen) {
+                lastPollSeen = pollId;
+                showPollOverlay(clsId, data.type);
+            } else if (!data && lastPollSeen) {
+                lastPollSeen = null;
+                hidePollOverlay();
+            }
+        } catch (e) { /* sessiz */ }
+    };
+    tick();
+    pollTimer = window.setInterval(tick, 3000);
+}
+function showPollOverlay(clsId, type) {
+    const ov = document.getElementById("pollOverlay");
+    const title = document.getElementById("pollOverlayTitle");
+    const body = document.getElementById("pollOverlayBody");
+    const status = document.getElementById("pollOverlayStatus");
+    if (!ov || !title || !body) return;
+    ov.style.display = "flex";
+    status.textContent = "";
+    if (type === "mc") {
+        title.textContent = "Şıklı Soru";
+        body.innerHTML = "";
+        ["A", "B", "C", "D"].forEach(opt => {
+            const b = document.createElement("button");
+            b.className = "poll-opt";
+            b.textContent = opt;
+            b.onclick = () => submitPollAnswer(clsId, opt, b);
+            body.appendChild(b);
+        });
+    } else {
+        title.textContent = "Açık Uçlu Soru";
+        body.innerHTML = "";
+        const ta = document.createElement("textarea");
+        ta.className = "poll-textarea";
+        ta.placeholder = "Cevabınızı yazın...";
+        body.appendChild(ta);
+        const btn = document.createElement("button");
+        btn.className = "poll-submit";
+        btn.textContent = "Cevabı Gönder";
+        btn.onclick = () => {
+            const val = ta.value.trim();
+            if (!val) return;
+            submitPollAnswer(clsId, val, btn);
+        };
+        body.appendChild(btn);
+    }
+}
+function hidePollOverlay() {
+    const ov = document.getElementById("pollOverlay");
+    if (ov) ov.style.display = "none";
+}
+async function submitPollAnswer(clsId, answer, el) {
+    const key = (myName || "Misafir") + "-poll";
+    try {
+        await fetchWithTimeout(FIREBASE_URL + "/_polls/" + encodeURIComponent(clsId) + "/answers/" + encodeURIComponent(key) + ".json", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: myName || "Misafir", answer: answer, at: Date.now() })
+        });
+        if (el) {
+            if (el.tagName === "BUTTON" && el.classList.contains("poll-opt")) {
+                el.classList.add("picked");
+            } else {
+                el.disabled = true;
+                el.textContent = "Gönderildi ✓";
+            }
+        }
+        const st = document.getElementById("pollOverlayStatus");
+        if (st) st.textContent = "Cevabınız kaydedildi.";
+    } catch (e) {
+        const st = document.getElementById("pollOverlayStatus");
+        if (st) { st.textContent = "Gönderilemedi, tekrar deneyin."; st.style.color = "#ef4444"; }
     }
 }
 
@@ -887,6 +1070,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     else loadAttendees(clsId);
 
     initHands(clsId);
+    setupPoll(clsId);
+    if (myRole !== "teacher") watchPoll(clsId);
 
     let recSig = JSON.stringify((cachedData.classes.find(x => x.id === clsId) || {}).recordings || []);
     window.setInterval(async () => {
