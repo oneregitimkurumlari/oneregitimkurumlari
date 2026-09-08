@@ -4,18 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#c09020">
-    <meta name="description" content="ONLİNE PİHOS online ders platformu - güncel ders programı, canlı dersler, ödevler ve duyurular. Öğrencilerimiz ders programına buradan ulaşabilir.">
+    <meta name="description" content="ONLİNE PİHOS online ders platformu - güncel ders programı, canlı dersler, ödevler ve duyurular. Öğrencilerimize özel kişisel çalışma paneli.">
     <meta name="keywords" content="online pihos, öner eğitim kurumları, online ders programı, canlı ders, ödev takibi">
     <link rel="canonical" href="https://oneregitimkurumlari.github.io/oneregitimkurumlari/">
-    <meta property="og:title" content="ONLİNE PİHOS - Online Ders Programı">
-    <meta property="og:description" content="Güncel ders programı, canlı dersler, ödevler ve duyurular. ONLİNE PİHOS online platformu.">
+    <meta property="og:title" content="ONLİNE PİHOS - Öğrenci Paneli">
+    <meta property="og:description" content="Kişisel çalışma takvimi, ders programı, canlı dersler ve ödevler. ONLİNE PİHOS online platformu.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://oneregitimkurumlari.github.io/oneregitimkurumlari/">
     <meta property="og:image" content="https://oneregitimkurumlari.github.io/oneregitimkurumlari/images.png">
-    <title>ONLİNE PİHOS - Online Ders Programı</title>
+    <title>ONLİNE PİHOS - Öğrenci Paneli</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" type="image/png" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=5">
+    <link rel="stylesheet" href="styles.css?v=6">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="transition.css">
@@ -61,222 +61,183 @@
 
 <div class="site-main" id="siteMain" style="display:none;">
 
-<header class="header">
-    <div class="container header-inner">
-        <div class="logo">
-            <img src="images.png" alt="ONLİNE PİHOS Logosu" class="logo-img">
-            <div class="logo-text">
-                <h1>ONLİNE PİHOS</h1>
-                <p class="designed-by">designed by ÖNER EĞİTİM</p>
+    <!-- EBA tarzı dashboard düzeni -->
+    <div class="dash">
+
+        <!-- Sol panel (ikonlar, mobilde açıklamalı) -->
+        <aside class="sidebar" id="sidebar">
+            <div class="side-logo">
+                <img src="images.png" alt="ONLİNE PİHOS" class="side-logo-img">
             </div>
-        </div>
-        <nav class="nav">
-            <a href="#program" class="nav-link">Ders Programı</a>
-            <a href="#dersler" class="nav-link">Dersler</a>
-            <a href="#kayitlar" class="nav-link">Ders Kayıtları</a>
-            <a href="#odevler" class="nav-link">Ödevler</a>
-            <a href="#hakkimizda" class="nav-link">Hakkımızda</a>
-            <a href="#iletisim" class="nav-link">İletişim</a>
-            <a href="admin.html" class="nav-link nav-admin"><i class="fas fa-user-shield"></i> Yönetim</a>
-            <a href="teacher.html" class="nav-link nav-admin"><i class="fas fa-chalkboard-teacher"></i> Öğretmen</a>
-        </nav>
-        <a href="#" class="apk-download-btn apk-header-btn" id="installBtnHeader">
-            <i class="fas fa-download"></i> <span>İndir</span>
-        </a>
-        <button class="dark-toggle" id="darkToggle" title="Koyu/Acik Mod"><i class="fas fa-moon"></i></button>
-        <button class="menu-toggle" id="menuToggle">
-            <i class="fas fa-bars"></i>
-        </button>
-    </div>
-</header>
+            <nav class="side-nav">
+                <a href="#panel" class="side-link active" data-view="panel"><i class="fas fa-th-large"></i><span class="side-txt">Panelim</span></a>
+                <a href="#takvim" class="side-link" data-view="takvim"><i class="fas fa-calendar-alt"></i><span class="side-txt">Takvim</span></a>
+                <a href="#plan" class="side-link" data-view="plan"><i class="fas fa-clipboard-check"></i><span class="side-txt">Çalışma Planı</span></a>
+                <a href="#program" class="side-link" data-view="program"><i class="fas fa-book-open"></i><span class="side-txt">Ders Programı</span></a>
+                <a href="#dersler" class="side-link" data-view="dersler"><i class="fas fa-video"></i><span class="side-txt">Canlı Ders</span></a>
+                <a href="#kayitlar" class="side-link" data-view="kayitlar"><i class="fas fa-history"></i><span class="side-txt">Kayıtlar</span></a>
+                <a href="#odevler" class="side-link" data-view="odevler"><i class="fas fa-file-alt"></i><span class="side-txt">Ödevler</span></a>
+            </nav>
+            <div class="side-bottom">
+                <button class="dark-toggle side-link" id="darkToggle" title="Koyu/Acik Mod"><i class="fas fa-moon"></i><span class="side-txt">Mod</span></button>
+                <a href="admin.html" class="side-link" title="Yönetim"><i class="fas fa-user-shield"></i><span class="side-txt">Yönetim</span></a>
+                <a href="teacher.html" class="side-link" title="Öğretmen"><i class="fas fa-chalkboard-teacher"></i><span class="side-txt">Öğretmen</span></a>
+                <button class="side-link" id="logoutBtn" title="Çıkış"><i class="fas fa-sign-out-alt"></i><span class="side-txt">Çıkış</span></button>
+            </div>
+        </aside>
 
-<section class="hero">
-    <div class="hero-content">
-        <h2>ONLİNE PİHOS</h2>
-        <p>Güncel ders programınızı inceleyin ve derslerinize katılın</p>
-        <a href="#program" class="btn btn-primary">Ders Programını Gör</a>
-    </div>
-</section>
+        <!-- Sağ içerik alanı -->
+        <main class="main">
 
-<section class="stats-bar">
-    <div class="container">
-        <div class="stats-grid">
-            <div class="stat-item">
-                <i class="fas fa-graduation-cap"></i>
-                <div>
-                    <span class="stat-number">150+</span>
-                    <span class="stat-label">Aktif Öğrenci</span>
+            <!-- Üst başlık -->
+            <header class="topbar">
+                <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+                <div class="topbar-title">
+                    <h1 id="dashGreeting">Hoş geldin</h1>
+                    <p id="dashDate"></p>
                 </div>
-            </div>
-            <div class="stat-item">
-                <i class="fas fa-chalkboard-teacher"></i>
-                <div>
-                    <span class="stat-number">12</span>
-                    <span class="stat-label">Uzman Eğitmen</span>
-                </div>
-            </div>
-            <div class="stat-item">
-                <i class="fas fa-book-open"></i>
-                <div>
-                    <span class="stat-number">24</span>
-                    <span class="stat-label">Farklı Ders</span>
-                </div>
-            </div>
-            <div class="stat-item">
-                <i class="fas fa-video"></i>
-                <div>
-                    <span class="stat-number">51</span>
-                    <span class="stat-label">Haftalık Seans</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<section class="section" id="program">
-    <div class="container">
-        <div class="section-header">
-            <h2>Ders Programı</h2>
-            <p>Haftalık ders programınızı inceleyin</p>
-        </div>
-
-        <div class="day-filter">
-            <button class="day-btn active" data-day="tum">Tümü</button>
-            <button class="day-btn" data-day="pazartesi">Pazartesi</button>
-            <button class="day-btn" data-day="sali">Salı</button>
-            <button class="day-btn" data-day="carsamba">Çarşamba</button>
-            <button class="day-btn" data-day="persembe">Perşembe</button>
-            <button class="day-btn" data-day="cuma">Cuma</button>
-            <button class="day-btn" data-day="cumartesi">Cumartesi</button>
-            <button class="day-btn" data-day="pazar">Pazar</button>
-        </div>
-
-        <div class="schedule-grid" id="scheduleGrid">
-        </div>
-    </div>
-</section>
-
-<section class="section section-alt" id="dersler">
-    <div class="container">
-        <div class="section-header">
-            <h2>Derslerimiz</h2>
-            <p>Sunulan eğitim programları</p>
-        </div>
-        <div class="courses-grid" id="coursesGrid">
-        </div>
-    </div>
-</section>
-
-<section class="section section-alt" id="kayitlar">
-    <div class="container">
-        <div class="section-header">
-            <h2>Ders Kayıtları</h2>
-            <p>Geçmiş derslerinizin kayıtları (son 5 ders)</p>
-        </div>
-        <div class="recordings-grid" id="recordingsGrid">
-        </div>
-        <div class="recordings-footer">
-            <button class="btn btn-secondary" id="allRecordingsBtn"><i class="fas fa-history"></i> Tüm Geçmiş Dersler</button>
-        </div>
-    </div>
-</section>
-
-<section class="section" id="odevler">
-    <div class="container">
-        <div class="section-header">
-            <h2>Ödevler</h2>
-            <p>Öğretmenleriniz tarafından verilen ödevler</p>
-        </div>
-        <div class="homework-grid" id="homeworkGrid">
-        </div>
-    </div>
-</section>
-
-<section class="section" id="hakkimizda">
-    <div class="container">
-        <div class="about-grid">
-            <div class="about-content">
-                <h2>Hakkımızda</h2>
-                <p>ONLİNE PİHOS, 2015 yılından bu yana kaliteli online eğitim hizmeti sunmaktadır. Uzman eğitmen kadromuz ve modern eğitim yöntemlerimizle öğrencilerimize en iyi eğitimi vermeyi hedefliyoruz.</p>
-                <p>Misyonumuz, herkesin erişebileceği, interaktif ve etkili bir eğitim ortamı oluşturmaktır.</p>
-                <div class="about-features">
-                    <div class="feature">
-                        <i class="fas fa-check-circle"></i>
-                        <span>Uzman Eğitmenler</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-check-circle"></i>
-                        <span>Canlı Dersler</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-check-circle"></i>
-                        <span>Kayıt İmkânı</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-check-circle"></i>
-                        <span>Sertifika</span>
+                <div class="topbar-user">
+                    <div class="user-avatar" id="userAvatar">Ö</div>
+                    <div class="user-info">
+                        <strong id="userName"></strong>
+                        <span>Öğrenci</span>
                     </div>
                 </div>
-            </div>
-            <div class="about-image">
-                <div class="about-card">
-                    <i class="fas fa-laptop-code"></i>
-                    <h3>Kaliteli Eğitim</h3>
-                    <p>Modern teknoloji ile donatılmış sınıflarda eğitim</p>
-                </div>
-                <div class="about-card">
-                    <i class="fas fa-users"></i>
-                    <h3>Küçük Sınıflar</h3>
-                    <p>Maksimum 25 kişilik sınıflar</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+            </header>
 
-<section class="section section-alt" id="iletisim">
-    <div class="container">
-        <div class="section-header">
-            <h2>İletişim</h2>
-            <p>Bize ulaşmak için aşağıdaki bilgileri kullanabilirsiniz</p>
-        </div>
-        <div class="contact-grid">
-            <div class="contact-card">
-                <i class="fas fa-phone"></i>
-                <h3>Telefon</h3>
-                <p>+90 352 223 29 59</p>
-                <p>+90 535 646 85 54</p>
-            </div>
-            <div class="contact-card">
-                <i class="fas fa-envelope"></i>
-                <h3>E-posta</h3>
-                <p>info@oneregitim.com</p>
-            </div>
-            <div class="contact-card">
-                <i class="fas fa-map-marker-alt"></i>
-                <h3>Adres</h3>
-                <p>Kocasinan, Kayseri</p>
-            </div>
-        </div>
-    </div>
-</section>
+            <!-- ==== GÖRÜNÜM: PANEL ==== -->
+            <section class="view active" id="view-panel">
+                <div class="dash-grid">
 
-<footer class="footer">
-    <div class="container footer-inner">
-        <div class="footer-logo">
-            <img src="images.png" alt="Logo" class="footer-logo-img">
-            <p>ONLİNE PİHOS &copy; 2026 Tüm hakları saklıdır.</p>
-            <p class="footer-designed">designed by ÖNER EĞİTİM</p>
-        </div>
-        <div class="footer-social">
-            <a href="admin.html" title="Yönetim Paneli"><i class="fas fa-user-shield"></i></a>
-            <a href="#"><i class="fab fa-instagram"></i></a>
-            <a href="#"><i class="fab fa-twitter"></i></a>
-            <a href="#"><i class="fab fa-youtube"></i></a>
-            <a href="#"><i class="fab fa-linkedin"></i></a>
-        </div>
+                    <!-- Takvim widget -->
+                    <div class="dash-card calendar-card">
+                        <div class="card-head">
+                            <h3><i class="fas fa-calendar-alt"></i> Takvim</h3>
+                            <button class="mini-btn" data-goto="takvim"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div class="cal-widget" id="calWidget"></div>
+                    </div>
+
+                    <!-- Bugünün çalışma planı -->
+                    <div class="dash-card plan-card">
+                        <div class="card-head">
+                            <h3><i class="fas fa-clipboard-check"></i> Bugünün Planı</h3>
+                            <button class="mini-btn" data-goto="plan"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div id="todayPlan"></div>
+                        <p class="plan-empty" id="todayPlanEmpty" style="display:none;">Bugün için planlanmış görev yok.</p>
+                        <button class="btn btn-secondary btn-sm" data-goto="plan"><i class="fas fa-plus"></i> Plan oluştur</button>
+                    </div>
+
+                    <!-- Bugünkü dersler -->
+                    <div class="dash-card">
+                        <div class="card-head">
+                            <h3><i class="fas fa-book-open"></i> Bugünkü Dersler</h3>
+                            <button class="mini-btn" data-goto="program"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div id="todayClasses"></div>
+                        <p class="plan-empty" id="todayClassesEmpty" style="display:none;">Bugün dersiniz yok.</p>
+                    </div>
+
+                    <!-- Son ödevler -->
+                    <div class="dash-card">
+                        <div class="card-head">
+                            <h3><i class="fas fa-file-alt"></i> Son Ödevler</h3>
+                            <button class="mini-btn" data-goto="odevler"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div id="recentHomeworks"></div>
+                        <p class="plan-empty" id="homeworksEmpty" style="display:none;">Henüz ödev yok.</p>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- ==== GÖRÜNÜM: TAKVİM ==== -->
+            <section class="view" id="view-takvim">
+                <div class="view-head">
+                    <h2>Takvim</h2>
+                    <p>Ders günleriniz ve özel günleriniz</p>
+                </div>
+                <div class="dash-card">
+                    <div class="cal-full" id="calFull"></div>
+                </div>
+            </section>
+
+            <!-- ==== GÖRÜNÜM: ÇALIŞMA PLANI ==== -->
+            <section class="view" id="view-plan">
+                <div class="view-head">
+                    <h2>Çalışma Planı</h2>
+                    <p>Haftalık çalışma planınızı oluşturun</p>
+                </div>
+                <div class="dash-card">
+                    <div class="plan-creator">
+                        <select id="planDay">
+                            <option value="pazartesi">Pazartesi</option>
+                            <option value="sali">Salı</option>
+                            <option value="carsamba">Çarşamba</option>
+                            <option value="persembe">Perşembe</option>
+                            <option value="cuma">Cuma</option>
+                            <option value="cumartesi">Cumartesi</option>
+                            <option value="pazar">Pazar</option>
+                        </select>
+                        <input type="text" id="planText" placeholder="Görev yazın (örn. Matematik testi çöz)">
+                        <button class="btn btn-primary" id="planAddBtn"><i class="fas fa-plus"></i> Ekle</button>
+                    </div>
+                    <div id="planList"></div>
+                </div>
+            </section>
+
+            <!-- ==== GÖRÜNÜM: DERS PROGRAMI ==== -->
+            <section class="view" id="view-program">
+                <div class="view-head">
+                    <h2>Ders Programı</h2>
+                    <p>Haftalık ders programınızı inceleyin</p>
+                </div>
+                <div class="day-filter" id="scheduleFilter">
+                    <button class="day-btn active" data-day="tum">Tümü</button>
+                    <button class="day-btn" data-day="pazartesi">Pazartesi</button>
+                    <button class="day-btn" data-day="sali">Salı</button>
+                    <button class="day-btn" data-day="carsamba">Çarşamba</button>
+                    <button class="day-btn" data-day="persembe">Perşembe</button>
+                    <button class="day-btn" data-day="cuma">Cuma</button>
+                    <button class="day-btn" data-day="cumartesi">Cumartesi</button>
+                    <button class="day-btn" data-day="pazar">Pazar</button>
+                </div>
+                <div class="schedule-grid" id="scheduleGrid"></div>
+            </section>
+
+            <!-- ==== GÖRÜNÜM: CANLI DERS ==== -->
+            <section class="view" id="view-dersler">
+                <div class="view-head">
+                    <h2>Canlı Dersler</h2>
+                    <p>Sunulan eğitim programları</p>
+                </div>
+                <div class="courses-grid" id="coursesGrid"></div>
+            </section>
+
+            <!-- ==== GÖRÜNÜM: KAYITLAR ==== -->
+            <section class="view" id="view-kayitlar">
+                <div class="view-head">
+                    <h2>Ders Kayıtları</h2>
+                    <p>Geçmiş derslerinizin kayıtları (son 5 ders)</p>
+                </div>
+                <div class="recordings-grid" id="recordingsGrid"></div>
+                <div class="recordings-footer">
+                    <button class="btn btn-secondary" id="allRecordingsBtn"><i class="fas fa-history"></i> Tüm Geçmiş Dersler</button>
+                </div>
+            </section>
+
+            <!-- ==== GÖRÜNÜM: ÖDEVLER ==== -->
+            <section class="view" id="view-odevler">
+                <div class="view-head">
+                    <h2>Ödevler</h2>
+                    <p>Öğretmenleriniz tarafından verilen ödevler</p>
+                </div>
+                <div class="homework-grid" id="homeworkGrid"></div>
+            </section>
+
+        </main>
     </div>
-</footer>
 
 </div>
 
@@ -328,7 +289,7 @@
     </div>
 </div>
 
-<script src="script.js?v=2"></script>
+<script src="script.js?v=3"></script>
 <script src="transition.js"></script>
 <script>
 (function () {
@@ -338,7 +299,7 @@
         if (e) e.preventDefault();
         modal.classList.add('active');
     }
-    ['installBtnLogin', 'installBtnHeader'].forEach(function (id) {
+    ['installBtnLogin'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.addEventListener('click', openModal);
     });
@@ -358,17 +319,6 @@
     if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
         var a = document.getElementById('androidInstallBtn');
         if (a) { a.style.display = 'none'; }
-    }
-    var dt = document.getElementById('darkToggle');
-    if (dt) dt.addEventListener('click', function () {
-        document.documentElement.classList.toggle('dark');
-        var d = document.documentElement.classList.contains('dark');
-        localStorage.setItem('theme', d ? 'dark' : 'light');
-        dt.querySelector('i').className = d ? 'fas fa-sun' : 'fas fa-moon';
-    });
-    if (document.documentElement.classList.contains('dark')) {
-        var dti = document.getElementById('darkToggle');
-        if (dti) dti.querySelector('i').className = 'fas fa-sun';
     }
 })();
 </script>

@@ -354,9 +354,450 @@ function showDetails(id) {
 
 function closeModal() { document.getElementById("classModal").classList.remove("active"); }
 
+var dashState = {
+    currentUser: null,
+    calYear: new Date().getFullYear(),
+    calMonth: new Date().getMonth()
+};
+
+var specialDays = {
+    "2026-01-01": "Yılbaşı",
+    "2026-04-23": "23 Nisan",
+    "2026-05-19": "19 Mayıs",
+    "2026-08-30": "30 Ağustos",
+    "2026-10-29": "29 Ekim",
+    "2026-01-01": "Yılbaşı"
+};
+
+var PLAN_URL = FIREBASE_URL + "/_plans.json";
+var planCache = null;
+
+function getStudentId() {
+    var u = sessionStorage.getItem("siteUser");
+    if (!u) return "default";
+    var st = cachedData.students.find(s => (s.name + " " + s.surname) === u);
+    return st ? st.id : "default";
+}
+
+async function loadPlans() {
+    try {
+        var res = await fetch(PLAN_URL + "?t=" + Date.now(), { cache: "no-store" });
+        var json = await res.json();
+        planCache = json || {};
+    } catch (e) {
+        console.warn("Plan yüklenemedi:", e);
+        planCache = {};
+    }
+}
+
+function myPlans() {
+    var sid = getStudentId();
+    planCache = planCache || {};
+    return planCache[sid] || {};
+}
+
+function weekKey() {
+    var d = new Date();
+    var day = d.getDay() || 7;
+    var monday = new Date(d);
+    monday.setDate(d.getDate() - day + 1);
+    var pad = n => String(n).padStart(2, "0");
+    return monday.getFullYear() + "-" + pad(monday.getMonth() + 1) + "-" + pad(monday.getDate());
+}
+
+async function savePlans() {
+    try {
+        await fetch(PLAN_URL + "?t=" + Date.now(), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(planCache)
+        });
+    } catch (e) {
+        console.error("Plan kaydedilemedi:", e);
+        alert("Plan kaydedilemedi. Veri bağlantısını kontrol edin.");
+    }
+}
+
+function getTodayDOM() {
+    var d = new Date();
+    var labels = ["pazar", "pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi"];
+    return labels[d.getDay()];
+}
+
+function todayPlanList() {
+    return myPlans()[weekKey()] || {};
+}
+
 function showSite() {
     document.getElementById("siteLogin").style.display = "none";
     document.getElementById("siteMain").style.display = "block";
+}
+
+function initDashboard() {
+    var user = sessionStorage.getItem("siteUser") || "Öğrenci";
+    var parts = user.split(" ");
+    dashState.currentUser = user;
+
+    var un = document.getElementById("userName");
+    if (un) un.textContent = user;
+    var av = document.getElementById("userAvatar");
+    if (av) av.textContent = (parts[0] || "Ö").charAt(0).toUpperCase();
+
+    var greet = document.getElementById("dashGreeting");
+    if (greet) {
+        var now = new Date().getHours();
+        var g = now < 12 ? "Günaydın" : now < 18 ? "İyi günler" : "İyi akşamlar";
+        greet.textContent = g + ", " + (parts[0] || "Öğrenci") + " 👋";
+    }
+    var ddate = document.getElementById("dashDate");
+    if (ddate) {
+        var tr = new Date().toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+        ddate.textContent = tr.charAt(0).toUpperCase() + tr.slice(1);
+    }
+
+    dashState.calYear = new Date().getFullYear();
+    dashState.calMonth = new Date().getMonth();
+
+    renderView("panel");
+    bindNav();
+    renderCalendar("calWidget", dashState.calYear, dashState.calMonth);
+    renderCalendar("calFull", dashState.calYear, dashState.calMonth);
+    renderTodayPlan();
+    renderTodayClasses();
+    renderRecentHomeworks();
+
+    var logout = document.getElementById("logoutBtn");
+    if (logout) logout.addEventListener("click", () => {
+        sessionStorage.removeItem("siteLogged");
+        sessionStorage.removeItem("siteUser");
+        sessionStorage.removeItem("teacherLogged");
+        sessionStorage.removeItem("teacherId");
+        sessionStorage.removeItem("teacherName");
+        window.location.reload();
+    });
+
+    var menu = document.getElementById("menuToggle");
+    if (menu) menu.addEventListener("click", () => {
+        var sb = document.getElementById("sidebar");
+        if (sb) sb.classList.toggle("open");
+    });
+
+    var addBtn = document.getElementById("planAddBtn");
+    if (addBtn) addBtn.addEventListener("click", addPlanTask);
+    var planInput = document.getElementById("planText");
+    if (planInput) planInput.addEventListener("keydown", e => { if (e.key === "Enter") addPlanTask(); });
+
+    if (window.location.hash) {
+        var v = window.location.hash.replace("#", "");
+        if (document.getElementById("view-" + v)) renderView(v);
+    }
+}
+
+function bindNav() {
+    document.querySelectorAll(".side-link[data-view]").forEach(link => {
+        link.addEventListener("click", (e) => {
+            e.preventDefault();
+            var v = link.dataset.view;
+            renderView(v);
+            var sb = document.getElementById("sidebar");
+            if (sb) sb.classList.remove("open");
+        });
+    });
+    document.querySelectorAll("[data-goto]").forEach(btn => {
+        btn.addEventListener("click", () => renderView(btn.dataset.goto));
+    });
+}
+
+function renderView(view) {
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    var target = document.getElementById("view-" + view);
+    if (target) target.classList.add("active");
+
+    document.querySelectorAll(".side-link[data-view]").forEach(l => {
+        l.classList.toggle("active", l.dataset.view === view);
+    });
+
+    if (view === "takvim") {
+        renderCalendar("calFull", dashState.calYear, dashState.calMonth);
+    }
+    if (view === "plan") {
+        renderPlanList();
+    }
+    if (view === "program") {
+        renderSchedule();
+        bindScheduleFilter();
+    }
+    if (view === "dersler") renderCourses();
+    if (view === "kayitlar") {
+        renderRecordings();
+        var allBtn = document.getElementById("allRecordingsBtn");
+        if (allBtn && !allBtn._bound) { allBtn.addEventListener("click", showAllRecordings); allBtn._bound = true; }
+        var allClose = document.getElementById("allRecordingsClose");
+        if (allClose && !allClose._bound) { allClose.addEventListener("click", closeAllRecordings); allClose._bound = true; }
+        var allModal = document.getElementById("allRecordingsModal");
+        if (allModal && !allModal._bound) { allModal.addEventListener("click", e => { if (e.target.id === "allRecordingsModal") closeAllRecordings(); }); allModal._bound = true; }
+    }
+    if (view === "odevler") renderHomework();
+}
+
+function bindScheduleFilter() {
+    document.querySelectorAll("#scheduleFilter .day-btn").forEach(btn => {
+        if (btn._bound) return;
+        btn._bound = true;
+        btn.addEventListener("click", () => {
+            document.querySelectorAll("#scheduleFilter .day-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            renderSchedule(btn.dataset.day);
+        });
+    });
+}
+
+function getClassDays() {
+    var set = {};
+    (cachedData.classes || []).forEach(c => {
+        if (c.date) set[c.date] = true;
+    });
+    return set;
+}
+
+function specialFor(dateStr) {
+    return specialDays[dateStr] || null;
+}
+
+function renderCalendar(containerId, year, month) {
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    var firstDay = new Date(year, month, 1);
+    var startDow = firstDay.getDay();
+    var gridStartDow = startDow === 0 ? 6 : startDow - 1;
+    var dim = new Date(year, month + 1, 0).getDate();
+    var prevDim = new Date(year, month, 0).getDate();
+    var pad = n => String(n).padStart(2, "0");
+    var dows = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+    var classDays = getClassDays();
+    var today = new Date();
+    var todayStr = today.getFullYear() + "-" + pad(today.getMonth() + 1) + "-" + pad(today.getDate());
+
+    var html = '<div class="cal-head"><button class="cal-nav" data-prev="1" data-cal="' + containerId + '"><i class="fas fa-chevron-left"></i></button>';
+    html += '<strong>' + firstDay.toLocaleDateString("tr-TR", { month: "long", year: "numeric" }) + '</strong>';
+    html += '<button class="cal-nav" data-next="1" data-cal="' + containerId + '"><i class="fas fa-chevron-right"></i></button></div>';
+
+    html += '<div class="cal-grid">';
+    dows.forEach(d => { html += '<div class="cal-dow">' + d + '</div>'; });
+
+    for (var i = gridStartDow - 1; i >= 0; i--) {
+        var pv = prevDim - i;
+        html += '<div class="cal-day other">' + pv + '</div>';
+    }
+    for (var d = 1; d <= dim; d++) {
+        var ds = year + "-" + pad(month + 1) + "-" + pad(d);
+        var cls = [];
+        if (ds === todayStr) cls.push("today");
+        if (classDays[ds]) cls.push("hasclass");
+        var sp = specialFor(ds);
+        if (sp) cls.push("special");
+        html += '<div class="cal-day ' + cls.join(" ") + '" title="' + (sp || "") + '">' + d + '</div>';
+    }
+    var after = (7 - ((gridStartDow + dim) % 7)) % 7;
+    for (var j = 1; j <= after; j++) {
+        html += '<div class="cal-day other">' + j + '</div>';
+    }
+    html += '</div>';
+
+    html += '<div class="cal-legend">';
+    html += '<span class="lg"><i style="background:#3b82f6;"></i> Ders günü</span>';
+    html += '<span class="lg"><i style="background:#fdba74;"></i> Özel gün</span>';
+    html += '</div>';
+
+    el.innerHTML = html;
+
+    el.querySelectorAll('[data-prev]').forEach(b => {
+        b.addEventListener("click", () => {
+            var m = dashState.calMonth - 1, y = dashState.calYear;
+            if (m < 0) { m = 11; y--; }
+            dashState.calMonth = m; dashState.calYear = y;
+            renderCalendar("calWidget", y, m);
+            renderCalendar("calFull", y, m);
+        });
+    });
+    el.querySelectorAll('[data-next]').forEach(b => {
+        b.addEventListener("click", () => {
+            var m = dashState.calMonth + 1, y = dashState.calYear;
+            if (m > 11) { m = 0; y++; }
+            dashState.calMonth = m; dashState.calYear = y;
+            renderCalendar("calWidget", y, m);
+            renderCalendar("calFull", y, m);
+        });
+    });
+}
+
+function addPlanTask() {
+    var daySel = document.getElementById("planDay");
+    var txt = document.getElementById("planText");
+    var day = daySel.value;
+    var text = (txt.value || "").trim();
+    if (!text) { txt.focus(); return; }
+
+    var wk = weekKey();
+    var all = myPlans();
+    if (!all[wk]) all[wk] = {};
+    var weekMap = {};
+    var labels = ["pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi", "pazar"];
+    labels.forEach(l => { weekMap[l] = l === day ? wk : wk; });
+    if (!all[weekMap[day]]) all[weekMap[day]] = {};
+    var dayTasks = all[weekMap[day]][day] || [];
+    dayTasks.push({ id: Date.now().toString(), text: text, done: false });
+    all[weekMap[day]][day] = dayTasks;
+
+    planCache[getStudentId()] = all;
+    txt.value = "";
+
+    savePlans().then(() => {
+        renderPlanList();
+        renderTodayPlan();
+    });
+}
+
+function renderTodayPlan() {
+    var el = document.getElementById("todayPlan");
+    var empty = document.getElementById("todayPlanEmpty");
+    if (!el) return;
+    var today = getTodayDOM();
+    var wk = weekKey();
+    var tasks = (myPlans()[wk] || {})[today] || [];
+
+    if (tasks.length === 0) {
+        el.innerHTML = "";
+        if (empty) empty.style.display = "block";
+        return;
+    }
+    if (empty) empty.style.display = "none";
+    var done = tasks.filter(t => t.done).length;
+    var html = '<div class="plan-progress"><div style="width:' + (tasks.length ? Math.round(done / tasks.length * 100) : 0) + '%"></div></div>';
+    html += tasks.map((t, i) => `
+        <div class="today-task ${t.done ? 'done' : ''}">
+            <span class="t-check ${t.done ? 'checked' : ''}" onclick="toggleTodayTask(${i})"><i class="fas fa-check"></i></span>
+            <span class="t-text">${t.text}</span>
+            <span class="plan-del" onclick="deleteTodayTask(${i})"><i class="fas fa-trash"></i></span>
+        </div>`).join("");
+    el.innerHTML = html;
+}
+
+function toggleTodayTask(idx) {
+    var today = getTodayDOM();
+    var wk = weekKey();
+    var tasks = (myPlans()[wk] || {})[today] || [];
+    if (!tasks[idx]) return;
+    tasks[idx].done = !tasks[idx].done;
+    savePlans().then(() => { renderTodayPlan(); renderPlanList(); });
+}
+
+function deleteTodayTask(idx) {
+    var today = getTodayDOM();
+    var wk = weekKey();
+    var pl = myPlans();
+    var tasks = (pl[wk] || {})[today] || [];
+    tasks.splice(idx, 1);
+    if (pl[wk]) pl[wk][today] = tasks;
+    savePlans().then(() => { renderTodayPlan(); renderPlanList(); });
+}
+
+function renderPlanList() {
+    var el = document.getElementById("planList");
+    if (!el) return;
+    var wk = weekKey();
+    var pl = myPlans()[wk] || {};
+    var dayDom = getTodayDOM();
+    var labels = ["pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi", "pazar"];
+
+    var html = "";
+    labels.forEach(day => {
+        var tasks = pl[day] || [];
+        if (tasks.length === 0) return;
+        var isToday = day === dayDom;
+        html += '<div class="plan-day-label">' + dayLabels[day] + (isToday ? ' <span style="font-weight:400;color:var(--primary)">(bugün)</span>' : '') + '</div>';
+        html += '<div class="plan-list">';
+        tasks.forEach((t, i) => {
+            html += `<div class="plan-item ${t.done ? 'done' : ''}">
+                <span class="plan-check ${t.done ? 'checked' : ''}" onclick="togglePlanTask('${day}', ${i})"><i class="fas fa-check"></i></span>
+                <span class="plan-text">${t.text}</span>
+                <span class="plan-del" onclick="deletePlanTask('${day}', ${i})"><i class="fas fa-trash"></i></span>
+            </div>`;
+        });
+        html += '</div>';
+    });
+
+    if (!html) {
+        el.innerHTML = '<p class="plan-empty">Bu hafta için planınız yok. Yukarıdan görev ekleyin.</p>';
+    } else {
+        el.innerHTML = html;
+    }
+}
+
+function togglePlanTask(day, idx) {
+    var wk = weekKey();
+    var pl = myPlans();
+    var tasks = (pl[wk] || {})[day] || [];
+    if (!tasks[idx]) return;
+    tasks[idx].done = !tasks[idx].done;
+    savePlans().then(() => { renderPlanList(); renderTodayPlan(); });
+}
+
+function deletePlanTask(day, idx) {
+    var wk = weekKey();
+    var pl = myPlans();
+    var tasks = (pl[wk] || {})[day] || [];
+    tasks.splice(idx, 1);
+    if (pl[wk]) pl[wk][day] = tasks;
+    savePlans().then(() => { renderPlanList(); renderTodayPlan(); });
+}
+
+function renderTodayClasses() {
+    var el = document.getElementById("todayClasses");
+    var empty = document.getElementById("todayClassesEmpty");
+    if (!el) return;
+    var today = getTodayDOM();
+    var items = getScheduleData().filter(s => s.day === today);
+    if (items.length === 0) {
+        el.innerHTML = "";
+        if (empty) empty.style.display = "block";
+        return;
+    }
+    if (empty) empty.style.display = "none";
+    el.innerHTML = items.map(s => `
+        <div class="today-class">
+            <div class="tc-icon"><i class="fas fa-video"></i></div>
+            <div class="tc-info"><strong>${s.title}</strong><span>${s.time} · ${s.instructor}</span></div>
+            <button onclick="joinClass('${s.link}', '${s.id}')"><i class="fas fa-play"></i> Katıl</button>
+        </div>`).join("");
+}
+
+function renderRecentHomeworks() {
+    var el = document.getElementById("recentHomeworks");
+    var empty = document.getElementById("homeworksEmpty");
+    if (!el) return;
+    var hw = (cachedData.homeworks || []).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 3);
+    if (hw.length === 0) {
+        el.innerHTML = "";
+        if (empty) empty.style.display = "block";
+        return;
+    }
+    if (empty) empty.style.display = "none";
+    el.innerHTML = hw.map(h => `
+        <div class="mini-hw" onclick="showHomeWorkDetail('${h.title}', '${(h.description || "").replace(/'/g, "\\'")}', '${h.fileUrl || ""}')">
+            <div class="mh-icon"><i class="fas ${h.fileType === "pdf" ? "fa-file-pdf" : h.fileType === "word" ? "fa-file-word" : "fa-file-alt"}"></i></div>
+            <div class="mh-info"><strong>${h.title}</strong><span>${h.subject || ""} · ${h.createdAt || ""}</span></div>
+        </div>`).join("");
+}
+
+function showHomeWorkDetail(title, desc, url) {
+    var modal = document.getElementById("classModal");
+    document.getElementById("modalBody").innerHTML = `
+        <h3>${title}</h3>
+        <div class="modal-detail"><i class="fas fa-info-circle"></i><span>${desc || "Açıklama yok"}</span></div>
+        ${url ? `<a class="btn btn-primary" href="${url}" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Dosyayı Gör</a>` : ""}
+        <div class="modal-actions"><button class="btn btn-details" onclick="closeModal()">Kapat</button></div>`;
+    modal.classList.add("active");
 }
 
 function initSite() {
@@ -364,18 +805,16 @@ function initSite() {
     renderCourses();
     renderRecordings();
     renderHomework();
-
-    document.querySelectorAll(".day-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-            document.querySelectorAll(".day-btn").forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-            renderSchedule(btn.dataset.day);
-        });
+    initDashboard();
+    loadPlans().then(() => {
+        renderTodayPlan();
+        renderPlanList();
     });
 
-    document.getElementById("menuToggle").addEventListener("click", () => {
-        document.querySelector(".nav").classList.toggle("active");
-    });
+    var menuToggle = document.getElementById("menuToggle");
+    if (menuToggle) {
+        menuToggle.addEventListener("click", () => document.querySelector(".nav")?.classList.toggle("active"));
+    }
 
     var allBtn = document.getElementById("allRecordingsBtn");
     if (allBtn) allBtn.addEventListener("click", showAllRecordings);
@@ -384,13 +823,13 @@ function initSite() {
     var allModal = document.getElementById("allRecordingsModal");
     if (allModal) allModal.addEventListener("click", (e) => { if (e.target.id === "allRecordingsModal") closeAllRecordings(); });
 
-    document.getElementById("modalClose").addEventListener("click", closeModal);
-    document.getElementById("classModal").addEventListener("click", (e) => {
-        if (e.target.id === "classModal") closeModal();
-    });
+    var modalClose = document.getElementById("modalClose");
+    if (modalClose) modalClose.addEventListener("click", closeModal);
+    var classModal = document.getElementById("classModal");
+    if (classModal) classModal.addEventListener("click", (e) => { if (e.target.id === "classModal") closeModal(); });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeModal(); closeAllRecordings(); } });
     document.querySelectorAll(".nav-link").forEach(link => {
-        link.addEventListener("click", () => document.querySelector(".nav").classList.remove("active"));
+        link.addEventListener("click", () => document.querySelector(".nav")?.classList.remove("active"));
     });
 }
 
