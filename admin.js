@@ -67,6 +67,22 @@ function formatDate(dateStr) {
 
 function formatTime(start, end) { return start + " - " + end; }
 
+function classEndPassed(c) {
+    const dowMap = { pazartesi: 1, sali: 2, carsamba: 3, persembe: 4, cuma: 5, cumartesi: 6, pazar: 0 };
+    const d = dowMap[c.day];
+    if (d === undefined) return false;
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setHours(0, 0, 0, 0);
+    monday.setDate(monday.getDate() - ((now.getDay() || 7) - 1));
+    const dayStart = new Date(monday);
+    dayStart.setDate(monday.getDate() + ((d === 0 ? 7 : d) - 1));
+    const eh = (c.endTime || "23:59").split(":").map(Number);
+    const end = new Date(dayStart);
+    end.setHours(eh[0] || 23, eh[1] || 59, 0, 0);
+    return now.getTime() > end.getTime();
+}
+
 function showToast(msg) {
     const t = document.createElement("div");
     t.textContent = msg;
@@ -228,6 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderHomework();
         updateDashboard();
         initNavigation();
+        setInterval(() => { renderClasses(); updateDashboard(); }, 30000);
     }
 
     window.saveToken = function() {
@@ -404,7 +421,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderClasses() {
         const tbody = document.getElementById("classTable");
         const empty = document.getElementById("emptyClasses");
-        let classes = [...remoteData.classes];
+        let classes = remoteData.classes.filter(c => !classEndPassed(c));
 
         const filterDay = document.getElementById("filterDay").value;
         const searchTerm = document.getElementById("searchClass").value.toLowerCase();
@@ -858,12 +875,12 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateDashboard() {
         const today = new Date().toISOString().split("T")[0];
         document.getElementById("teacherCount").textContent = remoteData.teachers.length;
-        document.getElementById("classCount").textContent = remoteData.classes.length;
+        document.getElementById("classCount").textContent = remoteData.classes.filter(c => !classEndPassed(c)).length;
         document.getElementById("todayCount").textContent = remoteData.classes.filter(c => c.date === today).length;
         document.getElementById("studentCount").textContent = (remoteData.students || []).length;
 
         const recent = document.getElementById("recentClasses");
-        const lastClasses = remoteData.classes.slice(-5).reverse();
+        const lastClasses = remoteData.classes.filter(c => !classEndPassed(c)).slice(-5).reverse();
 
         if (lastClasses.length === 0) {
             recent.innerHTML = '<p style="color:var(--text-light);padding:20px 0;">Henüz ders eklenmemiş</p>';

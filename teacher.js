@@ -93,6 +93,22 @@ function formatDate(dateStr) {
 
 function formatTime(start, end) { return start + " - " + end; }
 
+function classEndPassed(c) {
+    const dowMap = { pazartesi: 1, sali: 2, carsamba: 3, persembe: 4, cuma: 5, cumartesi: 6, pazar: 0 };
+    const d = dowMap[c.day];
+    if (d === undefined) return false;
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setHours(0, 0, 0, 0);
+    monday.setDate(monday.getDate() - ((now.getDay() || 7) - 1));
+    const dayStart = new Date(monday);
+    dayStart.setDate(monday.getDate() + ((d === 0 ? 7 : d) - 1));
+    const eh = (c.endTime || "23:59").split(":").map(Number);
+    const end = new Date(dayStart);
+    end.setHours(eh[0] || 23, eh[1] || 59, 0, 0);
+    return now.getTime() > end.getTime();
+}
+
 function showToast(msg) {
     const t = document.createElement("div");
     t.textContent = msg;
@@ -254,6 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderClasses(teacherId);
         renderHomework(teacherId);
         initNavigation();
+        setInterval(() => { renderClasses(teacherId); }, 30000);
     }
 
     function initNavigation() {
@@ -298,7 +315,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderClasses(teacherId) {
         const tbody = document.getElementById("classTable");
         const empty = document.getElementById("emptyClasses");
-        let classes = remoteData.classes.filter(c => c.teacherId === teacherId);
+        let classes = remoteData.classes.filter(c => c.teacherId === teacherId && !classEndPassed(c));
 
         const filterDay = document.getElementById("filterDay").value;
         const searchTerm = document.getElementById("searchClass").value.toLowerCase();
