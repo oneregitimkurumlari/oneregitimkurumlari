@@ -89,7 +89,6 @@
                 <a href="#panel" class="side-link active" data-view="panel"><i class="fas fa-th-large"></i><span class="side-txt">Panelim</span></a>
                 <a href="#takvim" class="side-link" data-view="takvim"><i class="fas fa-calendar-alt"></i><span class="side-txt">Takvim</span></a>
                 <a href="#plan" class="side-link" data-view="plan"><i class="fas fa-clipboard-check"></i><span class="side-txt">Çalışma Planı</span></a>
-                <a href="#program" class="side-link" data-view="program"><i class="fas fa-book-open"></i><span class="side-txt">Ders Programı</span></a>
                 <a href="#dersler" class="side-link" data-view="dersler"><i class="fas fa-video"></i><span class="side-txt">Canlı Ders</span></a>
                 <a href="#kayitlar" class="side-link" data-view="kayitlar"><i class="fas fa-history"></i><span class="side-txt">Kayıtlar</span></a>
                 <a href="#odevler" class="side-link" data-view="odevler"><i class="fas fa-file-alt"></i><span class="side-txt">Ödevler</span></a>
@@ -149,7 +148,7 @@
                     <div class="dash-card">
                         <div class="card-head">
                             <h3><i class="fas fa-book-open"></i> Bugünkü Dersler</h3>
-                            <button class="mini-btn" data-goto="program"><i class="fas fa-chevron-right"></i></button>
+                            <button class="mini-btn" data-goto="dersler"><i class="fas fa-chevron-right"></i></button>
                         </div>
                         <div id="todayClasses"></div>
                         <p class="plan-empty" id="todayClassesEmpty" style="display:none;">Bugün dersiniz yok.</p>
@@ -203,11 +202,11 @@
                 </div>
             </section>
 
-            <!-- ==== GÖRÜNÜM: DERS PROGRAMI ==== -->
-            <section class="view" id="view-program">
+            <!-- ==== GÖRÜNÜM: CANLI DERS (ders programı dahil) ==== -->
+            <section class="view" id="view-dersler">
                 <div class="view-head">
-                    <h2>Ders Programı</h2>
-                    <p>Haftalık ders programınızı inceleyin</p>
+                    <h2>Canlı Dersler</h2>
+                    <p>Haftalık ders programınızı inceleyin ve derslerinize katılın</p>
                 </div>
                 <div class="day-filter" id="scheduleFilter">
                     <button class="day-btn active" data-day="tum">Tümü</button>
@@ -220,15 +219,6 @@
                     <button class="day-btn" data-day="pazar">Pazar</button>
                 </div>
                 <div class="schedule-grid" id="scheduleGrid"></div>
-            </section>
-
-            <!-- ==== GÖRÜNÜM: CANLI DERS ==== -->
-            <section class="view" id="view-dersler">
-                <div class="view-head">
-                    <h2>Canlı Dersler</h2>
-                    <p>Sunulan eğitim programları</p>
-                </div>
-                <div class="courses-grid" id="coursesGrid"></div>
             </section>
 
             <!-- ==== GÖRÜNÜM: KAYITLAR ==== -->
@@ -305,7 +295,7 @@
     </div>
 </div>
 
-<script src="script.js?v=5"></script>
+<script src="script.js?v=6"></script>
 <script src="transition.js"></script>
 <script>
 (function () {

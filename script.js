@@ -111,6 +111,7 @@ function renderSchedule(filter = "tum") {
 
 function renderCourses() {
     const grid = document.getElementById("coursesGrid");
+    if (!grid) return;
     const courseMap = {};
     cachedData.classes.forEach(c => {
         const teacher = cachedData.teachers.find(t => t.id === c.teacherId);
@@ -523,11 +524,10 @@ function renderView(view) {
     if (view === "plan") {
         renderPlanList();
     }
-    if (view === "program") {
+    if (view === "dersler") {
         renderSchedule();
         bindScheduleFilter();
     }
-    if (view === "dersler") renderCourses();
     if (view === "kayitlar") {
         renderRecordings();
         var allBtn = document.getElementById("allRecordingsBtn");
@@ -802,7 +802,6 @@ function showHomeWorkDetail(title, desc, url) {
 
 function initSite() {
     renderSchedule();
-    renderCourses();
     renderRecordings();
     renderHomework();
     initDashboard();
