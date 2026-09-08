@@ -1723,3 +1723,36 @@ html.dark .plan-item .plan-text, html.dark .today-task .t-text, html.dark .today
 html.dark .topbar-title h1, html.dark .topbar-user strong { color: #f1f5f9; }
 html.dark .plan-creator select, html.dark .plan-creator input { background: #1e293b; border-color: #334155; color: #e2e8f0; }
 html.dark .plan-day-label { color: var(--primary); }
+
+/* Henüz başlamamış ders durumu */
+.schedule-pending {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--text-light);
+    background: var(--bg-light);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: .85rem;
+    font-weight: 500;
+}
+.tc-pending {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--text-light);
+    font-size: .75rem;
+    font-weight: 500;
+    background: var(--bg-light);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 5px 10px;
+}
+.btn-join {
+    background: var(--primary);
+}
+.btn-join.live-pulse {
+    animation: livePulse 2s infinite;
+}
+@keyframes livePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(192, 144, 32, .45); }
+    50% { box-shadow: 0 0 0 8px rgba(192, 144, 32, 0); }
+}
+html.dark .schedule-pending, html.dark .tc-pending { background: #16202f; border-color: #334155; color: #94a3b8; }

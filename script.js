@@ -48,9 +48,38 @@ async function loadData() {
     }
 }
 
+function getClassDateTime(c) {
+    var dowMap = { pazartesi: 1, sali: 2, carsamba: 3, persembe: 4, cuma: 5, cumartesi: 6, pazar: 0 };
+    var d = dowMap[c.day];
+    if (d === undefined) return null;
+    var now = new Date();
+    var monday = new Date(now);
+    monday.setHours(0, 0, 0, 0);
+    monday.setDate(monday.getDate() - ((now.getDay() || 7) - 1));
+    var dayStart = new Date(monday);
+    dayStart.setDate(monday.getDate() + ((d === 0 ? 7 : d) - 1));
+    var sh = (c.startTime || "00:00").split(":").map(Number);
+    var eh = (c.endTime || "23:59").split(":").map(Number);
+    var start = new Date(dayStart); start.setHours(sh[0] || 0, sh[1] || 0, 0, 0);
+    var end = new Date(dayStart); end.setHours(eh[0] || 23, eh[1] || 59, 0, 0);
+    return { start: start, end: end };
+}
+
+function getClassLiveState(c) {
+    var t = getClassDateTime(c);
+    if (!t) return { state: "upcoming" };
+    var now = new Date();
+    if (now.getTime() > t.end.getTime()) return { state: "past" };
+    var join = new Date(t.start);
+    join.setMinutes(join.getMinutes() - 10);
+    if (now.getTime() >= join.getTime()) return { state: "live", start: t.start, end: t.end, join: join };
+    return { state: "upcoming", start: t.start, join: join };
+}
+
 function getScheduleData() {
     return cachedData.classes.map(c => {
         const teacher = cachedData.teachers.find(t => t.id === c.teacherId);
+        const live = getClassLiveState(c);
         return {
             id: c.id,
             title: c.title,
@@ -65,31 +94,41 @@ function getScheduleData() {
             description: c.description || "",
             link: c.meetLink,
             students: c.capacity || 0,
-            duration: getDuration(c.startTime, c.endTime)
+            duration: getDuration(c.startTime, c.endTime),
+            liveState: live.state
         };
     });
 }
 
 function renderSchedule(filter = "tum") {
     const grid = document.getElementById("scheduleGrid");
+    if (!grid) return;
     const scheduleData = getScheduleData();
-    const filtered = filter === "tum" ? scheduleData : scheduleData.filter(s => s.day === filter);
+    const alive = scheduleData.filter(s => s.liveState !== "past");
+    const filtered = filter === "tum" ? alive : alive.filter(s => s.day === filter);
 
     if (filtered.length === 0) {
         grid.innerHTML = `
             <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-light);">
-                <i class="fas fa-calendar-plus" style="font-size:3rem;margin-bottom:16px;display:block;"></i>
-                <p style="font-size:1.1rem;">Henüz ders eklenmemiş</p>
-                <p style="font-size:0.9rem;">Yönetim panelinden ders ekleyebilirsiniz.</p>
+                <i class="fas fa-calendar-times" style="font-size:3rem;margin-bottom:16px;display:block;"></i>
+                <p style="font-size:1.1rem;">Yaklaşan ders bulunmamaktadır</p>
+                <p style="font-size:0.9rem;">Geçmiş dersler listeden kaldırıldı.</p>
             </div>`;
         return;
     }
 
-    grid.innerHTML = filtered.map(item => `
+    grid.innerHTML = filtered.map(item => {
+        const isLive = item.liveState === "live";
+        const statusCls = isLive ? "status-live" : "status-upcoming";
+        const statusLbl = isLive ? "Canlı" : "Yaklaşıyor";
+        const joinBtn = isLive
+            ? `<button class="schedule-btn btn-join" onclick="joinClass('${item.link}', '${item.id}')"><i class="fas fa-video"></i> Derse Katıl</button>`
+            : `<span class="schedule-pending"><i class="fas fa-hourglass-half"></i> Ders henüz başlamadı</span>`;
+        return `
         <div class="schedule-card ${item.courseType}" data-id="${item.id}">
             <div class="schedule-header">
                 <span class="schedule-day">${item.dayLabel}</span>
-                <span class="schedule-status ${statusMap[item.status]?.class || 'status-upcoming'}">${statusMap[item.status]?.label || 'Yaklaşıyor'}</span>
+                <span class="schedule-status ${statusCls}">${statusLbl}</span>
             </div>
             <h3 class="schedule-title">${item.title}</h3>
             <div class="schedule-info">
@@ -98,15 +137,14 @@ function renderSchedule(filter = "tum") {
                 <span><i class="fas fa-door-open"></i> ${item.classroom}</span>
             </div>
             <div class="schedule-actions">
-                <button class="schedule-btn btn-join" onclick="joinClass('${item.link}', '${item.id}')">
-                    <i class="fas fa-video"></i> Derse Katıl
-                </button>
+                ${joinBtn}
                 <button class="schedule-btn btn-details" onclick="showDetails('${item.id}')">
                     Detay
                 </button>
             </div>
         </div>
-    `).join("");
+    `;
+    }).join("");
 }
 
 function renderCourses() {
@@ -492,6 +530,15 @@ function initDashboard() {
         var v = window.location.hash.replace("#", "");
         if (document.getElementById("view-" + v)) renderView(v);
     }
+
+    setInterval(() => {
+        var dv = document.getElementById("view-dersler");
+        if (dv && dv.classList.contains("active")) {
+            var activeDay = document.querySelector("#scheduleFilter .day-btn.active");
+            renderSchedule(activeDay ? activeDay.dataset.day : "tum");
+        }
+        renderTodayClasses();
+    }, 30000);
 }
 
 function bindNav() {
@@ -757,19 +804,24 @@ function renderTodayClasses() {
     var empty = document.getElementById("todayClassesEmpty");
     if (!el) return;
     var today = getTodayDOM();
-    var items = getScheduleData().filter(s => s.day === today);
+    var items = getScheduleData().filter(s => s.day === today && s.liveState !== "past");
     if (items.length === 0) {
         el.innerHTML = "";
         if (empty) empty.style.display = "block";
         return;
     }
     if (empty) empty.style.display = "none";
-    el.innerHTML = items.map(s => `
+    el.innerHTML = items.map(s => {
+        var action = s.liveState === "live"
+            ? `<button onclick="joinClass('${s.link}', '${s.id}')"><i class="fas fa-play"></i> Katıl</button>`
+            : `<span class="tc-pending"><i class="fas fa-hourglass-half"></i> Henüz başlamadı</span>`;
+        return `
         <div class="today-class">
             <div class="tc-icon"><i class="fas fa-video"></i></div>
             <div class="tc-info"><strong>${s.title}</strong><span>${s.time} · ${s.instructor}</span></div>
-            <button onclick="joinClass('${s.link}', '${s.id}')"><i class="fas fa-play"></i> Katıl</button>
-        </div>`).join("");
+            ${action}
+        </div>`;
+    }).join("");
 }
 
 function renderRecentHomeworks() {
