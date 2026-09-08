@@ -1472,7 +1472,7 @@ html.dark .recording-subject { color: #94a3b8; }
 html.dark .recording-meta { color: #94a3b8; }
 
 
-/* ================= EBA-tarzý Öðrenci Paneli ================= */
+/* ================= EBA-tarzï¿½ ï¿½ï¿½renci Paneli ================= */
 .dash {
     display: flex;
     min-height: 100vh;
@@ -1507,20 +1507,49 @@ html.dark .recording-meta { color: #94a3b8; }
 .side-link {
     display: flex; align-items: center; justify-content: center;
     gap: 0;
+    position: relative;
     color: #a7b0c3;
     text-decoration: none;
     padding: 12px 0;
     font-size: 1.05rem;
     background: transparent; border: none; cursor: pointer; width: 100%;
     transition: background .2s ease, color .2s ease;
-    white-space: nowrap; overflow: hidden;
+    white-space: nowrap; overflow: visible;
 }
-.side-link .side-txt { display: none; font-size: .85rem; font-weight: 500; }
+.side-link .side-txt { display: none; font-size: .87rem; font-weight: 500; }
 .side-link:hover { color: #fff; background: rgba(255,255,255,.06); }
 .side-link.active { color: var(--primary); background: rgba(192,144,32,.14); }
 .dark-toggle { color: #a7b0c3; }
 
-/* Sað içerik */
+/* Ä°kon yanÄ±nda aÃ§Ä±klama: hover ile saÄŸda gÃ¶ster */
+.sidebar:not(.open) .side-link .side-txt {
+    display: none;
+}
+.sidebar:not(.open) .side-link:hover .side-txt {
+    display: inline;
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--navy-light);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: .82rem;
+    white-space: nowrap;
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+}
+.sidebar:not(.open) .side-link:hover .side-txt::before {
+    content: "";
+    position: absolute;
+    left: -6px; top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-right-color: var(--navy-light);
+}
+
+/* Saï¿½ iï¿½erik */
 .main {
     flex: 1;
     min-width: 0;
@@ -1545,7 +1574,7 @@ html.dark .recording-meta { color: #94a3b8; }
 .user-info span { color: var(--text-light); font-size: .78rem; }
 .menu-toggle { display: none; background: none; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 1.1rem; color: var(--text-dark); cursor: pointer; }
 
-/* Görünümler */
+/* Gï¿½rï¿½nï¿½mler */
 .view { display: none; }
 .view.active { display: block; animation: fadeIn .3s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: none;} }
@@ -1606,7 +1635,7 @@ html.dark .recording-meta { color: #94a3b8; }
 .cal-legend .lg { display: flex; align-items: center; gap: 5px; }
 .cal-legend .lg i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 
-/* Çalýþma planý */
+/* ï¿½alï¿½ï¿½ma planï¿½ */
 .plan-creator { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
 .plan-creator select, .plan-creator input {
     padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: .9rem;
@@ -1639,7 +1668,7 @@ html.dark .recording-meta { color: #94a3b8; }
 .today-task .t-text { flex:1; font-size:.87rem; color: var(--text-dark); }
 .today-task.done .t-text { text-decoration: line-through; color: var(--text-light); }
 
-/* Bugünkü ders mini kart */
+/* Bugï¿½nkï¿½ ders mini kart */
 .today-class {
     display: flex; align-items: center; gap: 12px;
     padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; background: var(--bg-white);
@@ -1650,7 +1679,7 @@ html.dark .recording-meta { color: #94a3b8; }
 .today-class .tc-info span { font-size:.78rem; color: var(--text-light); }
 .today-class button { background: var(--primary); border:none; color:#fff; border-radius:8px; padding:6px 12px; font-size:.78rem; cursor:pointer; }
 
-/* Son ödev mini kart */
+/* Son ï¿½dev mini kart */
 .mini-hw {
     display: flex; align-items: center; gap: 12px;
     padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; background: var(--bg-white); cursor:pointer;
@@ -1661,7 +1690,7 @@ html.dark .recording-meta { color: #94a3b8; }
 .mini-hw .mh-info strong { display:block; font-size:.9rem; color: var(--text-dark); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .mini-hw .mh-info span { font-size:.78rem; color: var(--text-light); }
 
-/* Özel günler: üst çubukta gösterim */
+/* ï¿½zel gï¿½nler: ï¿½st ï¿½ubukta gï¿½sterim */
 .special-bar {
     background: linear-gradient(135deg, #fdba74, #fb923c);
     color: #431407; border-radius: var(--radius);
@@ -1694,7 +1723,7 @@ html.dark .recording-meta { color: #94a3b8; }
     .topbar-user .user-info { display: none; }
 }
 
-/* Mobil panel geniþlik seçeneði */
+/* Mobil panel geniï¿½lik seï¿½eneï¿½i */
 @media (min-width: 721px) and (max-width: 1024px) {
     .dash-grid { grid-template-columns: 1fr; }
 }
