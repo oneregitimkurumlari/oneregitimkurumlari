@@ -476,19 +476,6 @@ function initDashboard() {
         window.location.reload();
     });
 
-    var dt = document.getElementById("darkToggle");
-    if (dt) dt.addEventListener("click", () => {
-        document.documentElement.classList.toggle("dark");
-        var d = document.documentElement.classList.contains("dark");
-        localStorage.setItem("theme", d ? "dark" : "light");
-        var i = dt.querySelector("i");
-        if (i) i.className = d ? "fas fa-sun" : "fas fa-moon";
-    });
-    if (document.documentElement.classList.contains("dark")) {
-        var dti = document.getElementById("darkToggle");
-        if (dti) { var ii = dti.querySelector("i"); if (ii) ii.className = "fas fa-sun"; }
-    }
-
     var menu = document.getElementById("menuToggle");
     if (menu) menu.addEventListener("click", () => {
         var sb = document.getElementById("sidebar");

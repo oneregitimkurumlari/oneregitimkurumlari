@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="theme-color" content="#c09020">
     <meta name="description" content="ONLİNE PİHOS online ders platformu - güncel ders programı, canlı dersler, ödevler ve duyurular. Öğrencilerimize özel kişisel çalışma paneli.">
     <meta name="keywords" content="online pihos, öner eğitim kurumları, online ders programı, canlı ders, ödev takibi">
@@ -15,11 +18,42 @@
     <title>ONLİNE PİHOS - Öğrenci Paneli</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" type="image/png" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=7">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="transition.css">
     <script>if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')</script>
+    <style>
+        /* Kritik: sol panel ikon + hover açıklaması */
+        .sidebar:not(.open) .side-link .side-txt { display: none; }
+        .sidebar:not(.open) .side-link:hover .side-txt {
+            display: inline;
+            position: absolute;
+            left: calc(100% + 12px);
+            top: 50%;
+            transform: translateY(-50%);
+            background: #1e293b;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: .82rem;
+            white-space: nowrap;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,.2);
+            z-index: 100;
+        }
+        .sidebar:not(.open) .side-link:hover .side-txt::before {
+            content: "";
+            position: absolute;
+            left: -6px; top: 50%;
+            transform: translateY(-50%);
+            border: 6px solid transparent;
+            border-right-color: #1e293b;
+        }
+        .side-link:hover .side-txt.side-txt-nudge { display: inline; position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%); }
+        @media (max-width: 720px) {
+            .sidebar .side-txt { display: inline !important; position: static !important; transform: none !important; }
+        }
+    </style>
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -79,10 +113,10 @@
                 <a href="#odevler" class="side-link" data-view="odevler"><i class="fas fa-file-alt"></i><span class="side-txt">Ödevler</span></a>
             </nav>
             <div class="side-bottom">
-                <button class="dark-toggle side-link" id="darkToggle" title="Koyu/Acik Mod"><i class="fas fa-moon"></i><span class="side-txt">Mod</span></button>
-                <a href="admin.html" class="side-link" title="Yönetim"><i class="fas fa-user-shield"></i><span class="side-txt">Yönetim</span></a>
-                <a href="teacher.html" class="side-link" title="Öğretmen"><i class="fas fa-chalkboard-teacher"></i><span class="side-txt">Öğretmen</span></a>
-                <button class="side-link" id="logoutBtn" title="Çıkış"><i class="fas fa-sign-out-alt"></i><span class="side-txt">Çıkış</span></button>
+                <button class="dark-toggle side-link" id="darkToggle" title="Koyu/Acik Mod"><i class="fas fa-moon"></i><span class="side-txt side-txt-nudge">Mod</span></button>
+                <a href="admin.html" class="side-link" title="Yönetim"><i class="fas fa-user-shield"></i><span class="side-txt side-txt-nudge">Yönetim</span></a>
+                <a href="teacher.html" class="side-link" title="Öğretmen"><i class="fas fa-chalkboard-teacher"></i><span class="side-txt side-txt-nudge">Öğretmen</span></a>
+                <button class="side-link" id="logoutBtn" title="Çıkış"><i class="fas fa-sign-out-alt"></i><span class="side-txt side-txt-nudge">Çıkış</span></button>
             </div>
         </aside>
 
@@ -289,7 +323,7 @@
     </div>
 </div>
 
-<script src="script.js?v=3"></script>
+<script src="script.js?v=4"></script>
 <script src="transition.js"></script>
 <script>
 (function () {
@@ -319,6 +353,19 @@
     if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
         var a = document.getElementById('androidInstallBtn');
         if (a) { a.style.display = 'none'; }
+    }
+
+    // Dark mode (delegasyon ile - load sırasından bağımsız)
+    var dtEl = document.getElementById('darkToggle');
+    if (dtEl) dtEl.addEventListener('click', function () {
+        var dark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('theme', dark ? 'dark' : 'light');
+        var i = dtEl.querySelector('i');
+        if (i) i.className = dark ? 'fas fa-sun' : 'fas fa-moon';
+    });
+    if (document.documentElement.classList.contains('dark')) {
+        var dti = document.getElementById('darkToggle');
+        if (dti) { var ii = dti.querySelector('i'); if (ii) ii.className = 'fas fa-sun'; }
     }
 })();
 </script>
