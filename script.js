@@ -528,9 +528,9 @@ function initDashboard() {
     renderRecentHomeworks();
 
     var logout = document.getElementById("logoutBtn");
-    if (logout) logout.addEventListener("click", () => {
-        sessionStorage.removeItem("siteLogged");
-        sessionStorage.removeItem("siteUser");
+    if (logout) logout.addEventListener("click", async () => {
+        await siteSessionRelease(cachedData);
+        siteSessionClear();
         sessionStorage.removeItem("teacherLogged");
         sessionStorage.removeItem("teacherId");
         sessionStorage.removeItem("teacherName");
@@ -553,7 +553,12 @@ function initDashboard() {
         if (document.getElementById("view-" + v)) renderView(v);
     }
 
-    setInterval(() => {
+    setInterval(async () => {
+        if (!(await siteSessionIsActive(cachedData))) {
+            siteSessionClear();
+            window.location.assign("index.html?expired=1");
+            return;
+        }
         var dv = document.getElementById("view-dersler");
         if (dv && dv.classList.contains("active")) {
             var activeDay = document.querySelector("#scheduleFilter .day-btn.active");
@@ -925,13 +930,22 @@ function initSite() {
 document.addEventListener("DOMContentLoaded", async () => {
     await loadData();
 
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("expired") === "1" && document.getElementById("siteErrorMsg")) {
+        document.getElementById("siteErrorMsg").textContent = "Oturum süreniz doldu veya başka bir cihazdan giriş yapıldı. Lütfen tekrar giriş yapın.";
+    }
+
     if (sessionStorage.getItem("siteLogged") === "true") {
-        sessionStorage.removeItem("teacherLogged");
-        sessionStorage.removeItem("teacherId");
-        sessionStorage.removeItem("teacherName");
-        showSite();
-        initSite();
-        return;
+        const active = await siteSessionIsActive(cachedData);
+        if (active) {
+            sessionStorage.removeItem("teacherLogged");
+            sessionStorage.removeItem("teacherId");
+            sessionStorage.removeItem("teacherName");
+            showSite();
+            initSite();
+            return;
+        }
+        siteSessionClear();
     }
 
     const loginForm = document.getElementById("siteLoginForm");
@@ -951,7 +965,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 sessionStorage.removeItem("teacherName");
                 sessionStorage.setItem("siteLogged", "true");
                 sessionStorage.setItem("siteUser", student.name + " " + student.surname);
+                sessionStorage.setItem("siteLoginAt", String(Date.now()));
+                sessionStorage.setItem("siteToken", "dev" + Date.now().toString(36) + Math.random().toString(36).substr(2, 8));
                 errorMsg.textContent = "";
+                siteSessionWrite(cachedData);
                 showSite();
                 initSite();
             } else {

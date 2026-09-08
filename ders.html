@@ -1095,7 +1095,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
     const cls = cachedData.classes.find(c => c.id === clsId);
-    if (cls) { resolveRoleForClass(cls); renderRoom(cls); }
+    if (cls) {
+        resolveRoleForClass(cls);
+        if (!myRole) {
+            location.replace("index.html");
+            return;
+        }
+        if (myRole === "student" && !(await siteSessionIsActive(cachedData))) {
+            siteSessionClear();
+            location.replace("index.html?expired=1");
+            return;
+        }
+        renderRoom(cls);
+    }
     else {
         document.getElementById("stageTitle").textContent = "Ders bulunamadı";
         return;
@@ -1121,6 +1133,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let recSig = JSON.stringify((cachedData.classes.find(x => x.id === clsId) || {}).recordings || []);
     window.setInterval(async () => {
+        if (myRole === "student" && !(await siteSessionIsActive(cachedData))) {
+            siteSessionClear();
+            location.replace("index.html?expired=1");
+            return;
+        }
         try {
             const freshRes = await fetchWithTimeout(FIREBASE_URL + "/.json", { cache: "no-store" });
             if (!freshRes.ok) return;
@@ -1134,5 +1151,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }, 30000);
 });
 </script>
+<script src="session.js?v=1"></script>
 </body>
 </html>
