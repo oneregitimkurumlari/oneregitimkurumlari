@@ -3,6 +3,9 @@ const ADMIN_PASS = "oneregitim123";
 const FIREBASE_URL = "https://one-egitim-default-rtdb.firebaseio.com";
 const DATA_URL = FIREBASE_URL + "/.json";
 
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function jsEsc(s) { return String(s == null ? "" : s).replace(/\\/g, "\\\\").replace(/'/g, "\\'"); }
+
 let remoteData = { teachers: [], classes: [], students: [], homeworks: [] };
 let deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
 
@@ -307,14 +310,14 @@ document.addEventListener("DOMContentLoaded", () => {
         tbody.innerHTML = teachers.map((t, i) => `
             <tr>
                 <td>${i + 1}</td>
-                <td><strong>${t.name} ${t.surname}</strong></td>
-                <td>${t.username || "-"}</td>
-                <td>${t.branch}</td>
-                <td>${t.email || "-"}</td>
+                <td><strong>${esc(t.name)} ${esc(t.surname)}</strong></td>
+                <td>${esc(t.username || "-")}</td>
+                <td>${esc(t.branch)}</td>
+                <td>${esc(t.email || "-")}</td>
                 <td>${t.password ? '<span style="color:#10b981;"><i class="fas fa-lock"></i> Kayıtlı</span>' : '<span style="color:var(--text-light);">-</span>'}</td>
                 <td class="actions-cell">
-                    <button class="btn-edit" onclick="editTeacher('${t.id}')"><i class="fas fa-edit"></i></button>
-                    <button class="btn-delete" onclick="deleteTeacher('${t.id}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn-edit" onclick="editTeacher('${jsEsc(t.id)}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-delete" onclick="deleteTeacher('${jsEsc(t.id)}')"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
         `).join("");
@@ -324,7 +327,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateTeacherSelect() {
         const select = document.getElementById("classTeacher");
         select.innerHTML = '<option value="">Öğretmen Seçin</option>' +
-            remoteData.teachers.map(t => `<option value="${t.id}">${t.name} ${t.surname} (${t.branch})</option>`).join("");
+            remoteData.teachers.map(t => `<option value="${esc(t.id)}">${esc(t.name)} ${esc(t.surname)} (${esc(t.branch)})</option>`).join("");
     }
 
     document.getElementById("addTeacherBtn").addEventListener("click", () => {
@@ -451,16 +454,16 @@ document.addEventListener("DOMContentLoaded", () => {
             return `
             <tr>
                 <td>${i + 1}</td>
-                <td><strong>${c.title}</strong><br><small style="color:var(--text-light);">${c.description || ""}</small></td>
-                <td>${teacherName}</td>
-                <td>${dayLabels[c.day] || c.day}</td>
+                <td><strong>${esc(c.title)}</strong><br><small style="color:var(--text-light);">${esc(c.description || "")}</small></td>
+                <td>${esc(teacherName)}</td>
+                <td>${esc(dayLabels[c.day] || c.day)}</td>
                 <td>${formatDate(c.date)}</td>
                 <td>${formatTime(c.startTime, c.endTime)}</td>
-                <td>${c.meetLink ? '<a href="' + c.meetLink + '" target="_blank" class="meet-link">' + c.meetLink + '</a>' : '<span style="color:var(--text-light);font-size:0.8rem;">—</span>'}</td>
-                <td><button class="btn-rec" onclick="openRecordModal('${c.id}')"><i class="fas fa-video"></i> Kayıtlar<span class="rec-count">${recs.length}</span></button></td>
+                <td>${c.meetLink ? '<a href="' + esc(c.meetLink) + '" target="_blank" class="meet-link">' + esc(c.meetLink) + '</a>' : '<span style="color:var(--text-light);font-size:0.8rem;">—</span>'}</td>
+                <td><button class="btn-rec" onclick="openRecordModal('${jsEsc(c.id)}')"><i class="fas fa-video"></i> Kayıtlar<span class="rec-count">${recs.length}</span></button></td>
                 <td class="actions-cell">
-                    <button class="btn-edit" onclick="editClass('${c.id}')"><i class="fas fa-edit"></i></button>
-                    <button class="btn-delete" onclick="deleteClass('${c.id}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn-edit" onclick="editClass('${jsEsc(c.id)}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-delete" onclick="deleteClass('${jsEsc(c.id)}')"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`;
         }).join("");
@@ -577,12 +580,12 @@ document.addEventListener("DOMContentLoaded", () => {
         list.innerHTML = c.recordings.map(r => `
             <div class="record-item">
                 <div class="rec-info">
-                    <span class="rec-title">${r.title || "Kayıt"}</span>
-                    <a class="rec-link" href="${r.url}" target="_blank">${r.url}</a>
+                    <span class="rec-title">${esc(r.title || "Kayıt")}</span>
+                    <a class="rec-link" href="${esc(r.url)}" target="_blank">${esc(r.url)}</a>
                 </div>
                 <div class="rec-btns">
-                    <button class="btn-edit" onclick="recordModalEdit('${r.id}')"><i class="fas fa-edit"></i></button>
-                    <button class="btn-delete" onclick="recordModalDelete('${r.id}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn-edit" onclick="recordModalEdit('${jsEsc(r.id)}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-delete" onclick="recordModalDelete('${jsEsc(r.id)}')"><i class="fas fa-trash"></i></button>
                 </div>
             </div>`).join("");
     }
@@ -651,13 +654,13 @@ document.addEventListener("DOMContentLoaded", () => {
         tbody.innerHTML = students.map((s, i) => `
             <tr>
                 <td>${i + 1}</td>
-                <td><strong>${s.username}</strong></td>
-                <td>${s.name} ${s.surname}</td>
-                <td>${s.studentClass || "-"}</td>
-                <td>${s.email || "-"}</td>
+                <td><strong>${esc(s.username)}</strong></td>
+                <td>${esc(s.name)} ${esc(s.surname)}</td>
+                <td>${esc(s.studentClass || "-")}</td>
+                <td>${esc(s.email || "-")}</td>
                 <td class="actions-cell">
-                    <button class="btn-edit" onclick="editStudent('${s.id}')"><i class="fas fa-edit"></i></button>
-                    <button class="btn-delete" onclick="deleteStudent('${s.id}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn-edit" onclick="editStudent('${jsEsc(s.id)}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-delete" onclick="deleteStudent('${jsEsc(s.id)}')"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
         `).join("");
@@ -759,18 +762,18 @@ document.addEventListener("DOMContentLoaded", () => {
             const teacher = remoteData.teachers.find(t => t.id === h.teacherId);
             const teacherName = teacher ? teacher.name + " " + teacher.surname : "Yönetim";
             const fileIcon = h.fileType === "pdf" ? "fa-file-pdf" : h.fileType === "word" ? "fa-file-word" : h.fileType === "excel" ? "fa-file-excel" : "fa-file";
-            const fileLink = h.fileUrl ? `<a href="${h.fileUrl}" target="_blank" style="color:var(--primary);"><i class="fas ${fileIcon}"></i> ${h.fileName || "Dosya"}</a>` : `<span style="color:var(--text-light);">-</span>`;
+            const fileLink = h.fileUrl ? `<a href="${esc(h.fileUrl)}" target="_blank" style="color:var(--primary);"><i class="fas ${fileIcon}"></i> ${esc(h.fileName || "Dosya")}</a>` : `<span style="color:var(--text-light);">-</span>`;
             return `
             <tr>
                 <td>${i + 1}</td>
-                <td><strong>${h.title}</strong></td>
-                <td>${h.subject}</td>
-                <td>${teacherName}</td>
+                <td><strong>${esc(h.title)}</strong></td>
+                <td>${esc(h.subject)}</td>
+                <td>${esc(teacherName)}</td>
                 <td>${fileLink}</td>
                 <td>${formatDate(h.createdAt)}</td>
                 <td class="actions-cell">
-                    <button class="btn-edit" onclick="editHomework('${h.id}')"><i class="fas fa-edit"></i></button>
-                    <button class="btn-delete" onclick="deleteHomework('${h.id}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn-edit" onclick="editHomework('${jsEsc(h.id)}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-delete" onclick="deleteHomework('${jsEsc(h.id)}')"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`;
         }).join("");
@@ -893,8 +896,8 @@ document.addEventListener("DOMContentLoaded", () => {
             return `
             <div class="recent-item">
                 <div class="recent-item-info">
-                    <h4>${c.title}</h4>
-                    <p>${name} | ${dayLabels[c.day]} ${formatTime(c.startTime, c.endTime)}</p>
+                    <h4>${esc(c.title)}</h4>
+                    <p>${esc(name)} | ${esc(dayLabels[c.day] || c.day)} ${formatTime(c.startTime, c.endTime)}</p>
                 </div>
                 <span class="recent-item-badge">${formatDate(c.date)}</span>
             </div>`;

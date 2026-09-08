@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: https:; media-src https: blob: data:; connect-src 'self' https://one-egitim-default-rtdb.firebaseio.com https://api.digitalsamba.com https://*.digitalsamba.com wss://*.digitalsamba.com https://upload.gofile.io https://api.github.com https://raw.githubusercontent.com; frame-src https://*.digitalsamba.com https://*.digitalsamba.app https://meet.jit.si; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests">
+    <meta name="referrer" content="no-referrer">
     <title>Canlı Ders Odası - ONLİNE PİHOS</title>
     <link rel="icon" type="image/png" href="icon-192.png">
     <link rel="stylesheet" href="styles.css?v=11">
@@ -761,10 +763,10 @@ function setupTokenBox() {
 function renderRoom(cls) {
     document.title = cls.title + " - Canlı Ders Odası";
     document.getElementById("roomMeta").innerHTML = `
-        <span><i class="fas fa-book"></i> ${cls.title}</span>
-        <span><i class="fas fa-calendar"></i> ${cls.date || ""}</span>
-        <span><i class="fas fa-clock"></i> ${cls.startTime} - ${cls.endTime}</span>
-        <span><i class="fas fa-user"></i> ${cls.dayLabel || ""}</span>`;
+        <span><i class="fas fa-book"></i> ${escapeHtml(cls.title)}</span>
+        <span><i class="fas fa-calendar"></i> ${escapeHtml(cls.date || "")}</span>
+        <span><i class="fas fa-clock"></i> ${escapeHtml(cls.startTime)} - ${escapeHtml(cls.endTime)}</span>
+        <span><i class="fas fa-user"></i> ${escapeHtml(cls.dayLabel || "")}</span>`;
     document.getElementById("stageTitle").textContent = cls.title;
     renderRecList(cls);
     if (myRole === "teacher") setupTokenBox();
@@ -806,7 +808,7 @@ function renderRecList(cls) {
         recs.slice().reverse().map(r => {
             const t = new Date(r.createdAt);
             const dateStr = isNaN(t.getTime()) ? "" : "<span style=\"color:var(--text-light);font-size:0.75rem;\">" + t.toLocaleDateString("tr-TR") + "</span>";
-            const url = r.url || "";
+            const url = escapeHtml(r.url || "");
             const isPending = url.indexOf("pending:") === 0;
             const isDrive = /drive\.google\.com\/file\/d\/.+\/preview/.test(url);
             const isGofilePage = url.indexOf("gofile.io/d/") !== -1;
@@ -826,7 +828,7 @@ function renderRecList(cls) {
             return "<div style=\"padding:10px 12px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:8px;\">" +
                 "<div style=\"display:flex;align-items:center;gap:10px;margin-bottom:8px;\">" +
                 "<i class=\"fas fa-play-circle\" style=\"color:#22c55e;font-size:1.3rem;\"></i>" +
-                "<div style=\"flex:1;min-width:0;\"><div style=\"font-weight:700;font-size:0.88rem;\">" + (r.title || "Kayıt") + "</div>" + dateStr + "</div>" +
+                "<div style=\"flex:1;min-width:0;\"><div style=\"font-weight:700;font-size:0.88rem;\">" + escapeHtml(r.title || "Kayıt") + "</div>" + dateStr + "</div>" +
                 openBtn +
                 "</div>" +
                 player +

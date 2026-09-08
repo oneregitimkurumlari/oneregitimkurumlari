@@ -1,6 +1,9 @@
 const FIREBASE_URL = "https://one-egitim-default-rtdb.firebaseio.com";
 const DATA_URL = FIREBASE_URL + "/.json";
 
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function jsEsc(s) { return String(s == null ? "" : s).replace(/\\/g, "\\\\").replace(/'/g, "\\'"); }
+
 let remoteData = { teachers: [], classes: [], students: [], homeworks: [] };
 let deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
 
@@ -341,15 +344,15 @@ document.addEventListener("DOMContentLoaded", () => {
         tbody.innerHTML = classes.map((c, i) => `
             <tr>
                 <td>${i + 1}</td>
-                <td><strong>${c.title}</strong><br><small style="color:var(--text-light);">${c.description || ""}</small></td>
-                <td>${dayLabels[c.day] || c.day}</td>
+                <td><strong>${esc(c.title)}</strong><br><small style="color:var(--text-light);">${esc(c.description || "")}</small></td>
+                <td>${esc(dayLabels[c.day] || c.day)}</td>
                 <td>${formatDate(c.date)}</td>
                 <td>${formatTime(c.startTime, c.endTime)}</td>
-                <td>${c.meetLink ? '<a href="' + c.meetLink + '" target="_blank" class="meet-link">' + c.meetLink + '</a>' : '<span style="color:var(--text-light);font-size:0.8rem;">—</span>'}</td>
+                <td>${c.meetLink ? '<a href="' + esc(c.meetLink) + '" target="_blank" class="meet-link">' + esc(c.meetLink) + '</a>' : '<span style="color:var(--text-light);font-size:0.8rem;">—</span>'}</td>
                 <td class="actions-cell">
-                    <button class="btn-edit" onclick="editClass('${c.id}')"><i class="fas fa-edit"></i></button>
-                    <button class="btn-delete" onclick="deleteClass('${c.id}')"><i class="fas fa-trash"></i></button>
-                    <a href="ders.html?ders=${c.id}&v=3&entry=teacher" class="btn-record"><i class="fas fa-record-vinyl"></i> Derse Başla</a>
+                    <button class="btn-edit" onclick="editClass('${jsEsc(c.id)}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-delete" onclick="deleteClass('${jsEsc(c.id)}')"><i class="fas fa-trash"></i></button>
+                    <a href="ders.html?ders=${esc(c.id)}&v=3&entry=teacher" class="btn-record"><i class="fas fa-record-vinyl"></i> Derse Başla</a>
                 </td>
             </tr>
         `).join("");
@@ -453,17 +456,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         tbody.innerHTML = homeworks.map((h, i) => {
             const fileIcon = h.fileType === "pdf" ? "fa-file-pdf" : h.fileType === "word" ? "fa-file-word" : h.fileType === "excel" ? "fa-file-excel" : "fa-file";
-            const fileLink = h.fileUrl ? `<a href="${h.fileUrl}" target="_blank" style="color:var(--primary);"><i class="fas ${fileIcon}"></i> ${h.fileName || "Dosya"}</a>` : `<span style="color:var(--text-light);">-</span>`;
+            const fileLink = h.fileUrl ? `<a href="${esc(h.fileUrl)}" target="_blank" style="color:var(--primary);"><i class="fas ${fileIcon}"></i> ${esc(h.fileName || "Dosya")}</a>` : `<span style="color:var(--text-light);">-</span>`;
             return `
             <tr>
                 <td>${i + 1}</td>
-                <td><strong>${h.title}</strong></td>
-                <td>${h.subject}</td>
+                <td><strong>${esc(h.title)}</strong></td>
+                <td>${esc(h.subject)}</td>
                 <td>${fileLink}</td>
                 <td>${formatDate(h.createdAt)}</td>
                 <td class="actions-cell">
-                    <button class="btn-edit" onclick="editHomework('${h.id}')"><i class="fas fa-edit"></i></button>
-                    <button class="btn-delete" onclick="deleteHomework('${h.id}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn-edit" onclick="editHomework('${jsEsc(h.id)}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-delete" onclick="deleteHomework('${jsEsc(h.id)}')"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`;
         }).join("");

@@ -1,6 +1,9 @@
 const FIREBASE_URL = "https://one-egitim-default-rtdb.firebaseio.com";
 const DATA_URL = FIREBASE_URL + "/.json";
 
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function jsEsc(s) { return String(s == null ? "" : s).replace(/\\/g, "\\\\").replace(/'/g, "\\'"); }
+
 const dayLabels = {
     pazartesi: "Pazartesi", sali: "Salı", carsamba: "Çarşamba",
     persembe: "Perşembe", cuma: "Cuma", cumartesi: "Cumartesi", pazar: "Pazar"
@@ -122,23 +125,23 @@ function renderSchedule(filter = "tum") {
         const statusCls = isLive ? "status-live" : "status-upcoming";
         const statusLbl = isLive ? "Canlı" : "Yaklaşıyor";
         const joinBtn = isLive
-            ? `<button class="schedule-btn btn-join" onclick="joinClass('${item.link}', '${item.id}')"><i class="fas fa-video"></i> Derse Katıl</button>`
+            ? `<button class="schedule-btn btn-join" onclick="joinClass('${jsEsc(item.link)}', '${jsEsc(item.id)}')"><i class="fas fa-video"></i> Derse Katıl</button>`
             : `<span class="schedule-pending"><i class="fas fa-hourglass-half"></i> Ders henüz başlamadı</span>`;
         return `
-        <div class="schedule-card ${item.courseType}" data-id="${item.id}">
+        <div class="schedule-card ${item.courseType}" data-id="${esc(item.id)}">
             <div class="schedule-header">
                 <span class="schedule-day">${item.dayLabel}</span>
                 <span class="schedule-status ${statusCls}">${statusLbl}</span>
             </div>
-            <h3 class="schedule-title">${item.title}</h3>
+            <h3 class="schedule-title">${esc(item.title)}</h3>
             <div class="schedule-info">
-                <span><i class="fas fa-user"></i> ${item.instructor}</span>
+                <span><i class="fas fa-user"></i> ${esc(item.instructor)}</span>
                 <span><i class="fas fa-clock"></i> ${item.time}</span>
-                <span><i class="fas fa-door-open"></i> ${item.classroom}</span>
+                <span><i class="fas fa-door-open"></i> ${esc(item.classroom)}</span>
             </div>
             <div class="schedule-actions">
                 ${joinBtn}
-                <button class="schedule-btn btn-details" onclick="showDetails('${item.id}')">
+                <button class="schedule-btn btn-details" onclick="showDetails('${jsEsc(item.id)}')">
                     Detay
                 </button>
             </div>
@@ -178,7 +181,7 @@ function renderCourses() {
     grid.innerHTML = courses.map(c => `
         <div class="course-card">
             <div class="course-icon"><i class="fas ${icons[c.name] || 'fa-book'}"></i></div>
-            <h3>${c.name}</h3>
+            <h3>${esc(c.name)}</h3>
             <p>Eğitim programı</p>
             <div class="course-meta">
                 <span><i class="fas fa-book"></i> ${c.count} Seans</span>
@@ -208,17 +211,17 @@ function renderHomework() {
         const teacherName = teacher ? teacher.name + " " + teacher.surname : "Yönetim";
         const fileIcon = h.fileType === "pdf" ? "fa-file-pdf" : h.fileType === "word" ? "fa-file-word" : h.fileType === "excel" ? "fa-file-excel" : "fa-file";
         const safeName = (h.fileName || "odev-dosyasi").replace(/\\/g, "").replace(/'/g, "").replace(/"/g, "");
-        const fileTag = h.fileUrl ? `<a href="${h.fileUrl}" class="homework-file" onclick="downloadHomeworkFile('${h.fileUrl}', '${safeName}'); return false;"><i class="fas ${fileIcon}"></i> ${h.fileName || "Dosyayı İndir"}</a>` : "";
+        const fileTag = h.fileUrl ? `<a href="${esc(h.fileUrl)}" class="homework-file" onclick="downloadHomeworkFile('${jsEsc(h.fileUrl)}', '${jsEsc(safeName)}'); return false;"><i class="fas ${fileIcon}"></i> ${esc(h.fileName || "Dosyayı İndir")}</a>` : "";
         return `
         <div class="homework-card">
             <div class="homework-header">
-                <span class="homework-subject">${h.subject}</span>
-                <span class="homework-date">${h.createdAt || ""}</span>
+                <span class="homework-subject">${esc(h.subject)}</span>
+                <span class="homework-date">${esc(h.createdAt || "")}</span>
             </div>
-            <h3>${h.title}</h3>
-            <p class="homework-desc">${h.description || ""}</p>
+            <h3>${esc(h.title)}</h3>
+            <p class="homework-desc">${esc(h.description || "")}</p>
             <div class="homework-meta">
-                <span><i class="fas fa-user"></i> ${teacherName}</span>
+                <span><i class="fas fa-user"></i> ${esc(teacherName)}</span>
             </div>
             ${fileTag}
         </div>`;
@@ -278,11 +281,11 @@ function recordingBody(r) {
     if (r.recordingUrl) {
         const src = recordingRawUrl(r.recordingUrl);
         return `
-        <video controls preload="metadata" class="recording-video" src="${src}">
+        <video controls preload="metadata" class="recording-video" src="${esc(src)}">
             Tarayıcınız video desteklemiyor.
         </video>
         <div class="recording-view-toolbar">
-            <a href="${r.recordingUrl}" target="_blank" class="schedule-btn btn-join recording-watch"><i class="fas fa-external-link-alt"></i> Kaydı Yeni Sekmede Görüntüle</a>
+            <a href="${esc(r.recordingUrl)}" target="_blank" class="schedule-btn btn-join recording-watch"><i class="fas fa-external-link-alt"></i> Kaydı Yeni Sekmede Görüntüle</a>
         </div>`;
     }
     return `<span class="recording-pending"><i class="fas fa-hourglass-half"></i> Kayıt henüz eklenmedi</span>`;
@@ -293,12 +296,12 @@ function recordingCard(r, idx) {
     <div class="recording-card ${r.courseType}">
         <div class="recording-rank">${idx}</div>
         <div class="recording-info">
-            <h3>${r.title}</h3>
-            <p class="recording-subject">${r.subject}</p>
+            <h3>${esc(r.title)}</h3>
+            <p class="recording-subject">${esc(r.subject)}</p>
             <div class="recording-meta">
-                <span><i class="fas fa-calendar"></i> ${r.date}</span>
+                <span><i class="fas fa-calendar"></i> ${esc(r.date)}</span>
                 <span><i class="fas fa-clock"></i> ${r.time}</span>
-                <span><i class="fas fa-user"></i> ${r.instructor}</span>
+                <span><i class="fas fa-user"></i> ${esc(r.instructor)}</span>
             </div>
         </div>
         ${recordingBody(r)}
@@ -376,16 +379,16 @@ function showDetails(id) {
     if (!item) return;
     const modal = document.getElementById("classModal");
     document.getElementById("modalBody").innerHTML = `
-        <h3>${item.title}</h3>
-        <div class="modal-detail"><i class="fas fa-user"></i><span><strong>Eğitmen:</strong> ${item.instructor}</span></div>
-        <div class="modal-detail"><i class="fas fa-calendar"></i><span><strong>Gün:</strong> ${item.dayLabel}</span></div>
+        <h3>${esc(item.title)}</h3>
+        <div class="modal-detail"><i class="fas fa-user"></i><span><strong>Eğitmen:</strong> ${esc(item.instructor)}</span></div>
+        <div class="modal-detail"><i class="fas fa-calendar"></i><span><strong>Gün:</strong> ${esc(item.dayLabel)}</span></div>
         <div class="modal-detail"><i class="fas fa-clock"></i><span><strong>Saat:</strong> ${item.time}</span></div>
-        <div class="modal-detail"><i class="fas fa-door-open"></i><span><strong>Sınıf:</strong> ${item.classroom}</span></div>
-        <div class="modal-detail"><i class="fas fa-hourglass-half"></i><span><strong>Süre:</strong> ${item.duration}</span></div>
-        <div class="modal-detail"><i class="fas fa-info-circle"></i><span><strong>Açıklama:</strong> ${item.description}</span></div>
-        <div class="modal-detail"><i class="fas fa-video"></i><span><strong>Microsoft Teams:</strong> <a href="${item.link}" target="_blank" style="color:var(--primary);text-decoration:underline;font-family:monospace;font-size:0.85rem;">${item.link}</a></span></div>
+        <div class="modal-detail"><i class="fas fa-door-open"></i><span><strong>Sınıf:</strong> ${esc(item.classroom)}</span></div>
+        <div class="modal-detail"><i class="fas fa-hourglass-half"></i><span><strong>Süre:</strong> ${esc(item.duration)}</span></div>
+        <div class="modal-detail"><i class="fas fa-info-circle"></i><span><strong>Açıklama:</strong> ${esc(item.description)}</span></div>
+        <div class="modal-detail"><i class="fas fa-video"></i><span><strong>Microsoft Teams:</strong> <a href="${esc(item.link)}" target="_blank" style="color:var(--primary);text-decoration:underline;font-family:monospace;font-size:0.85rem;">${esc(item.link)}</a></span></div>
         <div class="modal-actions">
-            <a href="ders.html?ders=${item.id}&v=3&entry=student" class="btn btn-secondary"><i class="fas fa-video"></i> Derse Katıl</a>
+            <a href="ders.html?ders=${esc(item.id)}&v=3&entry=student" class="btn btn-secondary"><i class="fas fa-video"></i> Derse Katıl</a>
             <button class="btn btn-details" onclick="closeModal()">Kapat</button>
         </div>`;
     modal.classList.add("active");
@@ -768,7 +771,7 @@ function renderTodayPlan() {
     html += tasks.map((t, i) => `
         <div class="today-task ${t.done ? 'done' : ''}">
             <span class="t-check ${t.done ? 'checked' : ''}" onclick="toggleTodayTask(${i})"><i class="fas fa-check"></i></span>
-            <span class="t-text">${t.text}</span>
+            <span class="t-text">${esc(t.text)}</span>
             <span class="plan-del" onclick="deleteTodayTask(${i})"><i class="fas fa-trash"></i></span>
         </div>`).join("");
     el.innerHTML = html;
@@ -811,7 +814,7 @@ function renderPlanList() {
         tasks.forEach((t, i) => {
             html += `<div class="plan-item ${t.done ? 'done' : ''}">
                 <span class="plan-check ${t.done ? 'checked' : ''}" onclick="togglePlanTask('${day}', ${i})"><i class="fas fa-check"></i></span>
-                <span class="plan-text">${t.text}</span>
+                <span class="plan-text">${esc(t.text)}</span>
                 <span class="plan-del" onclick="deletePlanTask('${day}', ${i})"><i class="fas fa-trash"></i></span>
             </div>`;
         });
@@ -857,12 +860,12 @@ function renderTodayClasses() {
     if (empty) empty.style.display = "none";
     el.innerHTML = items.map(s => {
         var action = s.liveState === "live"
-            ? `<button onclick="joinClass('${s.link}', '${s.id}')"><i class="fas fa-play"></i> Katıl</button>`
+            ? `<button onclick="joinClass('${jsEsc(s.link)}', '${jsEsc(s.id)}')"><i class="fas fa-play"></i> Katıl</button>`
             : `<span class="tc-pending"><i class="fas fa-hourglass-half"></i> Henüz başlamadı</span>`;
         return `
         <div class="today-class">
             <div class="tc-icon"><i class="fas fa-video"></i></div>
-            <div class="tc-info"><strong>${s.title}</strong><span>${s.time} · ${s.instructor}</span></div>
+            <div class="tc-info"><strong>${esc(s.title)}</strong><span>${s.time} · ${esc(s.instructor)}</span></div>
             ${action}
         </div>`;
     }).join("");
@@ -880,18 +883,18 @@ function renderRecentHomeworks() {
     }
     if (empty) empty.style.display = "none";
     el.innerHTML = hw.map(h => `
-        <div class="mini-hw" onclick="showHomeWorkDetail('${h.title}', '${(h.description || "").replace(/'/g, "\\'")}', '${h.fileUrl || ""}')">
+        <div class="mini-hw" onclick="showHomeWorkDetail('${jsEsc(h.title)}', '${jsEsc(h.description || "")}', '${jsEsc(h.fileUrl || "")}')">
             <div class="mh-icon"><i class="fas ${h.fileType === "pdf" ? "fa-file-pdf" : h.fileType === "word" ? "fa-file-word" : "fa-file-alt"}"></i></div>
-            <div class="mh-info"><strong>${h.title}</strong><span>${h.subject || ""} · ${h.createdAt || ""}</span></div>
+            <div class="mh-info"><strong>${esc(h.title)}</strong><span>${esc(h.subject || "")} · ${esc(h.createdAt || "")}</span></div>
         </div>`).join("");
 }
 
 function showHomeWorkDetail(title, desc, url) {
     var modal = document.getElementById("classModal");
     document.getElementById("modalBody").innerHTML = `
-        <h3>${title}</h3>
-        <div class="modal-detail"><i class="fas fa-info-circle"></i><span>${desc || "Açıklama yok"}</span></div>
-        ${url ? `<a class="btn btn-primary" href="${url}" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Dosyayı Gör</a>` : ""}
+        <h3>${esc(title)}</h3>
+        <div class="modal-detail"><i class="fas fa-info-circle"></i><span>${esc(desc || "Açıklama yok")}</span></div>
+        ${url ? `<a class="btn btn-primary" href="${esc(url)}" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Dosyayı Gör</a>` : ""}
         <div class="modal-actions"><button class="btn btn-details" onclick="closeModal()">Kapat</button></div>`;
     modal.classList.add("active");
 }
