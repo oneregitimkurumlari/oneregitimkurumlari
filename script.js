@@ -508,7 +508,8 @@ function initDashboard() {
     if (greet) {
         var now = new Date().getHours();
         var g = now < 12 ? "Günaydın" : now < 18 ? "İyi günler" : "İyi akşamlar";
-        greet.textContent = g + ", " + (parts[0] || "Öğrenci") + " 👋";
+        var nm = (parts[0] || "Öğrenci").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+        greet.innerHTML = g + ", " + nm + ' <span class="wave">👋</span>';
     }
     var ddate = document.getElementById("dashDate");
     if (ddate) {
