@@ -97,6 +97,60 @@
         .drive-frame { width: 100%; height: 520px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
         @media (max-width: 900px) { .drive-frame { height: 420px; } }
         @media (max-width: 900px) { .room-main { grid-template-columns: 1fr; } }
+
+        /* ==== Canlı ders odası animasyonları (PİHOS) ==== */
+        @keyframes roomTopIn { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
+        @keyframes roomFadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+        @keyframes roomFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes roomScaleIn { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: none; } }
+        @keyframes roomFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        @keyframes roomBlink { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+        @keyframes roomRing { 0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,.5); } 50% { box-shadow: 0 0 0 12px rgba(220,38,38,0); } }
+        @keyframes roomShine { 0% { transform: translateX(-120%); } 60%,100% { transform: translateX(220%); } }
+
+        .room-topbar { animation: roomTopIn .4s cubic-bezier(.22,.61,.36,1) both; }
+        .room-main { animation: roomFadeUp .45s cubic-bezier(.22,.61,.36,1) .08s both; }
+        .room-stage { animation: roomScaleIn .5s cubic-bezier(.22,.61,.36,1) .12s both; }
+        .stage-msg { animation: roomFloat 5s ease-in-out infinite; }
+        .stage-msg .live-badge { animation: roomRing 2s ease-in-out infinite; }
+        .jitsi-msg i { animation: roomBlink 1.6s ease-in-out infinite; }
+        .jitsi-msg { animation: roomFadeUp .4s ease both; }
+
+        .room-card { animation: roomFadeUp .45s cubic-bezier(.22,.61,.36,1) both; transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+        .room-panel .room-card:nth-child(1) { animation-delay: .14s; }
+        .room-panel .room-card:nth-child(2) { animation-delay: .2s; }
+        .room-panel .room-card:nth-child(3) { animation-delay: .26s; }
+        .room-panel .room-card:nth-child(4) { animation-delay: .32s; }
+        .room-card:hover { transform: translateY(-3px); border-color: rgba(192,144,32,.3); box-shadow: 0 12px 26px rgba(0,0,0,.18), var(--shadow); }
+        html.dark .room-card:hover { box-shadow: 0 12px 26px rgba(0,0,0,.45); }
+
+        .attendee-item { animation: roomFadeIn .25s ease both; }
+        .attendee-item .avatar { position: relative; overflow: hidden; }
+        .attendee-item .avatar::after {
+            content: ""; position: absolute; top: 0; left: 0; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+            animation: roomShine 3s ease-in-out infinite;
+        }
+
+        .student-controls { animation: roomFadeUp .5s cubic-bezier(.22,.61,.36,1) .3s both; }
+        .student-controls button { transition: transform .18s ease, background .18s ease, box-shadow .18s ease; }
+        .student-controls button:hover { transform: translateY(-2px) scale(1.06); }
+        .student-controls button.is-on, .student-controls button.is-off { box-shadow: 0 0 14px rgba(239,68,68,.4); }
+
+        .rec-ctrl-btn { transition: transform .2s ease, box-shadow .2s ease, background .2s ease; }
+        .rec-ctrl-btn:hover { transform: translateY(-2px); }
+        .rec-btn { transition: transform .2s ease, box-shadow .2s ease; }
+        .rec-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,.25); }
+        .rec-status.live, .rec-ctrl-btn.rec-on { animation: roomRing 1.8s ease-in-out infinite; }
+
+        .poll-box { animation: roomScaleIn .32s cubic-bezier(.22,.61,.36,1) both; }
+        #pollFsBar { animation: roomTopIn .3s ease both; }
+        #handsBox { animation: roomFadeUp .3s ease both; }
+        .drive-section { animation: roomFadeUp .5s cubic-bezier(.22,.61,.36,1) .2s both; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,*::before,*::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; }
+        }
     </style>
 </head>
 <body>
