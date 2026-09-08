@@ -24,34 +24,16 @@
     <link rel="stylesheet" href="transition.css">
     <script>if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')</script>
     <style>
-        /* Kritik: sol panel ikon + hover açıklaması */
-        .sidebar:not(.open) .side-link .side-txt { display: none; }
-        .sidebar:not(.open) .side-link:hover .side-txt {
-            display: inline;
-            position: absolute;
-            left: calc(100% + 12px);
-            top: 50%;
-            transform: translateY(-50%);
-            background: #1e293b;
-            color: #fff;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: .82rem;
-            white-space: nowrap;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,.2);
-            z-index: 100;
+        /* Kritik: Desktop'ta fare sol paneldeyken panel genişler, açıklamalar ikon yanında belirir */
+        @media (min-width: 721px) {
+            .sidebar .side-txt { display: none; }
+            .sidebar { transition: width .25s ease; }
+            .sidebar:hover { width: 230px; }
+            .sidebar:hover .side-link { justify-content: flex-start; gap: 14px; padding-left: 24px; }
+            .sidebar:hover .side-txt { display: inline; }
         }
-        .sidebar:not(.open) .side-link:hover .side-txt::before {
-            content: "";
-            position: absolute;
-            left: -6px; top: 50%;
-            transform: translateY(-50%);
-            border: 6px solid transparent;
-            border-right-color: #1e293b;
-        }
-        .side-link:hover .side-txt.side-txt-nudge { display: inline; position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%); }
         @media (max-width: 720px) {
-            .sidebar .side-txt { display: inline !important; position: static !important; transform: none !important; }
+            .sidebar .side-txt { display: inline !important; position: static !important; }
         }
     </style>
     <script type="application/ld+json">
@@ -113,10 +95,10 @@
                 <a href="#odevler" class="side-link" data-view="odevler"><i class="fas fa-file-alt"></i><span class="side-txt">Ödevler</span></a>
             </nav>
             <div class="side-bottom">
-                <button class="dark-toggle side-link" id="darkToggle" title="Koyu/Acik Mod"><i class="fas fa-moon"></i><span class="side-txt side-txt-nudge">Mod</span></button>
-                <a href="admin.html" class="side-link" title="Yönetim"><i class="fas fa-user-shield"></i><span class="side-txt side-txt-nudge">Yönetim</span></a>
-                <a href="teacher.html" class="side-link" title="Öğretmen"><i class="fas fa-chalkboard-teacher"></i><span class="side-txt side-txt-nudge">Öğretmen</span></a>
-                <button class="side-link" id="logoutBtn" title="Çıkış"><i class="fas fa-sign-out-alt"></i><span class="side-txt side-txt-nudge">Çıkış</span></button>
+                <button class="dark-toggle side-link" id="darkToggle" title="Koyu/Acik Mod"><i class="fas fa-moon"></i><span class="side-txt">Mod</span></button>
+                <a href="admin.html" class="side-link" title="Yönetim"><i class="fas fa-user-shield"></i><span class="side-txt">Yönetim</span></a>
+                <a href="teacher.html" class="side-link" title="Öğretmen"><i class="fas fa-chalkboard-teacher"></i><span class="side-txt">Öğretmen</span></a>
+                <button class="side-link" id="logoutBtn" title="Çıkış"><i class="fas fa-sign-out-alt"></i><span class="side-txt">Çıkış</span></button>
             </div>
         </aside>
 

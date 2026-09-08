@@ -1507,46 +1507,29 @@ html.dark .recording-meta { color: #94a3b8; }
 .side-link {
     display: flex; align-items: center; justify-content: center;
     gap: 0;
-    position: relative;
     color: #a7b0c3;
     text-decoration: none;
     padding: 12px 0;
     font-size: 1.05rem;
     background: transparent; border: none; cursor: pointer; width: 100%;
-    transition: background .2s ease, color .2s ease;
-    white-space: nowrap; overflow: visible;
+    transition: background .2s ease, color .2s ease, justify-content .2s ease, gap .2s ease, padding .2s ease;
+    white-space: nowrap; overflow: hidden;
 }
-.side-link .side-txt { display: none; font-size: .87rem; font-weight: 500; }
+.side-link .side-txt { display: none; font-size: .87rem; font-weight: 500; transition: opacity .2s ease; }
 .side-link:hover { color: #fff; background: rgba(255,255,255,.06); }
 .side-link.active { color: var(--primary); background: rgba(192,144,32,.14); }
 .dark-toggle { color: #a7b0c3; }
 
-/* İkon yanında açıklama: hover ile sağda göster */
-.sidebar:not(.open) .side-link .side-txt {
-    display: none;
-}
-.sidebar:not(.open) .side-link:hover .side-txt {
-    display: inline;
-    position: absolute;
-    left: calc(100% + 12px);
-    top: 50%;
-    transform: translateY(-50%);
-    background: var(--navy-light);
-    color: #fff;
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: .82rem;
-    white-space: nowrap;
-    box-shadow: var(--shadow-lg);
-    z-index: 100;
-}
-.sidebar:not(.open) .side-link:hover .side-txt::before {
-    content: "";
-    position: absolute;
-    left: -6px; top: 50%;
-    transform: translateY(-50%);
-    border: 6px solid transparent;
-    border-right-color: var(--navy-light);
+/* Desktop: fare panelin herhangi bir yerine gelince panel genişler, açıklamalar görünür */
+@media (min-width: 721px) {
+    .sidebar .side-txt { display: none; }
+    .sidebar:hover { width: 230px; }
+    .sidebar:hover .side-link {
+        justify-content: flex-start;
+        gap: 14px;
+        padding-left: 24px;
+    }
+    .sidebar:hover .side-txt { display: inline; }
 }
 
 /* Sa� i�erik */
