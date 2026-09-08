@@ -681,7 +681,7 @@ function renderCalendar(containerId, year, month) {
         if (classDays[ds]) cls.push("hasclass");
         var sp = specialFor(ds);
         if (sp) cls.push("special");
-        html += '<div class="cal-day ' + cls.join(" ") + '" title="' + (sp || "") + '">' + d + '</div>';
+        html += '<div class="cal-day ' + cls.join(" ") + '"' + (sp ? ' data-tip="' + sp + '"' : '') + ' title="' + (sp || "") + '">' + d + '</div>';
     }
     var after = (7 - ((gridStartDow + dim) % 7)) % 7;
     for (var j = 1; j <= after; j++) {
