@@ -399,13 +399,35 @@ var dashState = {
     calMonth: new Date().getMonth()
 };
 
-var specialDays = {
-    "2026-01-01": "Yılbaşı",
-    "2026-04-23": "23 Nisan",
-    "2026-05-19": "19 Mayıs",
-    "2026-08-30": "30 Ağustos",
-    "2026-10-29": "29 Ekim",
-    "2026-01-01": "Yılbaşı"
+/* Dini bayramlar yıla göre değişir; her tarih için isim listesi */
+var religiousHolidays = {
+    2025: {
+        "3-30": "Ramazan Bayramı (1. Gün)",
+        "3-31": "Ramazan Bayramı (2. Gün)",
+        "4-1": "Ramazan Bayramı (3. Gün)",
+        "6-6": "Kurban Bayramı (1. Gün)",
+        "6-7": "Kurban Bayramı (2. Gün)",
+        "6-8": "Kurban Bayramı (3. Gün)",
+        "6-9": "Kurban Bayramı (4. Gün)"
+    },
+    2026: {
+        "3-20": "Ramazan Bayramı (1. Gün)",
+        "3-21": "Ramazan Bayramı (2. Gün)",
+        "3-22": "Ramazan Bayramı (3. Gün)",
+        "5-27": "Kurban Bayramı (1. Gün)",
+        "5-28": "Kurban Bayramı (2. Gün)",
+        "5-29": "Kurban Bayramı (3. Gün)",
+        "5-30": "Kurban Bayramı (4. Gün)"
+    },
+    2027: {
+        "3-9": "Ramazan Bayramı (1. Gün)",
+        "3-10": "Ramazan Bayramı (2. Gün)",
+        "3-11": "Ramazan Bayramı (3. Gün)",
+        "5-16": "Kurban Bayramı (1. Gün)",
+        "5-17": "Kurban Bayramı (2. Gün)",
+        "5-18": "Kurban Bayramı (3. Gün)",
+        "5-19": "Kurban Bayramı (4. Gün)"
+    }
 };
 
 var PLAN_URL = FIREBASE_URL + "/_plans.json";
@@ -608,7 +630,23 @@ function getClassDays() {
 }
 
 function specialFor(dateStr) {
-    return specialDays[dateStr] || null;
+    var p = dateStr.split("-");
+    var y = parseInt(p[0], 10), m = parseInt(p[1], 10), d = parseInt(p[2], 10);
+    var md = m + "-" + d;
+
+    var fixed = {
+        "1-1": "Yılbaşı",
+        "4-23": "Ulusal Egemenlik ve Çocuk Bayramı",
+        "5-1": "Emek ve Dayanışma Günü",
+        "5-19": "Atatürk'ü Anma, Gençlik ve Spor Bayramı",
+        "7-15": "Demokrasi ve Milli Birlik Günü",
+        "8-30": "Zafer Bayramı",
+        "10-29": "Cumhuriyet Bayramı"
+    };
+
+    var label = fixed[md] || null;
+    if (!label && religiousHolidays[y]) label = religiousHolidays[y][md] || null;
+    return label;
 }
 
 function renderCalendar(containerId, year, month) {
