@@ -155,7 +155,7 @@
         attachB.innerHTML = '<i class="fas fa-paperclip"></i>';
         fileInput = document.createElement("input");
         fileInput.type = "file";
-        fileInput.accept = "image/*";
+        fileInput.accept = "image/jpeg,image/png,image/webp,image/gif";
         fileInput.style.display = "none";
         fileInput.addEventListener("change", onFilePicked);
         attachB.addEventListener("click", function () { fileInput.click(); });
@@ -260,16 +260,16 @@
     function onFilePicked() {
         var f = fileInput.files && fileInput.files[0];
         if (!f) return;
-        if (f.type.indexOf("image/") !== 0) { clearImage(); return; }
-        if (f.size > 10 * 1024 * 1024) { clearImage(); return; }
+        if (f.type.indexOf("image/") !== 0) { clearImage(); botSay("Lütfen bir görsel dosyası seç (JPEG, PNG veya WEBP)."); return; }
+        if (f.size > 10 * 1024 * 1024) { clearImage(); botSay("Görsel çok büyük (10 MB üstü). Lütfen daha küçük bir fotoğraf seç."); return; }
         var reader = new FileReader();
         reader.onload = function () {
             var img = new Image();
             img.onload = function () {
                 var MAX = 1100;
                 var scale = Math.min(1, MAX / Math.max(img.width, img.height));
-                var w = Math.round(img.width * scale);
-                var h = Math.round(img.height * scale);
+                var w = Math.round(img.width * scale || 1);
+                var h = Math.round(img.height * scale || 1);
                 var c = document.createElement("canvas");
                 c.width = w; c.height = h;
                 var ctx = c.getContext("2d");
@@ -280,10 +280,10 @@
                 previewName.textContent = f.name;
                 preview.style.display = "flex";
             };
-            img.onerror = clearImage;
+            img.onerror = function () { clearImage(); botSay("Bu görsel okunamadı. JPEG veya PNG olarak yeniden yükle."); };
             img.src = reader.result;
         };
-        reader.onerror = clearImage;
+        reader.onerror = function () { clearImage(); botSay("Dosya okunamadı, lütfen tekrar dene."); };
         reader.readAsDataURL(f);
     }
 
@@ -409,11 +409,17 @@
     ];
 
     function answer(q, img) {
+        if (img) {
+            if (hasBad(q || "")) return Promise.resolve("Bu konuda sana yardım edemem. Derslerin ve site hakkında soru sorabilirsin! 🙂");
+            return geminiAsk(q || "", img).catch(function () {
+                return "Görseldeki soruyu cevaplamakta bir sorun oldu. Lütfen görseli JPEG veya PNG olarak yeniden deneyin, ya da soruyu yazıyla yazın.";
+            });
+        }
         var n = norm(q);
         if (hasBad(q)) return Promise.resolve("Bu konuda sana yardım edemem. Derslerin ve site hakkında soru sorabilirsin! 🙂");
 
         var math = simpleMath(q);
-        if (math && !img) return Promise.resolve(math);
+        if (math) return Promise.resolve(math);
 
         var lessonWords = ["matemat", "fizik", "kimya", "biyolo", "turkce", "türkçe", "edebiyat", "ingiliz", "tarih", "cograf", "coğraf", "geometri", "bilgisayar", "fen", "muzik", "müzik", "din", "sosyal", "resim", "beden", "rehber"];
         var asksLesson = lessonWords.some(function (w) { return n.indexOf(w) !== -1; });
