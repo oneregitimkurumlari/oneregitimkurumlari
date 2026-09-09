@@ -326,6 +326,9 @@
         var n = norm(q);
         if (hasBad(q)) return Promise.resolve("Bu konuda sana yardım edemem. Derslerin ve site hakkında soru sorabilirsin! 🙂");
 
+        var math = simpleMath(q);
+        if (math) return Promise.resolve(math);
+
         var lessonWords = ["matemat", "fizik", "kimya", "biyolo", "turkce", "türkçe", "edebiyat", "ingiliz", "tarih", "cograf", "coğraf", "geometri", "bilgisayar", "fen", "muzik", "müzik", "din", "sosyal", "resim", "beden", "rehber"];
         var asksLesson = lessonWords.some(function (w) { return n.indexOf(w) !== -1; });
         if (asksLesson) {
@@ -345,11 +348,32 @@
         });
     }
 
+    function simpleMath(q) {
+        var n = String(q).toLowerCase().replace(/[!?.;:()"']/g, " ").replace(/\s+/g, " ").trim();
+        var m = n.match(/(-?\d+(?:[.,]\d+)?)\s*([+\-*x\u00d7/\u00f7])\s*(-?\d+(?:[.,]\d+)?)/);
+        if (!m) return null;
+        var rest = n.replace(m[0], " ").replace(/[0-9.,+\-*x\u00d7\/\u00f7]/g, " ");
+        var allowed = ["kac", "eder", "ediyor", "ne", "olur", "hesapla", "sor", "bu", "nedir", "yok", "bir", "kacir"];
+        var words = rest.split(" ").filter(function (w) { return w.length > 1; });
+        for (var i = 0; i < words.length; i++) {
+            if (allowed.indexOf(words[i]) === -1) return null;
+        }
+        var a = parseFloat(m[1].replace(",", "."));
+        var b = parseFloat(m[3].replace(",", "."));
+        if ((m[2] === "/" || m[2] === "\u00f7") && b === 0) return null;
+        var r = m[2] === "+" || m[2] === "-" || m[2] === "*" || m[2] === "x" || m[2] === "\u00d7" || m[2] === "/" || m[2] === "\u00f7"
+            ? (m[2] === "+" ? a + b : m[2] === "-" ? a - b : (m[2] === "/" || m[2] === "\u00f7") ? a / b : a * b)
+            : null;
+        if (r === null || isNaN(r) || !isFinite(r)) return null;
+        var rStr = Math.abs(r - Math.round(r)) < 1e-9 ? String(Math.round(r)) : String(Math.round(r * 1e6) / 1e6);
+        return "Hesapladım: " + m[1].replace(",", ".") + " " + m[2] + " " + m[3].replace(",", ".") + " = " + rStr;
+    }
+
     function geminiAsk(q) {
         var key = GEMINI_KEY || localStorage.getItem("ai_gemini_key") || "";
         if (!key) return Promise.reject(new Error("no-gemini-key"));
         var model = localStorage.getItem("ai_model") || GEMINI_MODEL;
-        var sys = "Sen ONLİNE PİHOS okul sitesinin öğrenci asistanısın. Sadece öğrencinin dersleri, ödevleri, ders programı ve site kullanımı hakkında yardım et. Kısa, sade, dostça Türkçe cevap ver. Konu dışı veya zararlı konular için kibarca reddet.";
+        var sys = "Sen ONLİNE PİHOS ilkokul/ortaokul öğrencilerine yardım eden okul asistanısın. Öğrencinin ders programı, ödevleri ve site kullanımı hakkında bildiğin kadarıyla yardım et; ayrıca matematik, fen ve okul dersleriyle ilgili sorularını, ödevlerini rahatça çöz. Kısa, sade, dostça, yaşına uygun Türkçe cevap ver. Zararlı, uygunsuz veya tehlikeli konuları kibarca reddet.";
         var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(key);
         return new Promise(function (resolve, reject) {
             var c = new AbortController();
