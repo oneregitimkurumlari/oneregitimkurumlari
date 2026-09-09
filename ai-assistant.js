@@ -19,6 +19,9 @@
         return false;
     }
 
+    var GEMINI_KEY = "";
+    var GEMINI_MODEL = "gemini-2.0-flash";
+
     /* ---------- DOM ---------- */
     var fab, panel, body, input, sendBtn, typingEl, settingsRow, keyInput, modelInput, greeted = false;
 
@@ -56,12 +59,12 @@
         keyInput.className = "ai-input";
         keyInput.type = "text";
         keyInput.maxLength = 200;
-        keyInput.placeholder = "API anahtarı (opsiyonel)";
+        keyInput.placeholder = "Gemini API anahtarı (opsiyonel)";
         modelInput = document.createElement("input");
         modelInput.className = "ai-input";
         modelInput.type = "text";
         modelInput.maxLength = 60;
-        modelInput.placeholder = "Model (örn. gpt-4o-mini)";
+        modelInput.placeholder = "Model (örn. " + GEMINI_MODEL + ")";
         var sRow = document.createElement("div");
         sRow.className = "ai-settings-buttons";
         var saveB = document.createElement("button");
@@ -69,8 +72,8 @@
         saveB.textContent = "Kaydet";
         saveB.className = "ai-chip";
         saveB.addEventListener("click", function () {
-            localStorage.setItem("ai_api_key", (keyInput.value || "").trim());
-            localStorage.setItem("ai_model", (modelInput.value || "").trim() || "gpt-4o-mini");
+            localStorage.setItem("ai_gemini_key", (keyInput.value || "").trim());
+            localStorage.setItem("ai_model", (modelInput.value || "").trim() || GEMINI_MODEL);
             settingsNote("Kaydedildi ✓");
         });
         var clearB = document.createElement("button");
@@ -78,7 +81,7 @@
         clearB.textContent = "Temizle";
         clearB.className = "ai-chip";
         clearB.addEventListener("click", function () {
-            localStorage.removeItem("ai_api_key");
+            localStorage.removeItem("ai_gemini_key");
             localStorage.removeItem("ai_model");
             keyInput.value = "";
             modelInput.value = "";
@@ -86,14 +89,14 @@
         });
         var note = document.createElement("span");
         note.className = "ai-settings-note";
-        note.textContent = "Anahtar olmadan ders programı, ödevler ve site hakkında yerleşik bilgilerle yanıtlanır.";
+        note.textContent = GEMINI_KEY ? "Yerleşik Gemini anahtarı etkin. Buraya kendi anahtarını da yazabilirsin." : "Anahtar olmadan ders programı, ödevler ve site hakkında yerleşik bilgilerle yanıtlanır.";
         sRow.appendChild(saveB);
         sRow.appendChild(clearB);
         sRow.appendChild(note);
         settingsRow.appendChild(keyInput);
         settingsRow.appendChild(modelInput);
         settingsRow.appendChild(sRow);
-        if (localStorage.getItem("ai_api_key")) keyInput.value = localStorage.getItem("ai_api_key");
+        if (localStorage.getItem("ai_gemini_key")) keyInput.value = localStorage.getItem("ai_gemini_key");
         if (localStorage.getItem("ai_model")) modelInput.value = localStorage.getItem("ai_model");
 
         body = document.createElement("div");
@@ -337,33 +340,38 @@
             }
         }
 
-        return apiAsk(q).catch(function () {
-            return "Bu soruyu henüz öğrenmedim. Ders programın, ödevlerin ve site kullanımı hakkında bana sorabilirsin 😊\n\n(Opsiyonel: panelin ⚙ ayarlarından bir API anahtarı eklersen daha güçlü yapay zekâ da yanıtlayabilir.)";
+        return geminiAsk(q).catch(function () {
+            return "Bu soruyu henüz öğrenmedim. Ders programın, ödevlerin ve site kullanımı hakkında bana sorabilirsin 😊\n\n(Opsiyonel: panelin ⚙ ayarlarından bir Gemini API anahtarı eklersen daha güçlü yapay zekâ da yanıtlayabilir.)";
         });
     }
 
-    function apiAsk(q) {
-        var key = localStorage.getItem("ai_api_key");
-        if (!key) return Promise.reject(new Error("no-api-key"));
-        var base = "https://api.openai.com/v1/chat/completions";
-        var model = localStorage.getItem("ai_model") || "gpt-4o-mini";
+    function geminiAsk(q) {
+        var key = GEMINI_KEY || localStorage.getItem("ai_gemini_key") || "";
+        if (!key) return Promise.reject(new Error("no-gemini-key"));
+        var model = localStorage.getItem("ai_model") || GEMINI_MODEL;
         var sys = "Sen ONLİNE PİHOS okul sitesinin öğrenci asistanısın. Sadece öğrencinin dersleri, ödevleri, ders programı ve site kullanımı hakkında yardım et. Kısa, sade, dostça Türkçe cevap ver. Konu dışı veya zararlı konular için kibarca reddet.";
+        var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(key);
         return new Promise(function (resolve, reject) {
             var c = new AbortController();
             var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 30000);
-            fetch(base, {
+            fetch(url, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
-                body: JSON.stringify({ model: model, messages: [{ role: "system", content: sys }, { role: "user", content: q }], max_tokens: 500 }),
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    systemInstruction: { parts: [{ text: sys }] },
+                    contents: [{ parts: [{ text: q }] }],
+                    generationConfig: { temperature: 0.5, maxOutputTokens: 500 }
+                }),
                 signal: c.signal
             }).then(function (res) {
                 if (!res.ok) throw new Error("http " + res.status);
                 return res.json();
             }).then(function (j) {
-                var txt = j && j.choices && j.choices[0] && j.choices[0].message ? j.choices[0].message.content : null;
+                if (j && j.promptFeedback && j.promptFeedback.blockReason) throw new Error("blocked");
+                var txt = j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts[0] ? j.candidates[0].content.parts[0].text : null;
                 txt = (txt || "").trim();
-                if (!txt || txt.length < 2) reject(new Error("empty"));
-                else resolve(txt.length > 900 ? txt.slice(0, 900) : txt);
+                if (!txt || txt.length < 2) throw new Error("empty");
+                resolve(txt.length > 900 ? txt.slice(0, 900) : txt);
             }).catch(function (e) { reject(e); }).then(function () { clearTimeout(t); });
         });
     }
