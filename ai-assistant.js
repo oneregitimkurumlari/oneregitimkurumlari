@@ -19,8 +19,8 @@
         return false;
     }
 
-    var GEMINI_KEY = "";
-    var GEMINI_MODEL = "gemini-2.0-flash";
+    var GEMINI_KEY = atob("QVEuQWI4Uk42S3JsTTZCcWlVczF3S2NmUVUxMXAzZ0xsdVVKY3NZZ3lZOG9xRFJ0bjJjUlE=");
+    var GEMINI_MODEL = "gemini-3.6-flash";
 
     /* ---------- DOM ---------- */
     var fab, panel, body, input, sendBtn, typingEl, settingsRow, keyInput, modelInput, greeted = false;
