@@ -24,6 +24,7 @@
 
     /* ---------- DOM ---------- */
     var fab, panel, body, input, sendBtn, typingEl, settingsRow, keyInput, modelInput, greeted = false;
+    var pendingImg = null, fileInput, preview, previewImg, previewName;
 
     function build() {
         if (document.getElementById("aiWidgetRoot")) return;
@@ -124,6 +125,20 @@
             chips.appendChild(c);
         });
 
+        preview = document.createElement("div");
+        preview.className = "ai-preview";
+        previewImg = document.createElement("img");
+        previewImg.alt = "";
+        previewName = document.createElement("span");
+        var removeP = document.createElement("button");
+        removeP.type = "button";
+        removeP.title = "Görseli kaldır";
+        removeP.innerHTML = '<i class="fas fa-times"></i>';
+        removeP.addEventListener("click", clearImage);
+        preview.appendChild(previewImg);
+        preview.appendChild(previewName);
+        preview.appendChild(removeP);
+
         var row = document.createElement("div");
         row.className = "ai-input-row";
         input = document.createElement("input");
@@ -133,6 +148,18 @@
         input.placeholder = "Bir soru sor (örn. matematik dersi ne zaman?)";
         input.addEventListener("keydown", function (e) { if (e.key === "Enter") send(); });
 
+        var attachB = document.createElement("button");
+        attachB.className = "ai-attach";
+        attachB.type = "button";
+        attachB.title = "Görsel / fotoğraf ekle";
+        attachB.innerHTML = '<i class="fas fa-paperclip"></i>';
+        fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.accept = "image/*";
+        fileInput.style.display = "none";
+        fileInput.addEventListener("change", onFilePicked);
+        attachB.addEventListener("click", function () { fileInput.click(); });
+
         sendBtn = document.createElement("button");
         sendBtn.className = "ai-send";
         sendBtn.type = "button";
@@ -140,6 +167,7 @@
         sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
         sendBtn.addEventListener("click", send);
 
+        row.appendChild(attachB);
         row.appendChild(input);
         row.appendChild(sendBtn);
 
@@ -147,6 +175,7 @@
         panel.appendChild(settingsRow);
         panel.appendChild(body);
         panel.appendChild(chips);
+        panel.appendChild(preview);
         panel.appendChild(row);
         root.appendChild(fab);
         root.appendChild(panel);
@@ -196,24 +225,81 @@
         return m;
     }
     function botSay(t) { say("bot", t); }
-    function userSay(t) { say("user", t); }
+    function userSay(t, img) {
+        var m = document.createElement("div");
+        m.className = "ai-msg user";
+        if (img) {
+            var im = document.createElement("img");
+            im.className = "ai-msg-img";
+            im.alt = "";
+            im.src = "data:" + img.mime + ";base64," + img.data;
+            m.appendChild(im);
+            if (t) {
+                var sp = document.createElement("div");
+                sp.textContent = t;
+                m.appendChild(sp);
+            }
+        } else {
+            m.textContent = t;
+        }
+        body.insertBefore(m, typingEl);
+        body.scrollTop = body.scrollHeight;
+    }
 
     function typing(on) {
         typingEl.style.display = on ? "flex" : "none";
         if (on) body.scrollTop = body.scrollHeight;
     }
 
+    function clearImage() {
+        pendingImg = null;
+        if (fileInput) fileInput.value = "";
+        if (preview) preview.style.display = "none";
+    }
+
+    function onFilePicked() {
+        var f = fileInput.files && fileInput.files[0];
+        if (!f) return;
+        if (f.type.indexOf("image/") !== 0) { clearImage(); return; }
+        if (f.size > 10 * 1024 * 1024) { clearImage(); return; }
+        var reader = new FileReader();
+        reader.onload = function () {
+            var img = new Image();
+            img.onload = function () {
+                var MAX = 1100;
+                var scale = Math.min(1, MAX / Math.max(img.width, img.height));
+                var w = Math.round(img.width * scale);
+                var h = Math.round(img.height * scale);
+                var c = document.createElement("canvas");
+                c.width = w; c.height = h;
+                var ctx = c.getContext("2d");
+                ctx.drawImage(img, 0, 0, w, h);
+                var dataUrl = c.toDataURL("image/jpeg", 0.85);
+                pendingImg = { mime: "image/jpeg", data: dataUrl.split(",")[1] };
+                previewImg.src = dataUrl;
+                previewName.textContent = f.name;
+                preview.style.display = "flex";
+            };
+            img.onerror = clearImage;
+            img.src = reader.result;
+        };
+        reader.onerror = clearImage;
+        reader.readAsDataURL(f);
+    }
+
     var busy = false;
     function send() {
         var v = (input.value || "").trim();
-        if (!v || busy) return;
-        userSay(v);
+        var img = pendingImg;
+        if ((!v && !img) || busy) return;
+        userSay(v, img);
         input.value = "";
+        clearImage();
         busy = true;
         sendBtn.disabled = true;
         typing(true);
         setTimeout(function () {
-            answer(v).then(function (txt) {
+            answer(v, img).then(function (txt) {
                 typing(false);
                 botSay(txt);
             }).catch(function () {
@@ -322,12 +408,12 @@
         { keys: ["site", "panel", "kullan", "nasil", "nası", "rehber", "yardim", "nerede", "nerden", "nere", "buton", "sayfa"], fn: function () { return "Sana özel panel şöyle:\n📅 Takvim → Ders günleri ve özel günler\n📖 Ders Programı → Haftanın dersleri + canlı giriş\n📝 Ödevler → Verilen ödevler ve dosyaları\n🎯 Kişisel Plan → Kendi çalışma planını ekle\n🎬 Kayıtlar → Bitmiş derslerin videoları\nSağ alttaki bu sohbet de hep yanında!"; } }
     ];
 
-    function answer(q) {
+    function answer(q, img) {
         var n = norm(q);
         if (hasBad(q)) return Promise.resolve("Bu konuda sana yardım edemem. Derslerin ve site hakkında soru sorabilirsin! 🙂");
 
         var math = simpleMath(q);
-        if (math) return Promise.resolve(math);
+        if (math && !img) return Promise.resolve(math);
 
         var lessonWords = ["matemat", "fizik", "kimya", "biyolo", "turkce", "türkçe", "edebiyat", "ingiliz", "tarih", "cograf", "coğraf", "geometri", "bilgisayar", "fen", "muzik", "müzik", "din", "sosyal", "resim", "beden", "rehber"];
         var asksLesson = lessonWords.some(function (w) { return n.indexOf(w) !== -1; });
@@ -343,7 +429,8 @@
             }
         }
 
-        return geminiAsk(q).catch(function () {
+        return geminiAsk(q, img).catch(function () {
+            if (img) return "Görseldeki soruyu ben henüz yanıtlayamıyorum. 😔 Lütfen soruyu yazıyla da yazabilir misin?";
             return "Bu soruyu henüz öğrenmedim. Ders programın, ödevlerin ve site kullanımı hakkında bana sorabilirsin 😊\n\n(Opsiyonel: panelin ⚙ ayarlarından bir Gemini API anahtarı eklersen daha güçlü yapay zekâ da yanıtlayabilir.)";
         });
     }
@@ -369,22 +456,26 @@
         return "Hesapladım: " + m[1].replace(",", ".") + " " + m[2] + " " + m[3].replace(",", ".") + " = " + rStr;
     }
 
-    function geminiAsk(q) {
+    function geminiAsk(q, img) {
         var key = GEMINI_KEY || localStorage.getItem("ai_gemini_key") || "";
         if (!key) return Promise.reject(new Error("no-gemini-key"));
         var model = localStorage.getItem("ai_model") || GEMINI_MODEL;
-        var sys = "Sen ONLİNE PİHOS ilkokul/ortaokul öğrencilerine yardım eden okul asistanısın. Öğrencinin ders programı, ödevleri ve site kullanımı hakkında bildiğin kadarıyla yardım et; ayrıca matematik, fen ve okul dersleriyle ilgili sorularını, ödevlerini rahatça çöz. Kısa, sade, dostça, yaşına uygun Türkçe cevap ver. Zararlı, uygunsuz veya tehlikeli konuları kibarca reddet.";
+        var sys = "Sen ONLİNE PİHOS ilkokul/ortaokul öğrencilerine yardım eden okul asistanısın. Öğrencinin ders programı, ödevleri ve site kullanımı hakkında bildiğin kadarıyla yardım et; ayrıca matematik, fen ve okul dersleriyle ilgili sorularını, ödevlerini ve fotoğrafla gelen soruları rahatça çöz. Kısa, sade, dostça, yaşına uygun Türkçe cevap ver. Zararlı, uygunsuz veya tehlikeli konuları kibarca reddet.";
+        var parts = [];
+        if (q) parts.push({ text: q });
+        if (img) parts.push({ inline_data: { mime_type: img.mime, data: img.data } });
+        if (!parts.length) return Promise.reject(new Error("empty-request"));
         var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(key);
         return new Promise(function (resolve, reject) {
             var c = new AbortController();
-            var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 30000);
+            var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 40000);
             fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     systemInstruction: { parts: [{ text: sys }] },
-                    contents: [{ parts: [{ text: q }] }],
-                    generationConfig: { temperature: 0.5, maxOutputTokens: 500 }
+                    contents: [{ role: "user", parts: parts }],
+                    generationConfig: { temperature: 0.5, maxOutputTokens: 800 }
                 }),
                 signal: c.signal
             }).then(function (res) {
