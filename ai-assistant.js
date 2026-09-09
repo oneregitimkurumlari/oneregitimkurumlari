@@ -168,7 +168,7 @@
 
     function watchLogin() {
         setInterval(function () {
-            var logged = sessionStorage.getItem("siteLogged") === "1";
+            var logged = sessionStorage.getItem("siteLogged") === "true";
             fab.classList.toggle("ai-visible", !!logged);
             if (!logged && panel.classList.contains("ai-show")) toggleOpen(false);
         }, 800);
