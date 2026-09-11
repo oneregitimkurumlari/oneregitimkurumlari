@@ -264,10 +264,17 @@ function renderExams() {
             <div class="homework-meta">
                 <span><i class="fas fa-user"></i> ${esc(teacherName)}</span>
             </div>
-            <button class="homework-file" onclick="openExam('${jsEsc(exam.id)}')"><i class="fas fa-pen"></i> Sınava Gir</button>
+            <button class="homework-file" onclick="startExamTab('${jsEsc(exam.id)}')"><i class="fas fa-pen"></i> Sınava Gir</button>
         </div>`;
     }).join("");
 }
+
+window.startExamTab = function(id) {
+    if (!id) return;
+    const me = (cachedData.students || []).find(s => (s.name + " " + s.surname) === (sessionStorage.getItem("siteUser") || ""));
+    const stId = me ? me.id : "";
+    window.open(window.location.pathname + "?exam=" + encodeURIComponent(id) + (stId ? "&st=" + encodeURIComponent(stId) : ""), "_blank", "noopener,noreferrer");
+};
 
 async function openExam(examId) {
     const exam = cachedData.exams.find(e => e.id === examId);
@@ -303,9 +310,10 @@ function examStatusClass(i) {
 function renderExamRunner() {
     const st = examState;
     removeExamModal();
+    const full = document.body.classList.contains("exam-full");
     const overlay = document.createElement("div");
     overlay.id = "examModal";
-    overlay.className = "exam-modal";
+    overlay.className = full ? "exam-modal exam-page" : "exam-modal";
 
     const finishBtn = st.done
         ? '<span class="exam-done-tag"><i class="fas fa-check-circle"></i> Sınav Tamamlandı</span>'
@@ -323,9 +331,10 @@ function renderExamRunner() {
                     <button class="exam-close" onclick="closeExam()"><i class="fas fa-times"></i></button>
                 </div>
             </div>
-            <div class="exam-modal-body">
-                <div class="exam-left">${renderQuestionPane()}</div>
-                <div class="exam-right">${renderOptionsPane()}</div>
+            <div class="exam-body">
+                <div class="exam-question-area">${renderQuestionPane()}</div>
+                <div class="exam-options-area">${renderOptionsPane()}</div>
+                <div class="exam-numbers-area">${renderNavPane()}</div>
             </div>
         </div>`;
     document.body.appendChild(overlay);
@@ -347,6 +356,21 @@ function renderQuestionPane() {
     else if (st.dirty[i] !== undefined) badge = '<span class="exam-badge dirty">Seçildi, kaydedilmedi</span>';
     else badge = '<span class="exam-badge empty">Boş</span>';
 
+    return `
+        <div class="exam-qhead">
+            <span>Soru ${i + 1} / ${n}</span>
+            ${badge}
+        </div>
+        <div class="exam-qtext">${esc(q.text)}</div>
+        ${q.image ? `<img src="${q.image}" class="exam-qimg" alt="Soru ${i + 1}">` : ""}`;
+}
+
+function renderNavPane() {
+    const st = examState;
+    if (!st) return "";
+    const i = st.qi;
+    const n = st.exam.questions.length;
+
     let navList = "";
     for (let j = 0; j < n; j++) {
         navList += `<button class="exam-q-btn ${examStatusClass(j)} ${j === i ? "active" : ""}" onclick="goToQuestion(${j})">${j + 1}</button>`;
@@ -354,13 +378,7 @@ function renderQuestionPane() {
 
     const legend = st.done ? "" : '<div class="exam-legend"><span class="dot saved"></span> Kayıtlı <span class="dot dirty"></span> Seçildi <span class="dot empty"></span> Boş</div>';
 
-    return `
-        <div class="exam-qhead">
-            <span>Soru ${i + 1} / ${n}</span>
-            ${badge}
-        </div>
-        <div class="exam-qtext">${esc(q.text)}</div>
-        ${q.image ? `<img src="${q.image}" class="exam-qimg" alt="Soru ${i + 1}">` : ""}
+    return `<div class="exam-nav-title">Sorular</div>
         <div class="exam-nav-list">${navList}</div>
         ${legend}`;
 }
@@ -392,9 +410,12 @@ function renderOptionsPane() {
     return `
         <div class="exam-opt-title">Şıklar</div>
         <div class="exam-options">${opts}</div>
-        ${saveRow}
-        <div class="exam-nav-row">${prev}${next}</div>
-        ${finish}`;
+        <div class="exam-control-row">
+            ${prev}
+            ${saveRow}
+            ${next}
+            ${finish}
+        </div>`;
 }
 
 function pickOption(j) {
@@ -499,6 +520,7 @@ function goToQuestion(i) {
 function closeExam() {
     removeExamModal();
     examState = null;
+    if (document.body.classList.contains("exam-full")) { window.close(); return; }
     if (renderExams) renderExams();
 }
 
@@ -1180,6 +1202,11 @@ function showHomeWorkDetail(title, desc, url) {
 }
 
 function initSite() {
+    const examParam = new URLSearchParams(window.location.search).get("exam");
+    if (examParam) {
+        document.body.classList.add("exam-full");
+        openExam(examParam);
+    }
     renderSchedule();
     renderRecordings();
     renderHomework();
@@ -1218,6 +1245,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     const q = new URLSearchParams(window.location.search);
     if (q.get("expired") === "1" && document.getElementById("siteErrorMsg")) {
         document.getElementById("siteErrorMsg").textContent = "Oturum süreniz doldu veya başka bir cihazdan giriş yapıldı. Lütfen tekrar giriş yapın.";
+    }
+
+    if (q.get("exam") && q.get("st") && !sessionStorage.getItem("siteLogged")) {
+        const st = (cachedData.students || []).find(s => String(s.id) === String(q.get("st")));
+        if (st) {
+            sessionStorage.setItem("siteLogged", "true");
+            sessionStorage.setItem("siteUser", st.name + " " + st.surname);
+            sessionStorage.setItem("siteLoginAt", String(Date.now()));
+            sessionStorage.setItem("siteToken", "dev" + Date.now().toString(36) + Math.random().toString(36).substr(2, 8));
+            siteSessionWrite(cachedData);
+        }
     }
 
     if (sessionStorage.getItem("siteLogged") === "true") {
