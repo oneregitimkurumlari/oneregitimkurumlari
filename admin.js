@@ -914,14 +914,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 r.readAsDataURL(file);
             });
             const base64 = dataUrl.split(",")[1];
+            if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js";
 
             const payload = {
-                systemInstruction: { parts: [{ text: "Sen bir sınav soru çıkarıcısın. PDF'teki test sorularını 4 şıklı (A,B,C,D) çoktan seçmeli sorulara çevirirsin. PDF'te şıklar yoksa kendin 4 makul şık üretirsin. DOĞRU CEVABI ASLA BELİRLEMEZ VE YAZMAZSIN; cevaplar öğretmen tarafından elle girilir. Çıktı yalnızca JSON dizisidir, başka hiçbir şey yazmazsın." }] },
+                systemInstruction: { parts: [{ text: "Sen bir sınav soru çıkarıcısısın. PDF'teki test sorularını 4 şıklı (A,B,C,D) çoktan seçmeli sorulara çevirirsin. PDF'te şıklar yoksa kendin 4 makul şık üretirsin. DOĞRU CEVABI ASLA BELİRLEMEZ VE YAZMAZSIN; cevaplar öğretmen tarafından elle girilir. Çıktı yalnızca JSON dizisidir, başka hiçbir şey yazmazsın. Resimli sorularda resmin PDF içindeki yeri (page ve bbox) JSON'a eklenir; resmi asla yeniden üretme, sadece konumunu bildir." }] },
                 contents: [{ parts: [
                     { inline_data: { mime_type: "application/pdf", data: base64 } },
-                    { text: "Bu PDF'teki her soruyu şu formatta JSON dizisi olarak döndür: [{\"text\":\"soru metni\",\"options\":[\"A şıkkı\",\"B şıkkı\",\"C şıkkı\",\"D şıkkı\"]}] - answer alanı ekleme." }
+                    { text: "Bu PDF'teki her soruyu şu formatta JSON dizisi olarak döndür: [{\"text\":\"soru metni\",\"options\":[\"A şıkkı\",\"B şıkkı\",\"C şıkkı\",\"D şıkkı\"]}] - answer alanı ekleme. Soruyu tamamlayan bir resim varsa bu soruya \"page\": <sayfa no, 1'den başlar> ve \"bbox\": {\"x\":0,\"y\":0,\"w\":200,\"h\":100} alanlarını ekle. Koordinatlar PDF nokta biriminde (72 DPI), sol üst köşe 0,0 kabul edilir; resmi olabildiğince sıkı çevreleyen kutu gir. Resim yoksa page/bbox alanlarını EKLEME." }
                 ] }],
-                generationConfig: { temperature: 0.1 }
+                generationConfig: { temperature: 0.1, maxOutputTokens: 65536 }
             };
 
             const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=" + GEMINI_KEY, {
@@ -936,11 +937,25 @@ document.addEventListener("DOMContentLoaded", () => {
             const list = JSON.parse(m ? m[0] : text);
             if (!Array.isArray(list) || list.length === 0) throw new Error("Soru bulunamadı");
 
-            const questions = list.slice(0, 50).map(q => ({
-                text: String(q.text || "").trim(),
-                options: Array.isArray(q.options) ? ["", "", "", ""].map((_, i) => String(q.options[i] || "").trim()) : ["", "", "", ""],
-                answer: 0
-            })).filter(q => q.text);
+            const questions = [];
+            const cap = Math.min(list.length, 150);
+            for (let qi = 0; qi < cap; qi++) {
+                const raw = list[qi];
+                const q = {
+                    text: String(raw.text || "").trim(),
+                    options: Array.isArray(raw.options) ? ["", "", "", ""].map((_, i) => String(raw.options[i] || "").trim()) : ["", "", "", ""],
+                    answer: 0,
+                    image: ""
+                };
+                if (!q.text) continue;
+                if (raw.bbox && raw.page) {
+                    status.textContent = "Görseller işleniyor: " + (questions.length + 1) + " / " + cap + "...";
+                    try {
+                        q.image = await cropPdfImage(base64, raw.page, raw.bbox);
+                    } catch (err) { q.image = ""; }
+                }
+                questions.push(q);
+            }
 
             if (questions.length === 0) throw new Error("Soru bulunamadı");
 
@@ -956,6 +971,33 @@ document.addEventListener("DOMContentLoaded", () => {
             btn.disabled = false;
         }
     });
+
+    function base64ToU8(b64) {
+        const bin = atob(b64);
+        const u = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+        return u;
+    }
+
+    async function cropPdfImage(base64, pageNum, bbox) {
+        const lib = window.pdfjsLib;
+        if (!lib || !pageNum || !bbox) return "";
+        const pdf = await lib.getDocument({ data: base64ToU8(base64) }).promise;
+        if (!pdf || pdf.numPages < pageNum) return "";
+        const page = await pdf.getPage(pageNum);
+        const vp = page.getViewport({ scale: 1 });
+        const x = Math.max(0, Math.min(vp.width - 1, Number(bbox.x) || 0));
+        const y = Math.max(0, Math.min(vp.height - 1, Number(bbox.y) || 0));
+        const w = Math.min(vp.width - x, Math.max(1, Number(bbox.w) || 0));
+        const h = Math.min(vp.height - y, Math.max(1, Number(bbox.h) || 0));
+        const scale = Math.min(2.5, 900 / Math.max(w, 1));
+        const cv = document.createElement("canvas");
+        cv.width = Math.max(2, Math.round(w * scale));
+        cv.height = Math.max(2, Math.round(h * scale));
+        const ctx = cv.getContext("2d");
+        await page.render({ canvasContext: ctx, viewport: vp, transform: [scale, 0, 0, scale, -x * scale, -y * scale] }).promise;
+        return cv.toDataURL("image/jpeg", 0.72);
+    }
 
     function renderExamQuestions(questions) {
         const wrap = document.getElementById("examQuestions");
