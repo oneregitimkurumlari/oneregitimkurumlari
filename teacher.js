@@ -573,6 +573,75 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     /* ============ Sınav Yönetimi ============ */
+    const GEMINI_KEY = atob("QVEuQWI4Uk42S3JsTTZCcWlVczF3S2NmUVUxMXAzZ0xsdVVKY3NZZ3lZOG9xRFJ0bjJjUlE=");
+
+    document.getElementById("pdfImportBtn").addEventListener("click", () => {
+        document.getElementById("pdfInput").click();
+    });
+
+    document.getElementById("pdfInput").addEventListener("change", async (e) => {
+        const file = e.target.files && e.target.files[0];
+        e.target.value = "";
+        if (!file) return;
+        if (file.type !== "application/pdf") { showError("Lütfen bir PDF dosyası seçin."); return; }
+        if (file.size > 25 * 1024 * 1024) { showError("PDF 25 MB'tan küçük olmalı."); return; }
+
+        const status = document.getElementById("pdfStatus");
+        const btn = document.getElementById("pdfImportBtn");
+        btn.disabled = true;
+        status.textContent = "PDF okunuyor, sorular çıkarılıyor...";
+
+        try {
+            const dataUrl = await new Promise((resolve, reject) => {
+                const r = new FileReader();
+                r.onload = () => resolve(r.result);
+                r.onerror = () => reject(new Error("Dosya okunamadı"));
+                r.readAsDataURL(file);
+            });
+            const base64 = dataUrl.split(",")[1];
+
+            const payload = {
+                systemInstruction: { parts: [{ text: "Sen bir sınav soru çıkarıcısın. PDF'teki test sorularını 4 şıklı (A,B,C,D) çoktan seçmeli sorulara çevirirsin. Doğru şıkkın indeksini answer alanına yazarsın (A=0, B=1, C=2, D=3). PDF'te şıklar yoksa kendin 4 makul şık üretirsin. Çıktı yalnızca JSON dizisidir, başka hiçbir şey yazmazsın." }] },
+                contents: [{ parts: [
+                    { inline_data: { mime_type: "application/pdf", data: base64 } },
+                    { text: "Bu PDF'teki her soruyu şu formatta JSON dizisi olarak döndür: [{\"text\":\"soru metni\",\"options\":[\"A şıkkı\",\"B şıkkı\",\"C şıkkı\",\"D şıkkı\"],\"answer\":0}]" }
+                ] }],
+                generationConfig: { temperature: 0.1 }
+            };
+
+            const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=" + GEMINI_KEY, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) throw new Error("AI servis hatası (" + res.status + ")");
+            const j = await res.json();
+            const text = ((j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || []).map(p => p.text).join("");
+            const m = text.match(/\[[\s\S]*\]/);
+            const list = JSON.parse(m ? m[0] : text);
+            if (!Array.isArray(list) || list.length === 0) throw new Error("Soru bulunamadı");
+
+            const questions = list.slice(0, 50).map(q => ({
+                text: String(q.text || "").trim(),
+                options: Array.isArray(q.options) ? ["", "", "", ""].map((_, i) => String(q.options[i] || "").trim()) : ["", "", "", ""],
+                answer: typeof q.answer === "number" ? q.answer : 0
+            })).filter(q => q.text);
+
+            if (questions.length === 0) throw new Error("Soru bulunamadı");
+
+            const wrap = document.getElementById("examQuestions");
+            wrap.innerHTML = "";
+            questions.forEach(q => addExamQuestionRow(q));
+            status.textContent = questions.length + " soru eklendi ✓";
+            showToast(questions.length + " soru PDF'ten alındı. Kontrol edip kaydedin.");
+        } catch (err) {
+            status.textContent = "";
+            showError("PDF okunamadı: " + err.message);
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
     function renderExamQuestions(questions) {
         const wrap = document.getElementById("examQuestions");
         wrap.innerHTML = "";
