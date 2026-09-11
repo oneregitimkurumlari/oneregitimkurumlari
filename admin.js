@@ -1193,7 +1193,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const counts = readBranchCounts();
         const totalBranch = OPTIK_SUBJECT_DEFS.reduce((t, s) => t + (counts[s.id] || 0), 0);
-        if (totalBranch === 0) { showError("Branşlara göre soru sayısı girilmelidir (optik form için)."); return; }
         if (totalBranch !== questions.length) {
             showError("Branş soru sayılarının toplamı (" + totalBranch + ") ile eklenen soru sayısı (" + questions.length + ") uyuşmuyor. Cevap kaymasını önlemek için düzeltin.");
             return;
