@@ -7,7 +7,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: https:; media-src https: blob: data:; connect-src 'self' https://one-egitim-default-rtdb.firebaseio.com https://upload.gofile.io https://api.github.com https://raw.githubusercontent.com https://generativelanguage.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests">
     <meta name="referrer" content="no-referrer">
     <title>ONLİNE PİHOS - Yönetim Paneli</title>
-    <link rel="stylesheet" href="admin.css?v=6">
+    <link rel="stylesheet" href="admin.css?v=7">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="transition.css">
@@ -60,6 +60,9 @@
             </button>
             <button class="sidebar-btn" data-section="exams">
                 <i class="fas fa-clipboard-list"></i> Sınavlar
+            </button>
+            <button class="sidebar-btn" data-section="optik">
+                <i class="fas fa-hashtag"></i> Optik Form
             </button>
             <button class="sidebar-btn" data-section="settings">
                 <i class="fas fa-cog"></i> Ayarlar
@@ -380,6 +383,16 @@
                                 <input type="email" id="studentEmail" placeholder="ornek@email.com">
                             </div>
                         </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Okul Numarası</label>
+                                <input type="text" id="studentNo" placeholder="Örn: 1205" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                            </div>
+                            <div class="form-group">
+                                <label>TC Kimlik No</label>
+                                <input type="text" id="studentTcno" placeholder="Örn: 12345678901" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                            </div>
+                        </div>
                         <div class="form-actions">
                             <button type="submit" class="btn-save">
                                 <i class="fas fa-save"></i> Kaydet
@@ -504,13 +517,19 @@
                                 <input type="text" id="examSubject" placeholder="Örn: Matematik" required>
                             </div>
                         </div>
-                        <div class="form-row">
+<div class="form-row">
                             <div class="form-group">
                                 <label>Açıklama (isteğe bağlı)</label>
                                 <input type="text" id="examDesc" placeholder="Örn: 10 soru, her soru için Kaydet'e basılmalı">
                             </div>
                         </div>
-<h4 style="margin:16px 0 6px;color:var(--text);">Sorular</h4>
+                        <div class="form-group" style="margin-top:12px;">
+                            <label style="font-weight:700;">Branşlara Göre Soru Sayıları</label>
+                            <p style="font-size:0.78rem;color:var(--text-light);margin-top:2px;">Sınavı kaydetmeden önce her branş için soru sayısı girilmelidir. Öğrenci cevapları bu sayılara göre optik TXT'te sıralanır; eksik/fazla girilirse kayma olur ve sonuçlar yanlış çıkar.</p>
+                            <div id="branchCounts" style="display:flex;flex-direction:column;gap:8px;margin-top:10px;"></div>
+                            <div id="branchRangePreview" style="margin-top:12px;padding:10px 12px;background:var(--bg-light);border-radius:8px;font-size:0.82rem;color:var(--text-medium);line-height:1.8;white-space:pre-line;"></div>
+                        </div>
+                        <h4 style="margin:16px 0 6px;color:var(--text);">Sorular</h4>
                     <div class="pdf-import-row" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
                         <button type="button" class="btn-add" id="pdfImportBtn" style="background:var(--bg-light);color:var(--text);border:1px dashed var(--border);">
                             <i class="fas fa-file-pdf"></i> PDF'ten Soruları Getir
@@ -555,6 +574,32 @@
                 </div>
             </div>
 
+            <div class="section-page" id="optikPage">
+                <div class="page-header">
+                    <h3>Optik Form Tanımları</h3>
+                    <button class="btn-save" id="optikSaveBtn">
+                        <i class="fas fa-save"></i> Kaydet
+                    </button>
+                </div>
+
+                <div class="form-panel">
+                    <h3>Optik Form Yerleşimi</h3>
+                    <p style="font-size:0.82rem;color:var(--text-medium);margin-top:4px;">
+                        Öğrenci cevapları bu aralıklara göre otomatik TXT formatına yazılır. Başlangıç ve bitişe sadece sayı girilir.
+                    </p>
+
+                    <div class="optik-top">
+                        <span class="optik-top-label">Üstte</span>
+                        <label>Başlangıç</label>
+                        <input type="text" id="optikBaslangic" inputmode="numeric" oninput="numericOnly(this)">
+                        <label>Bitiş</label>
+                        <input type="text" id="optikBitis" inputmode="numeric" oninput="numericOnly(this)">
+                    </div>
+
+                    <div id="optikFields" style="margin-top:14px;"></div>
+                </div>
+            </div>
+
             <div class="section-page" id="settingsPage">
                 <h3>Site Ayarları</h3>
                 <div class="settings-grid">
@@ -593,7 +638,7 @@
     </main>
 </div>
 
-<script src="admin.js?v=7"></script>
+<script src="admin.js?v=8"></script>
 <script src="transition.js"></script>
 <script>
 (function(){

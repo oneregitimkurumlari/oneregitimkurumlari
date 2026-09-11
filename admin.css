@@ -559,3 +559,34 @@ html.dark .exam-q-box .qq-opt:focus { border-color: var(--primary); }
 html.dark .exam-q-box .qq-letter { background: #422006; color: #fbbf24; }
 html.dark .qq-answer-row { border-top-color: #334155; }
 html.dark .qq-answer-row select { background: var(--navy); border-color: #334155; color: #fbbf24; }
+
+/* ============ Optik Form Tanımları ============ */
+.optik-top {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--primary-light, #fef3c7);
+    border: 1px solid rgba(192,144,32,.35);
+    border-radius: var(--radius-sm); padding: 14px 16px; margin-top: 14px;
+}
+.optik-top .optik-top-label { font-weight: 800; color: var(--primary-dark, #92400e); font-size: 0.85rem; text-transform: uppercase; }
+.optik-top label { font-size: 0.82rem; font-weight: 600; color: var(--text-medium); }
+.optik-top input, .optik-range input, .branch-count {
+    width: 90px; padding: 8px 10px; border: 2px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 0.9rem; color: var(--text); background: var(--bg-white); box-sizing: border-box;
+}
+.optik-top input:focus, .optik-range input:focus, .branch-count:focus { border-color: var(--primary); outline: none; }
+.optik-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 16px; margin-top: 8px;
+    background: var(--bg-white); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.optik-row.subject { background: var(--primary-light, #fef3c7); border-color: rgba(192,144,32,.35); }
+.optik-row .optik-label { font-size: 0.9rem; font-weight: 600; color: var(--text); }
+.optik-range { display: flex; align-items: center; gap: 8px; }
+.optik-range .optik-dash { color: var(--text-light); }
+.branch-count { width: 80px; }
+html.dark .optik-row { background: var(--navy-light); border-color: #334155; }
+html.dark .optik-row.subject { background: #422006; border-color: #78350f; }
+html.dark .optik-top { background: #422006; border-color: #78350f; }
+html.dark .optik-top .optik-top-label { color: #fbbf24; }
+html.dark .optik-top input, html.dark .optik-range input, html.dark .branch-count { background: var(--navy); border-color: #334155; color: #e2e8f0; }
+html.dark #branchRangePreview { background: var(--navy-light); color: #cbd5e1; }

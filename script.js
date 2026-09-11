@@ -411,19 +411,49 @@ async function saveAnswer() {
         return;
     }
     try {
+        st.answers[st.qi] = val;
+        delete st.dirty[st.qi];
         const res = await fetch(examResultURL(st.exam.id), {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ answers: st.answers, done: st.done, updatedAt: Date.now() })
+            body: JSON.stringify({ answers: st.answers, done: st.done, txt: buildOptikTxt(), updatedAt: Date.now() })
         });
         if (!res.ok) throw new Error("http " + res.status);
-        st.answers[st.qi] = val;
-        delete st.dirty[st.qi];
         renderExamRunner();
         showDownloadToast("Soru kaydedildi ✓");
     } catch (e) {
         alert("Soru kaydedilemedi. Veri bağlantısını kontrol edin.");
     }
+}
+
+function buildOptikTxt() {
+    const st = examState;
+    if (!st || !st.exam) return "";
+    const branches = st.exam.branches || [];
+    if (branches.length === 0) return "";
+    const letters = ["A", "B", "C", "D"];
+    let offset = 0;
+    const segs = branches.map(b => {
+        let seg = "";
+        for (let k = 0; k < (b.soruSayisi || 0); k++) {
+            const qi = offset + k;
+            const a = st.answers[qi];
+            seg += (a === undefined || letters[a] === undefined) ? "-" : letters[a];
+        }
+        offset += (b.soruSayisi || 0);
+        return seg;
+    });
+
+    let isim = "", no = "", tcno = "";
+    const uname = sessionStorage.getItem("siteUser") || "";
+    const me = (cachedData.students || []).find(s => (s.name + " " + s.surname) === uname);
+    if (me) {
+        isim = me.name + " " + me.surname;
+        no = me.no || "";
+        tcno = me.tcno || "";
+    }
+    const kitapcik = "A";
+    return [tcno, isim, no, kitapcik].concat(segs).join(";");
 }
 
 function finishExam() {
@@ -436,7 +466,7 @@ function finishExam() {
     fetch(examResultURL(st.exam.id), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: st.answers, done: true, updatedAt: Date.now() })
+        body: JSON.stringify({ answers: st.answers, done: true, txt: buildOptikTxt(), updatedAt: Date.now() })
     }).then(res => {
         if (!res.ok) throw new Error("http " + res.status);
         st.done = true;

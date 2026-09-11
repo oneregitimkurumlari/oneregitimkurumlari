@@ -4,7 +4,7 @@ const DATA_URL = FIREBASE_URL + "/.json";
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function jsEsc(s) { return String(s == null ? "" : s).replace(/\\/g, "\\\\").replace(/'/g, "\\'"); }
 
-let remoteData = { teachers: [], classes: [], students: [], homeworks: [], exams: [] };
+let remoteData = { teachers: [], classes: [], students: [], homeworks: [], exams: [], optik: null };
 let deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set(), exams: new Set() };
 
 let recState = { recording: false, classId: null, mediaRecorder: null, chunks: [], stream: null, startedAt: null };
@@ -154,6 +154,7 @@ async function fetchRemoteData() {
         remoteData.students = json.students || [];
         remoteData.homeworks = json.homeworks || [];
         remoteData.exams = json.exams || [];
+        remoteData.optik = json.optik || null;
         deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set(), exams: new Set() };
         return true;
     } catch (e) {
@@ -183,13 +184,15 @@ async function saveRemoteData() {
         remoteData.students = mergeArrays(serverData.students, remoteData.students, deletedIds.students);
         remoteData.homeworks = mergeArrays(serverData.homeworks, remoteData.homeworks || [], deletedIds.homeworks);
         remoteData.exams = mergeArrays(serverData.exams, remoteData.exams || [], deletedIds.exams);
+        remoteData.optik = serverData.optik !== undefined ? serverData.optik : (remoteData.optik || null);
 
         const payload = {
             teachers: remoteData.teachers,
             classes: remoteData.classes,
             students: remoteData.students,
             homeworks: remoteData.homeworks,
-            exams: remoteData.exams
+            exams: remoteData.exams,
+            optik: remoteData.optik
         };
 
         const res = await fetchWithTimeout(FIREBASE_URL + "/.json", {
@@ -276,6 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderClasses(teacherId);
         renderHomework(teacherId);
         renderExams(teacherId);
+        renderOptik();
         initNavigation();
         setInterval(() => { renderClasses(teacherId); }, 30000);
     }
@@ -703,6 +707,43 @@ document.addEventListener("DOMContentLoaded", () => {
         return questions;
     }
 
+    /* Branş soru sayıları */
+    function renderBranchCounts(counts) {
+        const wrap = document.getElementById("branchCounts");
+        const c = counts || {};
+        wrap.innerHTML = OPTIK_SUBJECT_DEFS.map(s => `
+            <div style="display:flex;align-items:center;gap:10px;">
+                <label style="flex:1;font-size:0.88rem;color:var(--text);" title="${esc(s.label)}">${esc(s.label)}</label>
+                <input type="text" class="branch-count" data-branch="${s.id}" placeholder="0" inputmode="numeric"
+                       oninput="numericOnly(this);updateBranchPreview()" value="${c[s.id] !== undefined ? c[s.id] : ""}">
+            </div>`).join("");
+        updateBranchPreview();
+    }
+
+    function readBranchCounts() {
+        const res = {};
+        document.querySelectorAll("#branchCounts .branch-count").forEach(inp => {
+            res[inp.dataset.branch] = parseInt(inp.value || "0", 10);
+        });
+        return res;
+    }
+
+    window.updateBranchPreview = function() {
+        const counts = readBranchCounts();
+        const pre = document.getElementById("branchRangePreview");
+        let start = 1;
+        let total = 0;
+        const lines = [];
+        OPTIK_SUBJECT_DEFS.forEach(s => {
+            const cnt = counts[s.id] || 0;
+            total += cnt;
+            const last = cnt > 0 ? start + cnt - 1 : start - 1;
+            lines.push(s.label + ": " + cnt + " soru" + (cnt > 0 ? " (cevap " + start + "-" + last + ")" : " (boş)"));
+            start += cnt;
+        });
+        pre.textContent = lines.join("\n") + "\nToplam: " + total + " soru";
+    };
+
     document.getElementById("addExamBtn").addEventListener("click", () => {
         document.getElementById("examForm").style.display = "block";
         document.getElementById("examFormTitle").textContent = "Yeni Sınav Ekle";
@@ -710,6 +751,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("editExamId").value = "";
         const wrap = document.getElementById("examQuestions");
         wrap.innerHTML = "";
+        renderBranchCounts({});
         addExamQuestionRow(null);
         document.getElementById("examTitle").focus();
     });
@@ -728,7 +770,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const subject = document.getElementById("examSubject").value.trim();
         if (!title || !subject) { showError("Sınav başlığı ve ders zorunludur."); return; }
 
-        const examData = { title, subject, description: document.getElementById("examDesc").value.trim(), questions, teacherId: currentTeacher };
+        const counts = readBranchCounts();
+        const totalBranch = OPTIK_SUBJECT_DEFS.reduce((t, s) => t + (counts[s.id] || 0), 0);
+        if (totalBranch === 0) { showError("Branşlara göre soru sayısı girilmelidir (optik form için)."); return; }
+        if (totalBranch !== questions.length) {
+            showError("Branş soru sayılarının toplamı (" + totalBranch + ") ile eklenen soru sayısı (" + questions.length + ") uyuşmuyor. Cevap kaymasını önlemek için düzeltin.");
+            return;
+        }
+        const branches = OPTIK_SUBJECT_DEFS.filter(s => (counts[s.id] || 0) > 0).map(s => ({ id: s.id, label: s.label, soruSayisi: counts[s.id] }));
+
+        const examData = { title, subject, description: document.getElementById("examDesc").value.trim(), questions, branches, teacherId: currentTeacher };
         if (editId) {
             const idx = (remoteData.exams || []).findIndex(x => x.id === editId);
             if (idx !== -1) remoteData.exams[idx] = { ...remoteData.exams[idx], ...examData };
@@ -764,11 +815,92 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td>${(x.questions || []).length}</td>
                 <td>${formatDate(x.createdAt)}</td>
                 <td class="actions-cell">
+                    <button class="btn-edit" onclick="showExamResults('${jsEsc(x.id)}')" title="Sonuçlar"><i class="fas fa-list-alt"></i></button>
                     <button class="btn-edit" onclick="editExam('${jsEsc(x.id)}')"><i class="fas fa-edit"></i></button>
                     <button class="btn-delete" onclick="deleteExam('${jsEsc(x.id)}')"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`).join("");
     }
+
+    window.showExamResults = async function(examId) {
+        const exam = (remoteData.exams || []).find(x => x.id === examId);
+        if (!exam) return;
+        try {
+            const res = await fetchWithTimeout(FIREBASE_URL + "/_examResults/" + examId + ".json?t=" + Date.now(), { cache: "no-store" });
+            const data = res.ok ? await res.json() : null;
+            const list = [];
+            if (data) {
+                Object.keys(data).forEach(k => {
+                    const r = data[k] || {};
+                    const st = (remoteData.students || []).find(s => s.id === k) || (remoteData.students || []).find(s => (s.name + " " + s.surname) === r.name);
+                    list.push({
+                        name: st ? (st.name + " " + st.surname) : (r.studentName || "Bilinmiyor"),
+                        no: st ? (st.no || "") : "",
+                        txt: r.txt || "",
+                        done: !!r.done,
+                        updatedAt: r.updatedAt || 0
+                    });
+                });
+            }
+            const doneList = list.filter(x => x.done).sort((a, b) => (a.no || "") < (b.no || "") ? -1 : 1);
+            const header = "TcNo;AdSoyad;Numara;Kitapcik;Turkce;Matematik;FenBilimleri;Inkilap;Din;YabanciDil";
+            const allTxt = header + "\n" + doneList.map(x => x.txt).join("\n");
+
+            const ov = document.createElement("div");
+            ov.id = "examResultsModal";
+            ov.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;";
+            ov.innerHTML = `
+                <div style="width:100%;max-width:760px;max-height:85vh;overflow:auto;background:#fff;border-radius:14px;padding:22px;box-shadow:0 25px 50px -12px rgba(0,0,0,.4);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;">
+                        <h3 style="margin:0;color:#0f172a;">${esc(exam.title)} — Sonuçlar</h3>
+                        <button style="border:none;background:none;font-size:1.2rem;cursor:pointer;color:#94a3b8;" onclick="document.getElementById('examResultsModal').remove()">✕</button>
+                    </div>
+                    <p style="font-size:0.82rem;color:#64748b;margin-bottom:10px;">Sınavı bitirmiş öğrencilerin optik TXT kayıtları:</p>
+                    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+                        <button class="btn-save" onclick="downloadExamTxt('${jsEsc(exam.id)}')"><i class="fas fa-download"></i> Tüm TXT'leri İndir (.txt)</button>
+                        <button class="btn-save" onclick="copyExamTxt('${jsEsc(exam.id)}')" style="background:#475569;"><i class="fas fa-copy"></i> Kopyala</button>
+                    </div>
+                    <div id="examResultsList"></div>
+                </div>`;
+            document.body.appendChild(ov);
+
+            const listEl = document.getElementById("examResultsList");
+            if (doneList.length === 0) {
+                listEl.innerHTML = '<p style="color:#94a3b8;font-size:0.9rem;">Henüz sınavı bitiren öğrenci yok.</p>';
+            } else {
+                listEl.innerHTML = doneList.map(x => `
+                    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:10px;background:#f8fafc;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+                            <strong style="color:#0f172a;font-size:0.95rem;">${esc(x.name)}${x.no ? " · No: " + esc(x.no) : ""}</strong>
+                            <span style="font-size:0.75rem;color:#64748b;">${new Date(x.updatedAt).toLocaleString("tr-TR")}</span>
+                        </div>
+                        <code style="display:block;padding:10px 12px;background:#0f172a;color:#a5f3fc;border-radius:8px;font-size:0.78rem;white-space:pre-wrap;word-break:break-all;">${esc(x.txt || "(TXT yok)")}</code>
+                    </div>`).join("");
+                window.__examTxtAll = allTxt;
+            }
+        } catch (e) {
+            showError("Sonuçlar okunamadı: " + e.message);
+        }
+    };
+
+    window.copyExamTxt = function() {
+        if (!window.__examTxtAll) return;
+        const p = navigator.clipboard ? navigator.clipboard.writeText(window.__examTxtAll) : Promise.resolve();
+        p.then(() => showToast("TXT panoya kopyalandı!")).catch(() => {});
+    };
+
+    window.downloadExamTxt = function() {
+        if (!window.__examTxtAll) return;
+        const blob = new Blob([window.__examTxtAll], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "optik_sonuclar.txt";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
 
     window.editExam = function(id) {
         const x = (remoteData.exams || []).find(y => y.id === id);
@@ -779,6 +911,9 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("examTitle").value = x.title || "";
         document.getElementById("examSubject").value = x.subject || "";
         document.getElementById("examDesc").value = x.description || "";
+        const counts = {};
+        (x.branches || []).forEach(b => { counts[b.id] = b.soruSayisi; });
+        renderBranchCounts(counts);
         renderExamQuestions(x.questions);
     };
 
@@ -793,6 +928,69 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     };
+
+    /* ============ Optik Form Tanımları ============ */
+    const OPTIK_FIELDS = [
+        { id: "isim", label: "İsim" },
+        { id: "tcno", label: "TC Kimlik No" },
+        { id: "numara", label: "Numara" },
+        { id: "kitapcik", label: "Kitapçık" },
+        { id: "turkce", label: "Türkçe" },
+        { id: "matematik", label: "Matematik" },
+        { id: "fen", label: "Fen Bilimleri" },
+        { id: "inkilap", label: "T.C. İnkılap Tarihi ve Atatürkçülük" },
+        { id: "din", label: "Din Kültürü ve Ahlak Bilgisi" },
+        { id: "yabanci", label: "Yabancı Dil" }
+    ];
+    const OPTIK_SUBJECT_DEFS = [
+        { id: "turkce", label: "Türkçe" },
+        { id: "matematik", label: "Matematik" },
+        { id: "fen", label: "Fen Bilimleri" },
+        { id: "inkilap", label: "T.C. İnkılap Tarihi ve Atatürkçülük" },
+        { id: "din", label: "Din Kültürü ve Ahlak Bilgisi" },
+        { id: "yabanci", label: "Yabancı Dil" }
+    ];
+
+    window.numericOnly = function(el) { el.value = el.value.replace(/[^0-9]/g, ""); };
+
+    function renderOptik() {
+        const o = remoteData.optik || {};
+        document.getElementById("optikBaslangic").value = o.baslangic || "";
+        document.getElementById("optikBitis").value = o.bitis || "";
+        const stored = {};
+        (o.fields || []).forEach(f => { stored[f.id] = { baslangic: f.baslangic, bitis: f.bitis }; });
+        const wrap = document.getElementById("optikFields");
+        wrap.innerHTML = OPTIK_FIELDS.map(f => {
+            const s = stored[f.id] || {};
+            const rowClass = OPTIK_SUBJECT_DEFS.some(x => x.id === f.id) ? "optik-row subject" : "optik-row";
+            return `<div class="${rowClass}">
+                <label class="optik-label" title="${esc(f.label)}">${esc(f.label)}</label>
+                <div class="optik-range">
+                    <input type="text" class="optik-bs" id="optikBs-${f.id}" placeholder="Başlangıç" inputmode="numeric" oninput="numericOnly(this)" value="${s.baslangic || ""}">
+                    <span class="optik-dash">–</span>
+                    <input type="text" class="optik-bt" id="optikBt-${f.id}" placeholder="Bitiş" inputmode="numeric" oninput="numericOnly(this)" value="${s.bitis || ""}">
+                </div>
+            </div>`;
+        }).join("");
+    }
+
+    document.getElementById("optikSaveBtn").addEventListener("click", async () => {
+        remoteData.optik = {
+            baslangic: parseInt(document.getElementById("optikBaslangic").value || "0", 10),
+            bitis: parseInt(document.getElementById("optikBitis").value || "0", 10),
+            fields: OPTIK_FIELDS.map(f => ({
+                id: f.id,
+                label: f.label,
+                baslangic: parseInt(document.getElementById("optikBs-" + f.id).value || "0", 10),
+                bitis: parseInt(document.getElementById("optikBt-" + f.id).value || "0", 10)
+            }))
+        };
+        const ok = await saveRemoteData();
+        if (ok) {
+            renderOptik();
+            showToast("Optik form tanımı kaydedildi!");
+        }
+    });
 });
 
 /* ============ Ders Kayıt Sistemi (Ekran Kaydı) ============ */
