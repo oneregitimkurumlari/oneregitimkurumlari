@@ -20,7 +20,7 @@
     <title>ONLİNE PİHOS - Öğrenci Paneli</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" type="image/png" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=13">
+    <link rel="stylesheet" href="styles.css?v=14">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="transition.css">
@@ -93,8 +93,9 @@
                 <a href="#plan" class="side-link" data-view="plan"><i class="fas fa-clipboard-check"></i><span class="side-txt">Çalışma Planı</span></a>
                 <a href="#dersler" class="side-link" data-view="dersler"><i class="fas fa-video"></i><span class="side-txt">Canlı Ders</span></a>
                 <a href="#kayitlar" class="side-link" data-view="kayitlar"><i class="fas fa-history"></i><span class="side-txt">Kayıtlar</span></a>
-                <a href="#odevler" class="side-link" data-view="odevler"><i class="fas fa-file-alt"></i><span class="side-txt">Ödevler</span></a>
-            </nav>
+<a href="#odevler" class="side-link" data-view="odevler"><i class="fas fa-file-alt"></i><span class="side-txt">Ödevler</span></a>
+    <a href="#sinavlar" class="side-link" data-view="sinavlar"><i class="fas fa-clipboard-list"></i><span class="side-txt">Sınavlar</span></a>
+</nav>
             <div class="side-bottom">
                 <button class="dark-toggle side-link" id="darkToggle" title="Koyu/Acik Mod"><i class="fas fa-moon"></i><span class="side-txt">Mod</span></button>
                 <a href="admin.html" class="side-link" title="Yönetim"><i class="fas fa-user-shield"></i><span class="side-txt">Yönetim</span></a>
@@ -244,6 +245,15 @@
                 <div class="homework-grid" id="homeworkGrid"></div>
             </section>
 
+            <!-- ==== GÖRÜNÜM: SINAVLAR ==== -->
+            <section class="view" id="view-sinavlar">
+                <div class="view-head">
+                    <h2>Sınavlar</h2>
+                    <p>Öğretmenleriniz tarafından hazırlanan sınavlar</p>
+                </div>
+                <div class="homework-grid" id="examsGrid"></div>
+            </section>
+
         </main>
     </div>
 
@@ -297,7 +307,7 @@
     </div>
 </div>
 
-<script src="script.js?v=11"></script>
+<script src="script.js?v=12"></script>
 <script src="session.js?v=1"></script>
 <script src="transition.js"></script>
 <script src="ai-assistant.js?v=7"></script>

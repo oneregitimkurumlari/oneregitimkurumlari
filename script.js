@@ -15,7 +15,7 @@ const statusMap = {
     finished: { label: "Bitti", class: "status-finished" }
 };
 
-let cachedData = { teachers: [], classes: [], students: [], homeworks: [] };
+let cachedData = { teachers: [], classes: [], students: [], homeworks: [], exams: [] };
 
 function getDuration(start, end) {
     if (!start || !end) return "-";
@@ -30,6 +30,7 @@ function applyJson(json) {
     cachedData.classes = json.classes || [];
     cachedData.students = json.students || [];
     cachedData.homeworks = json.homeworks || [];
+    cachedData.exams = json.exams || [];
 }
 
 async function loadData() {
@@ -46,7 +47,7 @@ async function loadData() {
             applyJson(await res.json());
         } catch (e) {
             console.error("Veri yüklenemedi:", e);
-            cachedData = { teachers: [], classes: [], students: [], homeworks: [] };
+            cachedData = { teachers: [], classes: [], students: [], homeworks: [], exams: [] };
         }
     }
 }
@@ -226,6 +227,236 @@ function renderHomework() {
             ${fileTag}
         </div>`;
     }).join("");
+}
+
+let examState = null;
+
+function examResultURL(examId) {
+    return FIREBASE_URL + "/_examResults/" + encodeURIComponent(examId) + "/" + encodeURIComponent(getStudentId()) + ".json";
+}
+
+function renderExams() {
+    const grid = document.getElementById("examsGrid");
+    const exams = cachedData.exams || [];
+
+    if (exams.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-light);">
+                <i class="fas fa-clipboard-list" style="font-size:3rem;margin-bottom:16px;display:block;"></i>
+                <p style="font-size:1.1rem;">Henüz sınav eklenmemiş</p>
+            </div>`;
+        return;
+    }
+
+    const sorted = [...exams].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    grid.innerHTML = sorted.map(exam => {
+        const teacher = cachedData.teachers.find(t => t.id === exam.teacherId);
+        const teacherName = teacher ? teacher.name + " " + teacher.surname : "Yönetim";
+        const qCount = (exam.questions || []).length;
+        return `
+        <div class="exam-card">
+            <div class="homework-header">
+                <span class="homework-subject">${esc(exam.subject || "Sınav")}</span>
+                <span class="homework-date">${esc(exam.createdAt || "")}</span>
+            </div>
+            <h3>${esc(exam.title)}</h3>
+            <p class="homework-desc">${esc(exam.description || "")} ${qCount > 0 ? "· " + qCount + " soru" : ""}</p>
+            <div class="homework-meta">
+                <span><i class="fas fa-user"></i> ${esc(teacherName)}</span>
+            </div>
+            <button class="homework-file" onclick="openExam('${jsEsc(exam.id)}')"><i class="fas fa-pen"></i> Sınava Gir</button>
+        </div>`;
+    }).join("");
+}
+
+async function openExam(examId) {
+    const exam = cachedData.exams.find(e => e.id === examId);
+    if (!exam) return;
+    if (!(exam.questions || []).length) {
+        alert("Bu sınavda henüz soru eklenmemiş.");
+        return;
+    }
+    try {
+        const res = await fetch(examResultURL(examId) + "?t=" + Date.now(), { cache: "no-store" });
+        const data = await res.json();
+        examState = {
+            exam: exam,
+            qi: 0,
+            answers: (data && data.answers) || {},
+            dirty: {},
+            done: !!(data && data.done)
+        };
+        renderExamRunner();
+    } catch (e) {
+        alert("Sınav sonucun okunamadı. Veri bağlantısını kontrol edin.");
+    }
+}
+
+function examStatusClass(i) {
+    const st = examState;
+    if (st.done) return st.answers[i] !== undefined ? "exam-q-stat-saved" : "exam-q-stat-empty";
+    if (st.answers[i] !== undefined) return "exam-q-stat-saved";
+    if (st.dirty[i] !== undefined) return "exam-q-stat-dirty";
+    return "exam-q-stat-empty";
+}
+
+function renderExamRunner() {
+    const st = examState;
+    removeExamModal();
+    const overlay = document.createElement("div");
+    overlay.id = "examModal";
+    overlay.className = "exam-modal";
+
+    let navList = '<div class="exam-nav-title">Sorular</div><div class="exam-nav-list">';
+    for (let i = 0; i < st.exam.questions.length; i++) {
+        navList += `<button class="exam-q-btn ${examStatusClass(i)} ${i === st.qi ? "active" : ""}" onclick="goToQuestion(${i})">${i + 1}</button>`;
+    }
+    navList += '</div>';
+    if (!st.done) {
+        navList += `<div class="exam-legend"><span class="dot saved"></span> Kayıtlı <span class="dot dirty"></span> Seçildi <span class="dot empty"></span> Boş</div>`;
+    }
+
+    const finishBtn = st.done
+        ? '<span class="exam-done-tag"><i class="fas fa-check-circle"></i> Sınav Tamamlandı</span>'
+        : `<button class="exam-finish" onclick="finishExam()"><i class="fas fa-flag-checkered"></i> Sınavı Bitir</button>`;
+
+    overlay.innerHTML = `
+        <div class="exam-modal-box">
+            <div class="exam-modal-head">
+                <div class="exam-modal-title">
+                    <h3>${esc(st.exam.title)}</h3>
+                    <span>${esc(st.exam.subject || "")} · ${st.exam.questions.length} soru</span>
+                </div>
+                <div class="exam-actions">
+                    ${finishBtn}
+                    <button class="exam-close" onclick="closeExam()"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="exam-modal-body">
+                <div class="exam-left">${navList}</div>
+                <div class="exam-right">${renderQuestionPane()}</div>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+}
+
+function renderQuestionPane() {
+    const st = examState;
+    const i = st.qi;
+    const q = st.exam.questions[i];
+    const n = st.exam.questions.length;
+    if (!q) return "";
+
+    const letters = ["A", "B", "C", "D"];
+    const saved = st.answers[i] !== undefined;
+    const picked = st.dirty[i] !== undefined ? st.dirty[i] : saved ? st.answers[i] : undefined;
+
+    let badge;
+    if (st.done) badge = saved ? '<span class="exam-badge saved">Kayıtlı ✓</span>' : '<span class="exam-badge empty">Boş</span>';
+    else if (saved) badge = '<span class="exam-badge saved">Kayıtlı ✓</span>';
+    else if (st.dirty[i] !== undefined) badge = '<span class="exam-badge dirty">Seçildi, kaydedilmedi</span>';
+    else badge = '<span class="exam-badge empty">Boş</span>';
+
+    let opts = "";
+    for (let j = 0; j < (q.options || []).length && j < 4; j++) {
+        const isPicked = picked === j;
+        const click = st.done ? "" : ` onclick="pickOption(${j})"`;
+        opts += `<button type="button" class="exam-option ${isPicked ? "picked" : ""}"${click}><span class="exam-opt-letter">${letters[j]}</span><span>${esc(q.options[j])}</span></button>`;
+    }
+
+    const saveRow = st.done ? "" : `<button class="exam-save" onclick="saveAnswer()"><i class="fas fa-save"></i> Kaydet</button>`;
+    const prev = i > 0 ? `<button class="exam-nav-btn" onclick="goToQuestion(${i - 1})"><i class="fas fa-chevron-left"></i> Önceki</button>` : "";
+    const next = i < n - 1 ? `<button class="exam-nav-btn" onclick="goToQuestion(${i + 1})">Sonraki <i class="fas fa-chevron-right"></i></button>` : "";
+
+    return `
+        <div class="exam-qhead">
+            <span>Soru ${i + 1} / ${n}</span>
+            ${badge}
+        </div>
+        <div class="exam-qtext">${esc(q.text)}</div>
+        <div class="exam-options">${opts}</div>
+        ${saveRow}
+        <div class="exam-nav-row">${prev}${next}</div>`;
+}
+
+function pickOption(j) {
+    if (!examState || examState.done) return;
+    examState.dirty[examState.qi] = j;
+    renderExamRunner();
+}
+
+async function saveAnswer() {
+    const st = examState;
+    if (!st || st.done) return;
+    const val = st.dirty[st.qi];
+    if (val === undefined) {
+        alert("Bir şık seçtikten sonra kaydedebilirsin.");
+        return;
+    }
+    try {
+        const res = await fetch(examResultURL(st.exam.id), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ answers: st.answers, done: st.done, updatedAt: Date.now() })
+        });
+        if (!res.ok) throw new Error("http " + res.status);
+        st.answers[st.qi] = val;
+        delete st.dirty[st.qi];
+        renderExamRunner();
+        showDownloadToast("Soru kaydedildi ✓");
+    } catch (e) {
+        alert("Soru kaydedilemedi. Veri bağlantısını kontrol edin.");
+    }
+}
+
+function finishExam() {
+    const st = examState;
+    if (!st || st.done) return;
+    const total = st.exam.questions.length;
+    const savedCnt = st.exam.questions.filter((qi, i) => st.answers[i] !== undefined).length;
+    const emptyCnt = total - savedCnt;
+    if (!confirm("Sınavı bitirmek istiyor musun? Kaydedilmeyen " + emptyCnt + " soru boş sayılacak.")) return;
+    fetch(examResultURL(st.exam.id), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: st.answers, done: true, updatedAt: Date.now() })
+    }).then(res => {
+        if (!res.ok) throw new Error("http " + res.status);
+        st.done = true;
+        removeExamModal();
+        const doneBox = document.createElement("div");
+        doneBox.id = "examModal";
+        doneBox.className = "exam-modal";
+        doneBox.innerHTML = `
+            <div class="exam-modal-box exam-done-box">
+                <div class="exam-done-icon"><i class="fas fa-check-circle"></i></div>
+                <h3>Sınav Kaydedildi ✓</h3>
+                <p>Kaydedilen soru: <strong>${savedCnt}</strong> / ${total}</p>
+                <p class="exam-done-empty">Boş bırakılan: <strong>${emptyCnt}</strong></p>
+                <button class="exam-finish" onclick="closeExam()"><i class="fas fa-times"></i> Kapat</button>
+            </div>`;
+        document.body.appendChild(doneBox);
+    }).catch(e => {
+        alert("Sınav kaydedilemedi. Veri bağlantısını kontrol edin.");
+    });
+}
+
+function goToQuestion(i) {
+    if (!examState) return;
+    if (i < 0 || i >= examState.exam.questions.length) return;
+    examState.qi = i;
+    renderExamRunner();
+}
+
+function closeExam() {
+    removeExamModal();
+    examState = null;
+    if (renderExams) renderExams();
+}
+
+function removeExamModal() {
+    const m = document.getElementById("examModal");
+    if (m) m.remove();
 }
 
 function joinClass(link, id) {
@@ -616,6 +847,7 @@ function renderView(view) {
         if (allModal && !allModal._bound) { allModal.addEventListener("click", e => { if (e.target.id === "allRecordingsModal") closeAllRecordings(); }); allModal._bound = true; }
     }
     if (view === "odevler") renderHomework();
+    if (view === "sinavlar") renderExams();
 }
 
 function bindScheduleFilter() {
@@ -903,6 +1135,7 @@ function initSite() {
     renderSchedule();
     renderRecordings();
     renderHomework();
+    renderExams();
     initDashboard();
     loadPlans().then(() => {
         renderTodayPlan();

@@ -4,8 +4,8 @@ const DATA_URL = FIREBASE_URL + "/.json";
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function jsEsc(s) { return String(s == null ? "" : s).replace(/\\/g, "\\\\").replace(/'/g, "\\'"); }
 
-let remoteData = { teachers: [], classes: [], students: [], homeworks: [] };
-let deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
+let remoteData = { teachers: [], classes: [], students: [], homeworks: [], exams: [] };
+let deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set(), exams: new Set() };
 
 let recState = { recording: false, classId: null, mediaRecorder: null, chunks: [], stream: null, startedAt: null };
 
@@ -153,7 +153,8 @@ async function fetchRemoteData() {
         remoteData.classes = json.classes || [];
         remoteData.students = json.students || [];
         remoteData.homeworks = json.homeworks || [];
-        deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
+        remoteData.exams = json.exams || [];
+        deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set(), exams: new Set() };
         return true;
     } catch (e) {
         console.error("Uzak veri okuma hatası:", e);
@@ -181,12 +182,14 @@ async function saveRemoteData() {
         remoteData.classes = mergeArrays(serverData.classes, remoteData.classes, deletedIds.classes);
         remoteData.students = mergeArrays(serverData.students, remoteData.students, deletedIds.students);
         remoteData.homeworks = mergeArrays(serverData.homeworks, remoteData.homeworks || [], deletedIds.homeworks);
+        remoteData.exams = mergeArrays(serverData.exams, remoteData.exams || [], deletedIds.exams);
 
         const payload = {
             teachers: remoteData.teachers,
             classes: remoteData.classes,
             students: remoteData.students,
-            homeworks: remoteData.homeworks
+            homeworks: remoteData.homeworks,
+            exams: remoteData.exams
         };
 
         const res = await fetchWithTimeout(FIREBASE_URL + "/.json", {
@@ -200,7 +203,7 @@ async function saveRemoteData() {
             return false;
         }
 
-        deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set() };
+        deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set(), exams: new Set() };
         return true;
     } catch (e) {
         console.error("Kayit hatasi:", e);
@@ -272,6 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         renderClasses(teacherId);
         renderHomework(teacherId);
+        renderExams(teacherId);
         initNavigation();
         setInterval(() => { renderClasses(teacherId); }, 30000);
     }
@@ -564,6 +568,159 @@ document.addEventListener("DOMContentLoaded", () => {
             if (ok) {
                 renderHomework(currentTeacher);
                 showToast("Ödev silindi!");
+            }
+        });
+    };
+
+    /* ============ Sınav Yönetimi ============ */
+    function renderExamQuestions(questions) {
+        const wrap = document.getElementById("examQuestions");
+        wrap.innerHTML = "";
+        (questions || []).forEach(q => addExamQuestionRow(q));
+    }
+
+    function addExamQuestionRow(q) {
+        const wrap = document.getElementById("examQuestions");
+        const row = document.createElement("div");
+        row.className = "exam-q-box";
+        const text = (q && q.text) ? q.text : "";
+        const opts = (q && q.options) || ["", "", "", ""];
+        const ans = (q && q.answer !== undefined) ? q.answer : 0;
+        const letters = ["A", "B", "C", "D"];
+        let optRows = "";
+        for (let j = 0; j < 4; j++) {
+            optRows += `<div class="qq-opt-row"><span class="qq-letter">${letters[j]}</span><input type="text" class="qq-opt" placeholder="Şık ${letters[j]}" value="${esc(opts[j] || "")}"></div>`;
+        }
+        row.innerHTML = `
+            <div class="qq-head">
+                <strong>Soru ${wrap.children.length + 1}</strong>
+                <button type="button" class="btn-delete" onclick="removeExamQuestion(this)"><i class="fas fa-trash"></i></button>
+            </div>
+            <input type="text" class="qq-text" placeholder="Soru metni" value="${esc(text)}">
+            ${optRows}
+            <div class="qq-answer-row">
+                <label>Doğru cevap</label>
+                <select class="qq-answer">
+                    <option value="0"${ans === 0 ? " selected" : ""}>A</option>
+                    <option value="1"${ans === 1 ? " selected" : ""}>B</option>
+                    <option value="2"${ans === 2 ? " selected" : ""}>C</option>
+                    <option value="3"${ans === 3 ? " selected" : ""}>D</option>
+                </select>
+            </div>`;
+        wrap.appendChild(row);
+    }
+
+    window.removeExamQuestion = function(btn) {
+        const row = btn.closest(".exam-q-box");
+        if (!row) return;
+        row.remove();
+        document.querySelectorAll("#examQuestions .exam-q-box").forEach((r, idx) => {
+            const s = r.querySelector(".qq-head strong");
+            if (s) s.textContent = "Soru " + (idx + 1);
+        });
+    };
+
+    function collectExamQuestions() {
+        const rows = document.querySelectorAll("#examQuestions .exam-q-box");
+        const questions = [];
+        rows.forEach(r => {
+            const qt = r.querySelector(".qq-text");
+            const text = qt ? qt.value.trim() : "";
+            if (!text) return;
+            const options = Array.from(r.querySelectorAll(".qq-opt")).map(o => (o.value || "").trim());
+            const answer = parseInt((r.querySelector(".qq-answer") || {}).value || "0", 10);
+            questions.push({ text, options, answer });
+        });
+        return questions;
+    }
+
+    document.getElementById("addExamBtn").addEventListener("click", () => {
+        document.getElementById("examForm").style.display = "block";
+        document.getElementById("examFormTitle").textContent = "Yeni Sınav Ekle";
+        document.getElementById("examFormEl").reset();
+        document.getElementById("editExamId").value = "";
+        const wrap = document.getElementById("examQuestions");
+        wrap.innerHTML = "";
+        addExamQuestionRow(null);
+        document.getElementById("examTitle").focus();
+    });
+
+    document.getElementById("addQuestionBtn").addEventListener("click", () => addExamQuestionRow(null));
+    document.getElementById("cancelExamBtn").addEventListener("click", () => {
+        document.getElementById("examForm").style.display = "none";
+    });
+
+    document.getElementById("examFormEl").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const editId = document.getElementById("editExamId").value;
+        const questions = collectExamQuestions();
+        if (questions.length === 0) { showError("En az bir soru girmelisiniz."); return; }
+        const title = document.getElementById("examTitle").value.trim();
+        const subject = document.getElementById("examSubject").value.trim();
+        if (!title || !subject) { showError("Sınav başlığı ve ders zorunludur."); return; }
+
+        const examData = { title, subject, description: document.getElementById("examDesc").value.trim(), questions, teacherId: currentTeacher };
+        if (editId) {
+            const idx = (remoteData.exams || []).findIndex(x => x.id === editId);
+            if (idx !== -1) remoteData.exams[idx] = { ...remoteData.exams[idx], ...examData };
+        } else {
+            examData.id = generateId();
+            examData.createdAt = new Date().toISOString().split("T")[0];
+            if (!remoteData.exams) remoteData.exams = [];
+            remoteData.exams.push(examData);
+        }
+        const ok = await saveRemoteData();
+        if (ok) {
+            showToast(editId ? "Sınav güncellendi!" : "Sınav eklendi!");
+            renderExams(currentTeacher);
+            document.getElementById("examForm").style.display = "none";
+        }
+    });
+
+    function renderExams(teacherId) {
+        const tbody = document.getElementById("examsTable");
+        const empty = document.getElementById("emptyExams");
+        const exams = (remoteData.exams || []).filter(x => x.teacherId === teacherId || x.teacherId === "");
+        if (exams.length === 0) {
+            tbody.innerHTML = "";
+            empty.style.display = "block";
+            return;
+        }
+        empty.style.display = "none";
+        tbody.innerHTML = exams.map((x, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td><strong>${esc(x.title)}</strong></td>
+                <td>${esc(x.subject)}</td>
+                <td>${(x.questions || []).length}</td>
+                <td>${formatDate(x.createdAt)}</td>
+                <td class="actions-cell">
+                    <button class="btn-edit" onclick="editExam('${jsEsc(x.id)}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-delete" onclick="deleteExam('${jsEsc(x.id)}')"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`).join("");
+    }
+
+    window.editExam = function(id) {
+        const x = (remoteData.exams || []).find(y => y.id === id);
+        if (!x) return;
+        document.getElementById("examForm").style.display = "block";
+        document.getElementById("examFormTitle").textContent = "Sınavı Düzenle";
+        document.getElementById("editExamId").value = x.id;
+        document.getElementById("examTitle").value = x.title || "";
+        document.getElementById("examSubject").value = x.subject || "";
+        document.getElementById("examDesc").value = x.description || "";
+        renderExamQuestions(x.questions);
+    };
+
+    window.deleteExam = function(id) {
+        showConfirm("Bu sınavı silmek istediğinize emin misiniz?", async () => {
+            remoteData.exams = (remoteData.exams || []).filter(y => y.id !== id);
+            deletedIds.exams.add(id);
+            const ok = await saveRemoteData();
+            if (ok) {
+                renderExams(currentTeacher);
+                showToast("Sınav silindi!");
             }
         });
     };

@@ -470,3 +470,92 @@ html.dark .topbar::after, html.dark .top-bar::after { opacity: .8; }
 @media (prefers-reduced-motion: reduce) {
     *,*::before,*::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; }
 }
+
+/* ============ Sınav Soru Oluşturucu ============ */
+.exam-q-box {
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    margin-bottom: 12px;
+    position: relative;
+}
+.exam-q-box .qq-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.exam-q-box .qq-head strong { color: var(--primary); font-size: 0.95rem; }
+.exam-q-box .qq-text {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    transition: border-color .2s;
+}
+.exam-q-box .qq-text:focus { border-color: var(--primary); outline: none; }
+.exam-q-box .qq-opt-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.exam-q-box .qq-letter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--primary-light, #fef3c7);
+    color: var(--primary-dark, #92400e);
+    font-weight: 700;
+    font-size: 0.82rem;
+    flex-shrink: 0;
+}
+.exam-q-box .qq-opt {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    transition: border-color .2s;
+}
+.exam-q-box .qq-opt:focus { border-color: var(--primary); outline: none; }
+.qq-answer-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+.qq-answer-row label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-medium);
+}
+.qq-answer-row select {
+    padding: 6px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primary-dark);
+    background: var(--bg-white);
+    cursor: pointer;
+}
+
+/* Dark mode uyumu */
+html.dark .exam-q-box { background: var(--navy-light); border-color: #334155; }
+html.dark .exam-q-box .qq-text,
+html.dark .exam-q-box .qq-opt { background: var(--navy); border-color: #334155; color: #e2e8f0; }
+html.dark .exam-q-box .qq-text:focus,
+html.dark .exam-q-box .qq-opt:focus { border-color: var(--primary); }
+html.dark .exam-q-box .qq-letter { background: #422006; color: #fbbf24; }
+html.dark .qq-answer-row { border-top-color: #334155; }
+html.dark .qq-answer-row select { background: var(--navy); border-color: #334155; color: #fbbf24; }
