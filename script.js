@@ -15,7 +15,7 @@ const statusMap = {
     finished: { label: "Bitti", class: "status-finished" }
 };
 
-let cachedData = { teachers: [], classes: [], students: [], homeworks: [], exams: [] };
+let cachedData = { teachers: [], classes: [], students: [], homeworks: [], exams: [], optik: null };
 
 function getDuration(start, end) {
     if (!start || !end) return "-";
@@ -31,6 +31,7 @@ function applyJson(json) {
     cachedData.students = json.students || [];
     cachedData.homeworks = json.homeworks || [];
     cachedData.exams = json.exams || [];
+    cachedData.optik = json.optik || null;
 }
 
 async function loadData() {
@@ -47,7 +48,7 @@ async function loadData() {
             applyJson(await res.json());
         } catch (e) {
             console.error("Veri yüklenemedi:", e);
-            cachedData = { teachers: [], classes: [], students: [], homeworks: [], exams: [] };
+            cachedData = { teachers: [], classes: [], students: [], homeworks: [], exams: [], optik: null };
         }
     }
 }
@@ -448,34 +449,52 @@ async function saveAnswer() {
     }
 }
 
+function optikFields() {
+    const o = cachedData.optik || {};
+    return (o.fields || []).map(f => ({
+        id: f.id,
+        baslangic: parseInt(f.baslangic || "0", 10),
+        bitis: parseInt(f.bitis || "0", 10)
+    })).filter(f => f.baslangic > 0 && f.bitis >= f.baslangic);
+}
+
 function buildOptikTxt() {
     const st = examState;
     if (!st || !st.exam) return "";
-    const branches = st.exam.branches || [];
-    if (branches.length === 0) return "";
+    const fields = optikFields();
+    if (fields.length === 0) return "";
+    const width = Math.max.apply(null, fields.map(f => f.bitis));
+    const chars = new Array(width + 1).join(" ").split("");
     const letters = ["A", "B", "C", "D"];
-    let offset = 0;
-    const segs = branches.map(b => {
-        let seg = "";
-        for (let k = 0; k < (b.soruSayisi || 0); k++) {
-            const qi = offset + k;
-            const a = st.answers[qi];
-            seg += (a === undefined || letters[a] === undefined) ? "-" : letters[a];
-        }
-        offset += (b.soruSayisi || 0);
-        return seg;
-    });
-
-    let isim = "", no = "", tcno = "";
     const uname = sessionStorage.getItem("siteUser") || "";
     const me = (cachedData.students || []).find(s => (s.name + " " + s.surname) === uname);
-    if (me) {
-        isim = me.name + " " + me.surname;
-        no = me.no || "";
-        tcno = me.tcno || "";
-    }
-    const kitapcik = "A";
-    return [tcno, isim, no, kitapcik].concat(segs).join(";");
+
+    const meta = {
+        isim: me ? (me.name + " " + me.surname) : "",
+        tcno: me ? (me.tcno || "") : "",
+        numara: me ? (me.no || "") : "",
+        kitapcik: "A"
+    };
+    let offset = 0;
+    (st.exam.branches || []).forEach(b => {
+        let seg = "";
+        for (let k = 0; k < (b.soruSayisi || 0); k++) {
+            const a = st.answers[offset + k];
+            seg += (a === undefined || letters[a] === undefined) ? " " : letters[a];
+        }
+        offset += (b.soruSayisi || 0);
+        meta[b.id] = seg;
+    });
+
+    fields.forEach(f => {
+        const val = String(meta[f.id] || "");
+        const start = f.baslangic - 1;
+        const end = f.bitis - 1;
+        if (start >= 0 && end >= start) {
+            for (let k = 0; k < val.length && start + k <= end; k++) chars[start + k] = val[k];
+        }
+    });
+    return chars.join("");
 }
 
 function finishExam() {

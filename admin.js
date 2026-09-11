@@ -1506,9 +1506,10 @@ document.addEventListener("DOMContentLoaded", () => {
             let seg = "";
             for (let k = 0; k < (b.soruSayisi || 0); k++) {
                 const a = answers[offset + k];
-                seg += (a === undefined || letters[a] === undefined) ? "-" : letters[a];
+                seg += (a === undefined || letters[a] === undefined) ? " " : letters[a];
             }
-            if (layout.fields.some(f => f.id === b.id)) rec[b.id] = seg;
+            const fdef = layout.fields.find(f => f.id === b.id);
+            if (fdef) rec[b.id] = seg.padEnd((fdef.bitis - fdef.baslangic + 1), " ");
             offset += (b.soruSayisi || 0);
         });
         return rec;
@@ -1524,7 +1525,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function txtBuildLine(layout, rec) {
         const width = Math.max(layout.width, 1);
-        const chars = new Array(width + 1).join(".").split("");
+        const chars = new Array(width + 1).join(" ").split("");
         layout.fields.forEach(f => {
             const val = String(rec[f.id] || "");
             const start = f.baslangic - 1;
