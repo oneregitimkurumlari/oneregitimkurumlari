@@ -650,7 +650,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const wrap = document.getElementById("examQuestions");
             wrap.innerHTML = "";
-            questions.forEach(q => addExamQuestionRow(q));
+            questions.forEach(q => addExamQuestionRow(q, true));
             status.textContent = questions.length + " soru eklendi ✓";
             showToast(questions.length + " soru PDF'ten alındı. Doğru cevapları formda elle seçip kaydedin.");
         } catch (err) {
@@ -659,6 +659,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } finally {
             btn.disabled = false;
         }
+        window.refreshExamAnswerPanel && window.refreshExamAnswerPanel();
     });
 
     function base64ToU8(b64) {
@@ -691,10 +692,11 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderExamQuestions(questions) {
         const wrap = document.getElementById("examQuestions");
         wrap.innerHTML = "";
-        (questions || []).forEach(q => addExamQuestionRow(q));
+        (questions || []).forEach(q => addExamQuestionRow(q, true));
+        window.refreshExamAnswerPanel && window.refreshExamAnswerPanel();
     }
 
-    function addExamQuestionRow(q) {
+    function addExamQuestionRow(q, silent) {
         const wrap = document.getElementById("examQuestions");
         const row = document.createElement("div");
         row.className = "exam-q-box";
@@ -771,6 +773,7 @@ document.addEventListener("DOMContentLoaded", () => {
             prev.innerHTML = "";
             addBtn.innerHTML = '<i class="fas fa-image"></i> Görsel Ekle';
         });
+        if (!silent) window.refreshExamAnswerPanel && window.refreshExamAnswerPanel();
     }
 
     function processQuestionImage(file) {
@@ -806,6 +809,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const s = r.querySelector(".qq-head strong");
             if (s) s.textContent = "Soru " + (idx + 1);
         });
+        window.refreshExamAnswerPanel && window.refreshExamAnswerPanel();
     };
 
     function collectExamQuestions() {
@@ -859,7 +863,120 @@ document.addEventListener("DOMContentLoaded", () => {
             start += cnt;
         });
         pre.textContent = lines.join("\n") + "\nToplam: " + total + " soru";
+        window.refreshExamAnswerPanel && window.refreshExamAnswerPanel();
     };
+
+    /* ============ Cevap Anahtarı / Toplu Cevap Girişi ============ */
+    const EA_COLORS = { turkce: "#16a34a", matematik: "#2563eb", fen: "#9a3412", inkilap: "#a855f7", din: "#0ea5e9", yabanci: "#dc2626" };
+    let eaActive = -1;
+
+    function eaBranchList() {
+        const counts = readBranchCounts();
+        const n = document.querySelectorAll("#examQuestions .exam-q-box").length;
+        const out = [];
+        let off = 0;
+        OPTIK_SUBJECT_DEFS.forEach(s => {
+            const cnt = Math.max(0, Math.min(counts[s.id] || 0, n - off));
+            if (cnt <= 0) return;
+            out.push({ id: s.id, label: s.label, soruSayisi: cnt, start: off, end: off + cnt, color: EA_COLORS[s.id] || "#64748b" });
+            off += cnt;
+        });
+        if (off === 0 && n > 0) out.push({ id: "tumu", label: "Tümü", soruSayisi: n, start: 0, end: n, color: "#64748b" });
+        return out;
+    }
+
+    window.refreshExamAnswerPanel = function() {
+        const grid = document.getElementById("eaOverlayGrid");
+        if (!grid) return;
+        const rows = document.querySelectorAll("#examQuestions .exam-q-box");
+        const answers = [];
+        rows.forEach(r => {
+            const s = r.querySelector(".qq-answer");
+            answers.push(s ? parseInt(s.value || "0", 10) : 0);
+        });
+        const n = answers.length;
+        const brs = eaBranchList();
+        const letters = ["A", "B", "C", "D"];
+
+        grid.innerHTML = "";
+        for (let i = 0; i < n; i++) {
+            const br = brs.find(b => i >= b.start && i < b.end);
+            const color = br ? br.color : "#64748b";
+            const cell = document.createElement("div");
+            cell.className = "ov-cell" + (i === eaActive ? " active" : "");
+            cell.id = "eaov-" + i;
+            cell.style.background = color;
+            cell.style.borderColor = color;
+            cell.title = "Soru " + (i + 1) + (br ? " - " + br.label : "");
+            cell.innerHTML = `<span class="o-num">${i + 1}</span><span class="o-let">${letters[answers[i]] || "A"}</span>`;
+            cell.addEventListener("click", () => eaJumpTo(i));
+            grid.appendChild(cell);
+        }
+
+        const bl = document.getElementById("eaBranches");
+        bl.innerHTML = "";
+        brs.forEach((b, bi) => {
+            const brow = document.createElement("div");
+            brow.className = "brow";
+            brow.innerHTML = `<span class="brow-dot" style="background:${b.color}"></span><span class="brow-name">${esc(b.label)}</span><span class="brow-range">${b.soruSayisi > 1 ? (b.start + 1) + "-" + b.end : (b.start + 1)}</span><span class="brow-count" id="eab-${bi}">${b.soruSayisi}</span>`;
+            brow.addEventListener("click", () => eaJumpTo(b.start));
+            bl.appendChild(brow);
+        });
+
+        const sheets = document.getElementById("eaSheets");
+        sheets.innerHTML = "";
+        brs.forEach((b, bi) => {
+            const box = document.createElement("div");
+            box.className = "branch-sheet";
+            box.innerHTML = `<div class="bs-head" style="background:${b.color}"><span class="bs-title">${esc(b.label)}</span><span class="bs-range">${b.soruSayisi > 1 ? (b.start + 1) + " – " + b.end : (b.start + 1)}</span><span class="bs-count" id="eac-${bi}">0/${b.soruSayisi}</span></div>`;
+            const rowsWrap = document.createElement("div");
+            rowsWrap.className = "bs-rows";
+            for (let i = b.start; i < b.end; i++) {
+                const rowEl = document.createElement("div");
+                rowEl.className = "bs-row" + (i === eaActive ? " active" : "");
+                rowEl.id = "earow-" + i;
+                rowEl.innerHTML = `<span class="bs-num">${i + 1}</span>
+                    <div class="bs-opt">${letters.map((L, j) => `<button type="button" class="let-btn ${answers[i] === j ? "picked" : ""}" data-q="${i}" data-v="${j}" onclick="eaPick(${i},${j})">${L}</button>`).join("")}</div>
+                    <span class="bs-num-link" onclick="eaJumpTo(${i})" title="Soruyu göster"><i class="fas fa-arrow-right"></i></span>`;
+                rowsWrap.appendChild(rowEl);
+            }
+            box.appendChild(rowsWrap);
+            sheets.appendChild(box);
+        });
+    };
+
+    window.eaPick = function(i, j) {
+        const rows = document.querySelectorAll("#examQuestions .exam-q-box");
+        const r = rows[i];
+        if (!r) return;
+        const s = r.querySelector(".qq-answer");
+        if (!s) return;
+        s.value = j;
+        window.refreshExamAnswerPanel();
+    };
+
+    window.eaJumpTo = function(i) {
+        eaActive = i;
+        document.querySelectorAll("#eaOverlayGrid .ov-cell").forEach(c => c.classList.toggle("active", c.id === "eaov-" + i));
+        document.querySelectorAll("#eaSheets .bs-row").forEach(r => r.classList.toggle("active", r.id === "earow-" + i));
+        const el = document.getElementById("earow-" + i);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        const qrows = document.querySelectorAll("#examQuestions .exam-q-box");
+        const qr = qrows[i];
+        if (qr) {
+            qr.scrollIntoView({ behavior: "smooth", block: "center" });
+            const box = qr.querySelector(".qq-answer-row");
+            if (box) {
+                box.style.transition = "box-shadow .3s ease";
+                box.style.boxShadow = "0 0 0 2px var(--primary)";
+                setTimeout(() => { box.style.boxShadow = ""; }, 1200);
+            }
+        }
+    };
+
+    document.getElementById("examQuestions").addEventListener("change", (e) => {
+        if (e.target.classList.contains("qq-answer")) window.refreshExamAnswerPanel();
+    });
 
     document.getElementById("addExamBtn").addEventListener("click", () => {
         document.getElementById("examForm").style.display = "block";

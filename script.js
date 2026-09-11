@@ -300,37 +300,8 @@ function examStatusClass(i) {
     return "exam-q-stat-empty";
 }
 
-const EXAM_BRANCH_COLORS = {
-    turkce: "#16a34a",
-    matematik: "#2563eb",
-    fen: "#9a3412",
-    inkilap: "#a855f7",
-    din: "#0ea5e9",
-    yabanci: "#dc2626"
-};
-
-function branchColor(id) {
-    return EXAM_BRANCH_COLORS[id] || "#64748b";
-}
-
-function branchRanges(exam) {
-    const n = (exam.questions || []).length;
-    const brs = (exam.branches || []);
-    if (!brs.length) return [{ id: "tumu", label: "Tümü", soruSayisi: n, start: 0, end: n, color: "#64748b" }];
-    let off = 0;
-    return brs.map(b => {
-        const len = Math.max(0, Math.min(b.soruSayisi || 0, n - off));
-        const r = { id: b.id || "b", label: b.label || "Branş", soruSayisi: len, start: off, end: off + len, color: branchColor(b.id) };
-        off += len;
-        return r;
-    }).filter(b => b.soruSayisi > 0);
-}
-
-let __bulkSaveT = null;
-
 function renderExamRunner() {
     const st = examState;
-    if (!st) return;
     removeExamModal();
     const overlay = document.createElement("div");
     overlay.id = "examModal";
@@ -341,7 +312,7 @@ function renderExamRunner() {
         : `<button class="exam-finish" onclick="finishExam()"><i class="fas fa-flag-checkered"></i> Sınavı Bitir</button>`;
 
     overlay.innerHTML = `
-        <div class="exam-modal-box exam-layout-box">
+        <div class="exam-modal-box">
             <div class="exam-modal-head">
                 <div class="exam-modal-title">
                     <h3>${esc(st.exam.title)}</h3>
@@ -352,252 +323,121 @@ function renderExamRunner() {
                     <button class="exam-close" onclick="closeExam()"><i class="fas fa-times"></i></button>
                 </div>
             </div>
-            <div class="exam-ge">
-                <div class="exam-left">${renderAnswerOverview()}</div>
-                <div class="exam-right">${renderBranchSheets()}</div>
+            <div class="exam-modal-body">
+                <div class="exam-left">${renderQuestionPane()}</div>
+                <div class="exam-right">${renderOptionsPane()}</div>
             </div>
         </div>`;
     document.body.appendChild(overlay);
 }
 
-function countAnswered() {
-    let c = 0;
-    const n = examState.exam.questions.length;
-    for (let i = 0; i < n; i++) if (examState.answers[i] !== undefined) c++;
-    return c;
-}
-
-function branchAnswered(b) {
-    let c = 0;
-    for (let x = b.start; x < b.end; x++) if (examState.answers[x] !== undefined) c++;
-    return c;
-}
-
-function renderAnswerOverview() {
+function renderQuestionPane() {
     const st = examState;
+    if (!st) return "";
+    const i = st.qi;
+    const q = st.exam.questions[i];
     const n = st.exam.questions.length;
-    const brs = branchRanges(st.exam);
-    const letters = ["A", "B", "C", "D"];
+    if (!q) return "";
 
-    let cells = "";
-    for (let i = 0; i < n; i++) {
-        const br = brs.find(b => i >= b.start && i < b.end);
-        const color = br ? br.color : "#64748b";
-        const a = st.answers[i];
-        const has = a !== undefined && letters[a] !== undefined;
-        cells += `<div class="ov-cell ${has ? "ans" : "empty"} ${i === st.qi ? "active" : ""}" id="ov-${i}"${has ? ` style="background:${color};border-color:${color};"` : ""} onclick="jumpTo(${i})" title="Soru ${i + 1}">
-            <span class="o-num">${i + 1}</span>
-            <span class="o-let">${has ? letters[a] : "–"}</span>
-        </div>`;
+    const saved = st.answers[i] !== undefined;
+
+    let badge;
+    if (st.done) badge = saved ? '<span class="exam-badge saved">Kayıtlı ✓</span>' : '<span class="exam-badge empty">Boş</span>';
+    else if (saved) badge = '<span class="exam-badge saved">Kayıtlı ✓</span>';
+    else if (st.dirty[i] !== undefined) badge = '<span class="exam-badge dirty">Seçildi, kaydedilmedi</span>';
+    else badge = '<span class="exam-badge empty">Boş</span>';
+
+    let navList = "";
+    for (let j = 0; j < n; j++) {
+        navList += `<button class="exam-q-btn ${examStatusClass(j)} ${j === i ? "active" : ""}" onclick="goToQuestion(${j})">${j + 1}</button>`;
     }
 
-    let blist = "";
-    brs.forEach((b, bi) => {
-        blist += `<div class="brow" onclick="jumpTo(${b.start})">
-            <span class="brow-dot" style="background:${b.color}"></span>
-            <span class="brow-name">${esc(b.label)}</span>
-            <span class="brow-range">${b.soruSayisi > 1 ? (b.start + 1) + "-" + b.end : (b.start + 1)}</span>
-            <span class="brow-count" id="bc-${bi}">${branchAnswered(b)}</span>
-        </div>`;
-    });
+    const legend = st.done ? "" : '<div class="exam-legend"><span class="dot saved"></span> Kayıtlı <span class="dot dirty"></span> Seçildi <span class="dot empty"></span> Boş</div>';
 
     return `
-        <div class="ov-block">
-            <div class="ov-title"><i class="fas fa-th-list"></i> Tüm Cevaplar <span><strong id="ov-total">${countAnswered()}</strong>/${n}</span></div>
-            <div class="ov-grid">${cells}</div>
+        <div class="exam-qhead">
+            <span>Soru ${i + 1} / ${n}</span>
+            ${badge}
         </div>
-        <div class="ov-block">
-            <div class="ov-title"><i class="fas fa-layer-group"></i> Branşlar</div>
-            <div class="blist-wrap">${blist}</div>
-        </div>`;
+        <div class="exam-qtext">${esc(q.text)}</div>
+        <div class="exam-nav-list">${navList}</div>
+        ${legend}`;
 }
 
-function renderBranchSheets() {
+function renderOptionsPane() {
     const st = examState;
-    const brs = branchRanges(st.exam);
+    if (!st) return "";
+    const i = st.qi;
+    const q = st.exam.questions[i];
+    const n = st.exam.questions.length;
+    if (!q) return "";
+
     const letters = ["A", "B", "C", "D"];
-    return brs.map((b, bi) => {
-        let rows = "";
-        for (let i = b.start; i < b.end; i++) {
-            const a = st.answers[i];
-            rows += `<div class="bs-row ${i === st.qi ? "active" : ""}" id="br-${i}">
-                <span class="bs-num">${i + 1}</span>
-                <div class="bs-opt">
-                    ${letters.map((L, j) => `<button type="button" class="let-btn ${a === j ? "picked" : ""}" data-q="${i}" data-v="${j}" ${st.done ? "disabled" : ""} onclick="setAnswer(${i},${j})">${L}</button>`).join("")}
-                </div>
-                <button type="button" class="bs-view" onclick="openQuestionView(${i})"><i class="fas fa-eye"></i> Soruyu Gör</button>
-            </div>`;
-        }
-        return `<div class="branch-sheet" id="sheet-${bi}">
-            <div class="bs-head" style="background:${b.color}">
-                <span class="bs-title">${esc(b.label)}</span>
-                <span class="bs-range">${b.soruSayisi > 1 ? (b.start + 1) + " – " + b.end : (b.start + 1)}</span>
-                <span class="bs-count" id="sc-${bi}">${branchAnswered(b)}/${b.soruSayisi}</span>
-            </div>
-            <div class="bs-rows">${rows}</div>
-        </div>`;
-    }).join("");
+    const saved = st.answers[i] !== undefined;
+    const picked = st.dirty[i] !== undefined ? st.dirty[i] : saved ? st.answers[i] : undefined;
+
+    let opts = "";
+    for (let j = 0; j < (q.options || []).length && j < 4; j++) {
+        const isPicked = picked === j;
+        const click = st.done ? "" : ` onclick="pickOption(${j})"`;
+        opts += `<button type="button" class="exam-option ${isPicked ? "picked" : ""}"${click}><span class="exam-opt-letter">${letters[j]}</span><span>${esc(q.options[j])}</span></button>`;
+    }
+
+    const saveRow = st.done ? "" : `<button class="exam-save" onclick="saveAnswer()"><i class="fas fa-save"></i> Kaydet</button>`;
+    const prev = i > 0 ? `<button class="exam-nav-btn" onclick="goToQuestion(${i - 1})"><i class="fas fa-chevron-left"></i> Önceki</button>` : "";
+    const next = i < n - 1 ? `<button class="exam-nav-btn" onclick="goToQuestion(${i + 1})">Sonraki <i class="fas fa-chevron-right"></i></button>` : "";
+    const finish = st.done ? "" : `<button class="exam-nav-btn exam-nav-finish" onclick="finishExam()"><i class="fas fa-flag-checkered"></i> Sınavı Bitir</button>`;
+
+    return `
+        <div class="exam-opt-title">Şıklar</div>
+        <div class="exam-options">${opts}</div>
+        ${saveRow}
+        <div class="exam-nav-row">${prev}${next}</div>
+        ${finish}`;
 }
 
-function setAnswer(idx, j) {
+function pickOption(j) {
+    if (!examState || examState.done) return;
+    examState.dirty[examState.qi] = j;
+    renderExamRunner();
+}
+
+async function saveAnswer() {
     const st = examState;
     if (!st || st.done) return;
-    st.answers[idx] = j;
-    refreshAnswerUI(idx);
-    scheduleBulkSave();
-}
-
-function scheduleBulkSave() {
-    clearTimeout(__bulkSaveT);
-    __bulkSaveT = setTimeout(saveBulkNow, 500);
-}
-
-async function saveBulkNow() {
-    const st = examState;
-    if (!st || st.done) return;
-    clearTimeout(__bulkSaveT);
-    const ans = Object.assign({}, st.answers);
+    const val = st.dirty[st.qi];
+    if (val === undefined) {
+        alert("Bir şık seçtikten sonra kaydedebilirsin.");
+        return;
+    }
     try {
+        st.answers[st.qi] = val;
+        delete st.dirty[st.qi];
         const res = await fetch(examResultURL(st.exam.id), {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ answers: ans, done: st.done, txt: buildOptikTxt(ans), updatedAt: Date.now() })
+            body: JSON.stringify({ answers: st.answers, done: st.done, txt: buildOptikTxt(), updatedAt: Date.now() })
         });
         if (!res.ok) throw new Error("http " + res.status);
-        showDownloadToast("Cevaplar kaydedildi ✓");
+        renderExamRunner();
+        showDownloadToast("Soru kaydedildi ✓");
     } catch (e) {
-        showDownloadToast("Kaydetme başarısız, tekrar deneyin");
+        alert("Soru kaydedilemedi. Veri bağlantısını kontrol edin.");
     }
 }
 
-function refreshAnswerUI(idx) {
-    const st = examState;
-    if (!st) return;
-    const letters = ["A", "B", "C", "D"];
-    const a = st.answers[idx];
-    const has = a !== undefined && letters[a] !== undefined;
-    const ov = document.getElementById("ov-" + idx);
-    if (ov) {
-        ov.querySelector(".o-let").textContent = has ? letters[a] : "–";
-        if (has) {
-            ov.classList.add("ans");
-            ov.classList.remove("empty");
-            const color = (branchRanges(st.exam).find(b => idx >= b.start && idx < b.end) || {}).color || "#64748b";
-            ov.style.background = color;
-            ov.style.borderColor = color;
-        } else {
-            ov.classList.remove("ans");
-            ov.classList.add("empty");
-            ov.style.background = "";
-            ov.style.borderColor = "";
-        }
-    }
-    const row = document.getElementById("br-" + idx);
-    if (row) {
-        row.querySelectorAll(".let-btn").forEach(b => b.classList.toggle("picked", parseInt(b.getAttribute("data-v"), 10) === a));
-    }
-    updateBranchCounts();
-    const tot = document.getElementById("ov-total");
-    if (tot) tot.textContent = countAnswered();
-}
-
-function updateBranchCounts() {
-    const brs = branchRanges(examState.exam);
-    brs.forEach((b, bi) => {
-        const el = document.getElementById("bc-" + bi);
-        if (el) el.textContent = branchAnswered(b);
-        const el2 = document.getElementById("sc-" + bi);
-        if (el2) el2.textContent = branchAnswered(b) + "/" + b.soruSayisi;
-    });
-}
-
-function jumpTo(idx) {
-    const st = examState;
-    if (!st) return;
-    st.qi = idx;
-    document.querySelectorAll(".ov-cell").forEach(c => c.classList.toggle("active", parseInt(c.id.split("-")[1], 10) === idx));
-    document.querySelectorAll(".bs-row").forEach(r => r.classList.toggle("active", r.id === "br-" + idx));
-    const el = document.getElementById("br-" + idx);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-}
-
-function openQuestionView(idx) {
-    const st = examState;
-    if (!st) return;
-    if (idx < 0 || idx >= st.exam.questions.length) return;
-    st.qi = idx;
-    const q = st.exam.questions[idx];
-    const letters = ["A", "B", "C", "D"];
-    const br = branchRanges(st.exam).find(b => idx >= b.start && idx < b.end) || null;
-    const opts = (q.options || []).map((o, j) => {
-        const picked = st.answers[idx] === j;
-        const click = st.done ? "" : ` onclick="viewPick(${j})"`;
-        return `<button type="button" class="exam-option ${picked ? "picked" : ""}"${click}><span class="exam-opt-letter">${letters[j]}</span><span>${esc(o)}</span></button>`;
-    }).join("");
-
-    let m = document.getElementById("examQModal");
-    if (m) m.remove();
-    m = document.createElement("div");
-    m.id = "examQModal";
-    m.className = "exam-modal";
-    m.innerHTML = `
-        <div class="exam-modal-box exam-qv-box" onclick="event.stopPropagation()">
-            <div class="exam-qv-head">
-                <span class="exam-branch-badge" style="background:${br ? br.color : "#64748b"}">${esc(br ? br.label : "")}</span>
-                <span>Soru ${idx + 1} / ${st.exam.questions.length}</span>
-                <button class="exam-close" onclick="closeQuestionView()"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="exam-qv-body">
-                ${q.image ? `<img class="exam-question-img" src="${esc(q.image)}" alt="Soru görseli">` : ""}
-                <div class="exam-qtext">${esc(q.text)}</div>
-                <div class="exam-options">${opts}</div>
-            </div>
-            <div class="exam-qv-foot">
-                ${idx > 0 ? `<button class="exam-nav-btn" onclick="openQuestionView(${idx - 1})"><i class="fas fa-chevron-left"></i> Önceki</button>` : ""}
-                <button class="exam-save" onclick="viewSave(${idx})"><i class="fas fa-check"></i> ${st.done ? "Kapat" : "Kaydet ve Kapat"}</button>
-                ${idx + 1 < st.exam.questions.length ? `<button class="exam-nav-btn" onclick="openQuestionView(${idx + 1})">Sonraki <i class="fas fa-chevron-right"></i></button>` : ""}
-            </div>
-        </div>`;
-    document.body.appendChild(m);
-}
-
-function closeQuestionView() {
-    const m = document.getElementById("examQModal");
-    if (m) m.remove();
-}
-
-function viewPick(j) {
-    const st = examState;
-    if (!st || st.done) return;
-    st.answers[st.qi] = j;
-    const m = document.getElementById("examQModal");
-    if (m) {
-        m.querySelectorAll(".exam-option").forEach((b, bi) => b.classList.toggle("picked", bi === j));
-    }
-}
-
-function viewSave(idx) {
-    const st = examState;
-    if (!st) return;
-    refreshAnswerUI(idx);
-    closeQuestionView();
-    if (!st.done) scheduleBulkSave();
-    showDownloadToast("Soru kaydedildi ✓");
-}
-
-function buildOptikTxt(ansMap) {
+function buildOptikTxt() {
     const st = examState;
     if (!st || !st.exam) return "";
     const branches = st.exam.branches || [];
     if (branches.length === 0) return "";
     const letters = ["A", "B", "C", "D"];
-    const ans = ansMap || st.answers;
     let offset = 0;
     const segs = branches.map(b => {
         let seg = "";
         for (let k = 0; k < (b.soruSayisi || 0); k++) {
             const qi = offset + k;
-            const a = ans[qi];
+            const a = st.answers[qi];
             seg += (a === undefined || letters[a] === undefined) ? "-" : letters[a];
         }
         offset += (b.soruSayisi || 0);
@@ -619,7 +459,6 @@ function buildOptikTxt(ansMap) {
 function finishExam() {
     const st = examState;
     if (!st || st.done) return;
-    clearTimeout(__bulkSaveT);
     const total = st.exam.questions.length;
     const savedCnt = st.exam.questions.filter((qi, i) => st.answers[i] !== undefined).length;
     const emptyCnt = total - savedCnt;
