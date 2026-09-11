@@ -1274,14 +1274,24 @@ html.dark .exam-modal-box { background: #1e293b; }
 }
 
 .exam-left {
-    width: 150px; flex-shrink: 0;
-    background: #0f172a;
-    border-right: 1px solid #334155;
-    padding: 14px 12px;
+    flex: 1; min-width: 0;
+    background: var(--bg-card);
+    padding: 22px 24px;
     overflow-y: auto;
-    display: flex; flex-direction: column;
+    display: flex; flex-direction: column; gap: 14px;
 }
-html.dark .exam-left { background: #0f172a; border-right-color: #334155; }
+.exam-left .exam-nav-list { margin-top: auto; }
+
+.exam-right {
+    width: 260px; flex-shrink: 0;
+    background: #0f172a;
+    border-left: 1px solid #334155;
+    padding: 18px 16px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 12px;
+}
+html.dark .exam-right { background: #0f172a; border-left-color: #334155; }
+.exam-opt-title { font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
 .exam-nav-title { font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; margin-bottom: 10px; }
 .exam-nav-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .exam-q-btn {
@@ -1352,6 +1362,11 @@ html.dark .exam-option { background: #0f172a; border-color: #334155; color: var(
 }
 html.dark .exam-nav-btn { color: var(--text-dark); }
 .exam-nav-btn:hover { border-color: var(--primary); color: var(--primary); }
+#examModal .exam-right .exam-nav-btn { color: #e2e8f0; border-color: #334155; }
+#examModal .exam-right .exam-nav-btn:hover { border-color: #c09020; color: #c09020; }
+#examModal .exam-right .exam-save { align-self: stretch; justify-content: center; display: flex; }
+#examModal .exam-right .exam-nav-row { justify-content: space-between; }
+#examModal .exam-right .exam-nav-finish { border-color: #a16207; color: #fbbf24; }
 
 .exam-done-box { align-items: center; justify-content: center; text-align: center; gap: 6px; padding: 30px; }
 .exam-done-icon { font-size: 3.2rem; color: #22c55e; }
@@ -1361,8 +1376,8 @@ html.dark .exam-nav-btn { color: var(--text-dark); }
 
 @media (max-width: 640px) {
     .exam-modal-box { height: 94vh; }
-    .exam-left { width: 116px; padding: 12px 10px; }
-    .exam-right { padding: 16px; }
+    .exam-left { padding: 14px 14px; }
+    .exam-right { width: 170px; padding: 14px 12px; }
     .exam-q-btn { width: 34px; height: 34px; }
     .exam-actions .exam-finish { padding: 8px 12px; font-size: 0.78rem; }
     .exam-modal-head { flex-wrap: wrap; }

@@ -307,15 +307,6 @@ function renderExamRunner() {
     overlay.id = "examModal";
     overlay.className = "exam-modal";
 
-    let navList = '<div class="exam-nav-title">Sorular</div><div class="exam-nav-list">';
-    for (let i = 0; i < st.exam.questions.length; i++) {
-        navList += `<button class="exam-q-btn ${examStatusClass(i)} ${i === st.qi ? "active" : ""}" onclick="goToQuestion(${i})">${i + 1}</button>`;
-    }
-    navList += '</div>';
-    if (!st.done) {
-        navList += `<div class="exam-legend"><span class="dot saved"></span> Kayıtlı <span class="dot dirty"></span> Seçildi <span class="dot empty"></span> Boş</div>`;
-    }
-
     const finishBtn = st.done
         ? '<span class="exam-done-tag"><i class="fas fa-check-circle"></i> Sınav Tamamlandı</span>'
         : `<button class="exam-finish" onclick="finishExam()"><i class="fas fa-flag-checkered"></i> Sınavı Bitir</button>`;
@@ -333,8 +324,8 @@ function renderExamRunner() {
                 </div>
             </div>
             <div class="exam-modal-body">
-                <div class="exam-left">${navList}</div>
-                <div class="exam-right">${renderQuestionPane()}</div>
+                <div class="exam-left">${renderQuestionPane()}</div>
+                <div class="exam-right">${renderOptionsPane()}</div>
             </div>
         </div>`;
     document.body.appendChild(overlay);
@@ -342,6 +333,40 @@ function renderExamRunner() {
 
 function renderQuestionPane() {
     const st = examState;
+    if (!st) return "";
+    const i = st.qi;
+    const q = st.exam.questions[i];
+    const n = st.exam.questions.length;
+    if (!q) return "";
+
+    const saved = st.answers[i] !== undefined;
+
+    let badge;
+    if (st.done) badge = saved ? '<span class="exam-badge saved">Kayıtlı ✓</span>' : '<span class="exam-badge empty">Boş</span>';
+    else if (saved) badge = '<span class="exam-badge saved">Kayıtlı ✓</span>';
+    else if (st.dirty[i] !== undefined) badge = '<span class="exam-badge dirty">Seçildi, kaydedilmedi</span>';
+    else badge = '<span class="exam-badge empty">Boş</span>';
+
+    let navList = "";
+    for (let j = 0; j < n; j++) {
+        navList += `<button class="exam-q-btn ${examStatusClass(j)} ${j === i ? "active" : ""}" onclick="goToQuestion(${j})">${j + 1}</button>`;
+    }
+
+    const legend = st.done ? "" : '<div class="exam-legend"><span class="dot saved"></span> Kayıtlı <span class="dot dirty"></span> Seçildi <span class="dot empty"></span> Boş</div>';
+
+    return `
+        <div class="exam-qhead">
+            <span>Soru ${i + 1} / ${n}</span>
+            ${badge}
+        </div>
+        <div class="exam-qtext">${esc(q.text)}</div>
+        <div class="exam-nav-list">${navList}</div>
+        ${legend}`;
+}
+
+function renderOptionsPane() {
+    const st = examState;
+    if (!st) return "";
     const i = st.qi;
     const q = st.exam.questions[i];
     const n = st.exam.questions.length;
@@ -350,12 +375,6 @@ function renderQuestionPane() {
     const letters = ["A", "B", "C", "D"];
     const saved = st.answers[i] !== undefined;
     const picked = st.dirty[i] !== undefined ? st.dirty[i] : saved ? st.answers[i] : undefined;
-
-    let badge;
-    if (st.done) badge = saved ? '<span class="exam-badge saved">Kayıtlı ✓</span>' : '<span class="exam-badge empty">Boş</span>';
-    else if (saved) badge = '<span class="exam-badge saved">Kayıtlı ✓</span>';
-    else if (st.dirty[i] !== undefined) badge = '<span class="exam-badge dirty">Seçildi, kaydedilmedi</span>';
-    else badge = '<span class="exam-badge empty">Boş</span>';
 
     let opts = "";
     for (let j = 0; j < (q.options || []).length && j < 4; j++) {
@@ -367,16 +386,14 @@ function renderQuestionPane() {
     const saveRow = st.done ? "" : `<button class="exam-save" onclick="saveAnswer()"><i class="fas fa-save"></i> Kaydet</button>`;
     const prev = i > 0 ? `<button class="exam-nav-btn" onclick="goToQuestion(${i - 1})"><i class="fas fa-chevron-left"></i> Önceki</button>` : "";
     const next = i < n - 1 ? `<button class="exam-nav-btn" onclick="goToQuestion(${i + 1})">Sonraki <i class="fas fa-chevron-right"></i></button>` : "";
+    const finish = st.done ? "" : `<button class="exam-nav-btn exam-nav-finish" onclick="finishExam()"><i class="fas fa-flag-checkered"></i> Sınavı Bitir</button>`;
 
     return `
-        <div class="exam-qhead">
-            <span>Soru ${i + 1} / ${n}</span>
-            ${badge}
-        </div>
-        <div class="exam-qtext">${esc(q.text)}</div>
+        <div class="exam-opt-title">Şıklar</div>
         <div class="exam-options">${opts}</div>
         ${saveRow}
-        <div class="exam-nav-row">${prev}${next}</div>`;
+        <div class="exam-nav-row">${prev}${next}</div>
+        ${finish}`;
 }
 
 function pickOption(j) {
