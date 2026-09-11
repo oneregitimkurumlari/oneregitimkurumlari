@@ -64,6 +64,9 @@
             <button class="sidebar-btn" data-section="optik">
                 <i class="fas fa-hashtag"></i> Optik Form
             </button>
+            <button class="sidebar-btn" data-section="txt">
+                <i class="fas fa-file-alt"></i> TXT
+            </button>
             <button class="sidebar-btn" data-section="settings">
                 <i class="fas fa-cog"></i> Ayarlar
             </button>
@@ -541,25 +544,6 @@
                         <button type="button" class="btn-add" id="addQuestionBtn" style="margin-top:10px;background:var(--bg-light);color:var(--text);border:1px dashed var(--border);">
                             <i class="fas fa-plus"></i> Soru Ekle
                         </button>
-                        <div class="ea-panel" id="eaPanel">
-                            <h4 style="margin:18px 0 4px;color:var(--text);"><i class="fas fa-key"></i> Cevap Anahtarı (Toplu)</h4>
-                            <p style="font-size:0.78rem;color:var(--text-light);margin:4px 0 10px;">Doğru cevapları klavyeyle girin. Sadece <strong>A, B, C, D</strong> veya <strong>İ (İptal)</strong> kabul edilir; başka harf, sayı ve karakter girilemez. Yazdıkça soru kartları otomatik senkronize olur.</p>
-                            <div class="ea-ge">
-                                <div class="ea-left">
-                                    <div class="ov-block">
-                                        <div class="ov-title"><i class="fas fa-th-list"></i> Tüm Cevaplar</div>
-                                        <div id="eaOverlayGrid" class="ov-grid"></div>
-                                    </div>
-                                    <div class="ov-block">
-                                        <div class="ov-title"><i class="fas fa-layer-group"></i> Branşlar</div>
-                                        <div id="eaBranches" class="blist-wrap"></div>
-                                    </div>
-                                </div>
-                                <div class="ea-right">
-                                    <div id="eaSheets"></div>
-                                </div>
-                            </div>
-                        </div>
                         <div class="form-actions">
                             <button type="submit" class="btn-save">
                                 <i class="fas fa-save"></i> Kaydet
@@ -619,6 +603,41 @@
                 </div>
             </div>
 
+            <div class="section-page" id="txtPage">
+                <div class="page-header">
+                    <h3>TXT Birleştirme</h3>
+                </div>
+                <div class="form-panel">
+                    <h3>Optik TXT Yükleme</h3>
+                    <p style="font-size:0.82rem;color:var(--text-medium);margin-top:4px;">
+                        Sınavı seçin ve o sınava gelen TXT dosyalarını yükleyin. Her satır bir öğrencidir; alanlar <strong>Optik Form</strong> bölümündeki başlangıç/bitiş aralıklarına göre
+                        satır içindeki karakterlere yazılır (örn. İsim başlangıç 1 – bitiş 21 ise 1. karakterden 21. karaktere). O sınava gelen bütün TXT'ler tek dosyada birleştirilir.
+                    </p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Sınav Seç</label>
+                            <select id="txtExamSelect"></select>
+                        </div>
+                    </div>
+                    <div class="txt-upload-row" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px;">
+                        <button type="button" class="btn-add" id="txtUploadBtn" style="background:var(--bg-light);color:var(--text);border:1px dashed var(--border);">
+                            <i class="fas fa-file-upload"></i> TXT Dosyalarını Seç
+                        </button>
+                        <input type="file" id="txtFileInput" accept=".txt,text/plain" multiple style="display:none;">
+                        <span id="txtStatus" style="font-size:0.8rem;color:var(--text-medium);"></span>
+                    </div>
+                    <div id="txtFileList" style="margin-top:12px;"></div>
+                    <h4 style="margin:14px 0 6px;color:var(--text);">Birleştirilmiş TXT</h4>
+                    <div class="txt-merged-wrap">
+                        <pre id="txtMerged" style="margin:0;padding:10px 12px;background:var(--bg-light);border-radius:8px;font-size:0.78rem;white-space:pre;overflow:auto;color:var(--text-medium);line-height:1.5;"></pre>
+                    </div>
+                    <div class="form-actions" style="margin-top:12px;">
+                        <button type="button" class="btn-save" id="txtDownloadBtn"><i class="fas fa-download"></i> TXT'yi İndir</button>
+                        <button type="button" class="btn-cancel" id="txtClearBtn"><i class="fas fa-trash"></i> Temizle</button>
+                    </div>
+                </div>
+            </div>
+
             <div class="section-page" id="settingsPage">
                 <h3>Site Ayarları</h3>
                 <div class="settings-grid">
@@ -659,7 +678,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js"></script>
-<script src="admin.js?v=13"></script>
+<script src="admin.js?v=14"></script>
 <script src="transition.js"></script>
 <script>
 (function(){

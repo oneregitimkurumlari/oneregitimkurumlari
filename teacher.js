@@ -657,14 +657,13 @@ document.addEventListener("DOMContentLoaded", () => {
             wrap.innerHTML = "";
             questions.forEach(q => addExamQuestionRow(q, true));
             status.textContent = questions.length + " soru eklendi ✓";
-            showToast(questions.length + " soru PDF'ten alındı. Doğru cevapları formda elle seçip kaydedin.");
+            showToast(questions.length + " soru PDF'ten alındı. Soru metinlerini kontrol edip kaydedin.");
         } catch (err) {
             status.textContent = "";
             showError("PDF okunamadı: " + err.message);
         } finally {
             btn.disabled = false;
         }
-        window.refreshExamAnswerPanel && window.refreshExamAnswerPanel();
     });
 
     function base64ToU8(b64) {
@@ -697,7 +696,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const wrap = document.getElementById("examQuestions");
         wrap.innerHTML = "";
         (questions || []).forEach(q => addExamQuestionRow(q, true));
-        window.refreshExamAnswerPanel && window.refreshExamAnswerPanel();
     }
 
     function addExamQuestionRow(q, silent) {
@@ -706,7 +704,6 @@ document.addEventListener("DOMContentLoaded", () => {
         row.className = "exam-q-box";
         const text = (q && q.text) ? q.text : "";
         const opts = (q && q.options) || ["", "", "", ""];
-        const ans = (q && q.answer !== undefined) ? q.answer : -1;
         const img = (q && q.image) ? q.image : "";
         const letters = ["A", "B", "C", "D"];
         let optRows = "";
@@ -732,17 +729,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </button>
                 </div>
             </div>
-            ${optRows}
-            <div class="qq-answer-row">
-                <label>Doğru cevap</label>
-                <select class="qq-answer">
-                    <option value="0"${ans === 0 ? " selected" : ""}>A</option>
-                    <option value="1"${ans === 1 ? " selected" : ""}>B</option>
-                    <option value="2"${ans === 2 ? " selected" : ""}>C</option>
-                    <option value="3"${ans === 3 ? " selected" : ""}>D</option>
-                    <option value="-1"${ans === -1 ? " selected" : ""}>İ (İptal)</option>
-                </select>
-            </div>`;
+            ${optRows}`;
         wrap.appendChild(row);
 
         const addBtn = row.querySelector(".qq-img-add");
@@ -778,7 +765,6 @@ document.addEventListener("DOMContentLoaded", () => {
             prev.innerHTML = "";
             addBtn.innerHTML = '<i class="fas fa-image"></i> Görsel Ekle';
         });
-        if (!silent) window.refreshExamAnswerPanel && window.refreshExamAnswerPanel();
     }
 
     function processQuestionImage(file) {
@@ -814,7 +800,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const s = r.querySelector(".qq-head strong");
             if (s) s.textContent = "Soru " + (idx + 1);
         });
-        window.refreshExamAnswerPanel && window.refreshExamAnswerPanel();
     };
 
     function collectExamQuestions() {
@@ -825,11 +810,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const text = qt ? qt.value.trim() : "";
             if (!text) return;
             const options = Array.from(r.querySelectorAll(".qq-opt")).map(o => (o.value || "").trim());
-            const av = (r.querySelector(".qq-answer") || {}).value;
-            const answer = (av === undefined || av === null || av === "") ? -1 : parseInt(av, 10);
             const imgEl = r.querySelector(".qq-img");
             const image = imgEl && imgEl.value ? imgEl.value : "";
-            questions.push({ text, options, answer, image });
+            questions.push({ text, options, answer: -1, image });
         });
         return questions;
     }
@@ -869,141 +852,7 @@ document.addEventListener("DOMContentLoaded", () => {
             start += cnt;
         });
         pre.textContent = lines.join("\n") + "\nToplam: " + total + " soru";
-        window.refreshExamAnswerPanel && window.refreshExamAnswerPanel();
     };
-
-    /* ============ Cevap Anahtarı / Toplu Cevap Girişi ============ */
-    const EA_COLORS = { turkce: "#16a34a", matematik: "#2563eb", fen: "#9a3412", inkilap: "#a855f7", din: "#0ea5e9", yabanci: "#dc2626" };
-    let eaActive = -1;
-
-    function eaBranchList() {
-        const counts = readBranchCounts();
-        const n = document.querySelectorAll("#examQuestions .exam-q-box").length;
-        const out = [];
-        let off = 0;
-        OPTIK_SUBJECT_DEFS.forEach(s => {
-            const cnt = Math.max(0, Math.min(counts[s.id] || 0, n - off));
-            if (cnt <= 0) return;
-            out.push({ id: s.id, label: s.label, soruSayisi: cnt, start: off, end: off + cnt, color: EA_COLORS[s.id] || "#64748b" });
-            off += cnt;
-        });
-        if (off === 0 && n > 0) out.push({ id: "tumu", label: "Tümü", soruSayisi: n, start: 0, end: n, color: "#64748b" });
-        return out;
-    }
-
-    window.refreshExamAnswerPanel = function() {
-        const grid = document.getElementById("eaOverlayGrid");
-        if (!grid) return;
-        const rows = document.querySelectorAll("#examQuestions .exam-q-box");
-        const answers = [];
-        rows.forEach(r => {
-            const s = r.querySelector(".qq-answer");
-            answers.push(s ? (s.value === "" ? -1 : parseInt(s.value, 10)) : -1);
-        });
-        const n = answers.length;
-        const brs = eaBranchList();
-        const letters = ["A", "B", "C", "D"];
-
-        grid.innerHTML = "";
-        for (let i = 0; i < n; i++) {
-            const br = brs.find(b => i >= b.start && i < b.end);
-            const color = br ? br.color : "#64748b";
-            const isIptal = answers[i] < 0;
-            const cell = document.createElement("div");
-            cell.className = "ov-cell" + (isIptal ? " iptal" : "") + (i === eaActive ? " active" : "");
-            cell.id = "eaov-" + i;
-            if (!isIptal) { cell.style.background = color; cell.style.borderColor = color; }
-            cell.title = "Soru " + (i + 1) + (br ? " - " + br.label : "") + (isIptal ? " - İptal" : "");
-            cell.innerHTML = `<span class="o-num">${i + 1}</span><span class="o-let">${isIptal ? "İ" : (letters[answers[i]] || "A")}</span>`;
-            cell.addEventListener("click", () => eaJumpTo(i));
-            grid.appendChild(cell);
-        }
-
-        const bl = document.getElementById("eaBranches");
-        bl.innerHTML = "";
-        brs.forEach((b, bi) => {
-            let done = 0;
-            for (let x = b.start; x < b.end; x++) if (answers[x] >= 0) done++;
-            const brow = document.createElement("div");
-            brow.className = "brow";
-            brow.innerHTML = `<span class="brow-dot" style="background:${b.color}"></span><span class="brow-name">${esc(b.label)}</span><span class="brow-range">${b.soruSayisi > 1 ? (b.start + 1) + "-" + b.end : (b.start + 1)}</span><span class="brow-count" id="eab-${bi}">${done}/${b.soruSayisi}</span>`;
-            brow.addEventListener("click", () => eaJumpTo(b.start));
-            bl.appendChild(brow);
-        });
-
-        const sheets = document.getElementById("eaSheets");
-        sheets.innerHTML = "";
-        brs.forEach((b, bi) => {
-            let done = 0;
-            for (let x = b.start; x < b.end; x++) if (answers[x] >= 0) done++;
-            const box = document.createElement("div");
-            box.className = "branch-sheet";
-            box.innerHTML = `<div class="bs-head" style="background:${b.color}"><span class="bs-title">${esc(b.label)}</span><span class="bs-range">${b.soruSayisi > 1 ? (b.start + 1) + " – " + b.end : (b.start + 1)}</span><span class="bs-count" id="eac-${bi}">${done}/${b.soruSayisi}</span></div>`;
-            const rowsWrap = document.createElement("div");
-            rowsWrap.className = "bs-rows";
-            for (let i = b.start; i < b.end; i++) {
-                const rowEl = document.createElement("div");
-                rowEl.className = "bs-row" + (i === eaActive ? " active" : "");
-                rowEl.id = "earow-" + i;
-                const val = answers[i] >= 0 ? letters[answers[i]] : "İ";
-                rowEl.innerHTML = `<span class="bs-num">${i + 1}</span>
-                    <input type="text" class="ea-inp" value="${val}" maxlength="1" autocomplete="off" spellcheck="false" data-q="${i}" title="A, B, C, D veya İ (İptal)" onkeydown="eaBlockKey(event)" oninput="eaKey(this)">
-                    <span class="bs-num-link" onclick="eaJumpTo(${i})" title="Soruyu göster"><i class="fas fa-arrow-right"></i></span>`;
-                rowsWrap.appendChild(rowEl);
-            }
-            box.appendChild(rowsWrap);
-            sheets.appendChild(box);
-        });
-    };
-
-    window.eaBlockKey = function(e) {
-        if (e.ctrlKey || e.metaKey || e.altKey) return;
-        const k = e.key;
-        if (k && k.length === 1 && !/[ABCDİ]/.test(k.toUpperCase())) e.preventDefault();
-    };
-
-    window.eaKey = function(inp) {
-        let v = inp.value.toUpperCase().replace(/[^ABCDİ]/g, "").slice(0, 1);
-        if (v === "") v = "İ";
-        inp.value = v;
-        inp.classList.toggle("iptal", v === "İ");
-        const map = { A: 0, B: 1, C: 2, D: 3, İ: -1 };
-        const q = parseInt(inp.getAttribute("data-q"), 10);
-        if (isNaN(q)) return;
-        const rows = document.querySelectorAll("#examQuestions .exam-q-box");
-        const r = rows[q];
-        if (r) {
-            const s = r.querySelector(".qq-answer");
-            if (s) s.value = map[v];
-        }
-        window.refreshExamAnswerPanel();
-        const el = document.getElementById("earow-" + q);
-        const ni = el && el.querySelector(".ea-inp");
-        if (ni) { ni.focus(); ni.select(); }
-    };
-
-    window.eaJumpTo = function(i) {
-        eaActive = i;
-        document.querySelectorAll("#eaOverlayGrid .ov-cell").forEach(c => c.classList.toggle("active", c.id === "eaov-" + i));
-        document.querySelectorAll("#eaSheets .bs-row").forEach(r => r.classList.toggle("active", r.id === "earow-" + i));
-        const el = document.getElementById("earow-" + i);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-        const qrows = document.querySelectorAll("#examQuestions .exam-q-box");
-        const qr = qrows[i];
-        if (qr) {
-            qr.scrollIntoView({ behavior: "smooth", block: "center" });
-            const box = qr.querySelector(".qq-answer-row");
-            if (box) {
-                box.style.transition = "box-shadow .3s ease";
-                box.style.boxShadow = "0 0 0 2px var(--primary)";
-                setTimeout(() => { box.style.boxShadow = ""; }, 1200);
-            }
-        }
-    };
-
-    document.getElementById("examQuestions").addEventListener("change", (e) => {
-        if (e.target.classList.contains("qq-answer")) window.refreshExamAnswerPanel();
-    });
 
     document.getElementById("addExamBtn").addEventListener("click", () => {
         document.getElementById("examForm").style.display = "block";
@@ -1251,6 +1100,195 @@ document.addEventListener("DOMContentLoaded", () => {
             renderOptik();
             showToast("Optik form tanımı kaydedildi!");
         }
+    });
+
+    /* ============ TXT Birleştirme Bölümü ============ */
+    let _txtFileList = null;
+    let _txtExamId = "";
+
+    function txtLayout() {
+        const o = remoteData.optik || {};
+        const fields = OPTIK_FIELDS.map(f => {
+            const ff = (o.fields || []).find(x => x.id === f.id) || {};
+            return { id: f.id, label: f.label, baslangic: parseInt(ff.baslangic || "0", 10), bitis: parseInt(ff.bitis || "0", 10) };
+        });
+        const width = Math.max(parseInt(o.bitis || "0", 10), 0, ...fields.map(f => f.bitis));
+        return { fields, width };
+    }
+
+    function txtParseLine(layout, line) {
+        const rec = {};
+        layout.fields.forEach(f => {
+            rec[f.id] = (f.baslangic > 0 && f.bitis >= f.baslangic) ? line.slice(f.baslangic - 1, f.bitis) : "";
+        });
+        return rec;
+    }
+
+    function txtBuildLine(layout, rec) {
+        const width = Math.max(layout.width, 1);
+        const chars = new Array(width + 1).join(".").split("");
+        layout.fields.forEach(f => {
+            const val = String(rec[f.id] || "");
+            const start = f.baslangic - 1;
+            const end = f.bitis - 1;
+            if (start >= 0 && end >= start) {
+                for (let k = 0; k < val.length && start + k <= end; k++) chars[start + k] = val[k];
+            }
+        });
+        return chars.join("");
+    }
+
+    function txtMergeAll(files) {
+        const layout = txtLayout();
+        if (!layout.fields.some(f => f.baslangic > 0 && f.bitis >= f.baslangic)) {
+            return { error: "Önce Optik Form bölümünde alanlara Başlangıç/Bitiş girilmelidir.", merged: "", count: 0 };
+        }
+        const records = [];
+        (files || []).forEach(f => {
+            String(f.content || "").replace(/\r\n/g, "\n").trim().split("\n").forEach(l => {
+                const s = l.trimEnd();
+                if (s !== "") records.push(txtParseLine(layout, s));
+            });
+        });
+        return { error: "", merged: records.map(r => txtBuildLine(layout, r)).join("\n"), count: records.length };
+    }
+
+    function txtRender() {
+        const sel = document.getElementById("txtExamSelect");
+        const statusEl = document.getElementById("txtStatus");
+        const listEl = document.getElementById("txtFileList");
+        const preEl = document.getElementById("txtMerged");
+        const examId = sel ? sel.value : _txtExamId;
+        _txtExamId = examId;
+        if (!examId) {
+            listEl.innerHTML = "";
+            preEl.textContent = "";
+            statusEl.textContent = "";
+            return;
+        }
+        const merge = txtMergeAll(_txtFileList || []);
+        if (merge.error) {
+            preEl.textContent = merge.error;
+            listEl.innerHTML = "";
+            statusEl.textContent = "";
+            return;
+        }
+        statusEl.textContent = (_txtFileList || []).length + " dosya · " + merge.count + " öğrenci satırı";
+        preEl.textContent = merge.merged;
+        listEl.innerHTML = (_txtFileList || []).map((f, i) => `
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:var(--bg-white);">
+                <i class="fas fa-file-alt" style="color:var(--text-light);"></i>
+                <span style="flex:1;font-size:0.84rem;color:var(--text);">${esc(f.name || "TXT")}</span>
+                <span style="font-size:0.72rem;color:var(--text-light);">${f.addedAt ? new Date(f.addedAt).toLocaleString("tr-TR") : ""}</span>
+                <button type="button" class="btn-delete" style="padding:4px 8px;font-size:0.72rem;" onclick="txtRemoveFile(${i})"><i class="fas fa-trash"></i></button>
+            </div>`).join("");
+    }
+
+    async function txtLoad(examId) {
+        if (!examId) { _txtFileList = null; return; }
+        try {
+            const res = await fetchWithTimeout(FIREBASE_URL + "/_examTxt/" + examId + ".json?t=" + Date.now(), { cache: "no-store" });
+            const data = res.ok ? await res.json() : null;
+            _txtFileList = Array.isArray(data) ? data : [];
+            _txtExamId = examId;
+        } catch (e) {
+            _txtFileList = null;
+            showError("TXT listesi okunamadı: " + e.message);
+        }
+    }
+
+    async function txtSave(examId, files) {
+        const res = await fetchWithTimeout(FIREBASE_URL + "/_examTxt/" + examId + ".json", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(files)
+        });
+        if (!res.ok) throw new Error("TXT kaydedilemedi (" + res.status + ")");
+    }
+
+    window.renderTxtSection = async function() {
+        const sel = document.getElementById("txtExamSelect");
+        if (!sel) return;
+        const exams = (remoteData.exams || []).filter(x => x.teacherId === currentTeacher || x.teacherId === "");
+        const prev = sel.value;
+        sel.innerHTML = `<option value="">Sınav Seç...</option>` + exams.map(x => `<option value="${jsEsc(x.id)}">${esc(x.title)}</option>`).join("");
+        if (prev) sel.value = prev;
+        if (sel.value) { await txtLoad(sel.value); }
+        txtRender();
+    };
+
+    window.txtRemoveFile = async function(i) {
+        const files = (_txtFileList || []).slice();
+        files.splice(i, 1);
+        _txtFileList = files;
+        try {
+            if (files.length === 0) {
+                await fetchWithTimeout(FIREBASE_URL + "/_examTxt/" + _txtExamId + ".json", { method: "DELETE" });
+            } else {
+                await txtSave(_txtExamId, files);
+            }
+            txtRender();
+            showToast("Dosya kaldırıldı.");
+        } catch (e) {
+            showError(e.message);
+        }
+    };
+
+    document.querySelector('.sidebar-btn[data-section="txt"]').addEventListener("click", () => { window.renderTxtSection(); });
+
+    document.getElementById("txtExamSelect").addEventListener("change", async () => {
+        const sel = document.getElementById("txtExamSelect");
+        if (!sel.value) { _txtFileList = null; txtRender(); return; }
+        await txtLoad(sel.value);
+        txtRender();
+    });
+    document.getElementById("txtUploadBtn").addEventListener("click", () => document.getElementById("txtFileInput").click());
+    document.getElementById("txtFileInput").addEventListener("change", async (e) => {
+        const sel = document.getElementById("txtExamSelect");
+        if (!sel.value) { showError("Önce sınav seçin."); e.target.value = ""; return; }
+        const files = Array.from(e.target.files || []);
+        e.target.value = "";
+        if (!files.length) return;
+        const reads = files.map(f => new Promise((resolve, reject) => {
+            const rd = new FileReader();
+            rd.onload = () => resolve({ name: f.name, addedAt: Date.now(), content: String(rd.result || "") });
+            rd.onerror = () => reject(new Error(f.name + " okunamadı"));
+            rd.readAsText(f, "utf-8");
+        }));
+        try {
+            const newOnes = await Promise.all(reads);
+            const all = (_txtFileList || []).concat(newOnes);
+            await txtSave(_txtExamId, all);
+            _txtFileList = all;
+            txtRender();
+            showToast(newOnes.length + " TXT eklendi ve birleştirildi.");
+        } catch (err) {
+            showError(err.message);
+        }
+    });
+    document.getElementById("txtDownloadBtn").addEventListener("click", () => {
+        const exam = (remoteData.exams || []).find(x => x.id === _txtExamId);
+        const content = document.getElementById("txtMerged").textContent;
+        if (!content) { showError("Birleştirilmiş TXT yok."); return; }
+        const a = document.createElement("a");
+        const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+        a.href = URL.createObjectURL(blob);
+        a.download = ((exam && exam.title) || "optik") + "_optik.txt";
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    });
+    document.getElementById("txtClearBtn").addEventListener("click", () => {
+        if (!_txtExamId) return;
+        showConfirm("Bu sınava yüklenen tüm TXT'ler silinsin mi?", async () => {
+            try {
+                await fetchWithTimeout(FIREBASE_URL + "/_examTxt/" + _txtExamId + ".json", { method: "DELETE" });
+                _txtFileList = [];
+                txtRender();
+                showToast("TXT'ler temizlendi.");
+            } catch (e) {
+                showError(e.message);
+            }
+        });
     });
 });
 
