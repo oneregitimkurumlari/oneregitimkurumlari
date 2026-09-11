@@ -808,10 +808,10 @@ document.addEventListener("DOMContentLoaded", () => {
         rows.forEach(r => {
             const qt = r.querySelector(".qq-text");
             const text = qt ? qt.value.trim() : "";
-            if (!text) return;
-            const options = Array.from(r.querySelectorAll(".qq-opt")).map(o => (o.value || "").trim());
             const imgEl = r.querySelector(".qq-img");
             const image = imgEl && imgEl.value ? imgEl.value : "";
+            if (!text && !image) return;
+            const options = Array.from(r.querySelectorAll(".qq-opt")).map(o => (o.value || "").trim());
             questions.push({ text, options, answer: -1, image });
         });
         return questions;
