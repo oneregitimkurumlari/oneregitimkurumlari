@@ -633,7 +633,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const q = {
                     text: String(raw.text || "").trim(),
                     options: Array.isArray(raw.options) ? ["", "", "", ""].map((_, i) => String(raw.options[i] || "").trim()) : ["", "", "", ""],
-                    answer: 0,
+                    answer: -1,
                     image: ""
                 };
                 if (!q.text) continue;
@@ -702,7 +702,7 @@ document.addEventListener("DOMContentLoaded", () => {
         row.className = "exam-q-box";
         const text = (q && q.text) ? q.text : "";
         const opts = (q && q.options) || ["", "", "", ""];
-        const ans = (q && q.answer !== undefined) ? q.answer : 0;
+        const ans = (q && q.answer !== undefined) ? q.answer : -1;
         const img = (q && q.image) ? q.image : "";
         const letters = ["A", "B", "C", "D"];
         let optRows = "";
@@ -736,6 +736,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <option value="1"${ans === 1 ? " selected" : ""}>B</option>
                     <option value="2"${ans === 2 ? " selected" : ""}>C</option>
                     <option value="3"${ans === 3 ? " selected" : ""}>D</option>
+                    <option value="-1"${ans === -1 ? " selected" : ""}>İ (İptal)</option>
                 </select>
             </div>`;
         wrap.appendChild(row);
@@ -820,7 +821,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const text = qt ? qt.value.trim() : "";
             if (!text) return;
             const options = Array.from(r.querySelectorAll(".qq-opt")).map(o => (o.value || "").trim());
-            const answer = parseInt((r.querySelector(".qq-answer") || {}).value || "0", 10);
+            const av = (r.querySelector(".qq-answer") || {}).value;
+            const answer = (av === undefined || av === null || av === "") ? -1 : parseInt(av, 10);
             const imgEl = r.querySelector(".qq-img");
             const image = imgEl && imgEl.value ? imgEl.value : "";
             questions.push({ text, options, answer, image });
@@ -892,7 +894,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const answers = [];
         rows.forEach(r => {
             const s = r.querySelector(".qq-answer");
-            answers.push(s ? parseInt(s.value || "0", 10) : 0);
+            answers.push(s ? (s.value === "" ? -1 : parseInt(s.value, 10)) : -1);
         });
         const n = answers.length;
         const brs = eaBranchList();
@@ -902,13 +904,13 @@ document.addEventListener("DOMContentLoaded", () => {
         for (let i = 0; i < n; i++) {
             const br = brs.find(b => i >= b.start && i < b.end);
             const color = br ? br.color : "#64748b";
+            const isIptal = answers[i] < 0;
             const cell = document.createElement("div");
-            cell.className = "ov-cell" + (i === eaActive ? " active" : "");
+            cell.className = "ov-cell" + (isIptal ? " iptal" : "") + (i === eaActive ? " active" : "");
             cell.id = "eaov-" + i;
-            cell.style.background = color;
-            cell.style.borderColor = color;
-            cell.title = "Soru " + (i + 1) + (br ? " - " + br.label : "");
-            cell.innerHTML = `<span class="o-num">${i + 1}</span><span class="o-let">${letters[answers[i]] || "A"}</span>`;
+            if (!isIptal) { cell.style.background = color; cell.style.borderColor = color; }
+            cell.title = "Soru " + (i + 1) + (br ? " - " + br.label : "") + (isIptal ? " - İptal" : "");
+            cell.innerHTML = `<span class="o-num">${i + 1}</span><span class="o-let">${isIptal ? "İ" : (letters[answers[i]] || "A")}</span>`;
             cell.addEventListener("click", () => eaJumpTo(i));
             grid.appendChild(cell);
         }
@@ -916,9 +918,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const bl = document.getElementById("eaBranches");
         bl.innerHTML = "";
         brs.forEach((b, bi) => {
+            let done = 0;
+            for (let x = b.start; x < b.end; x++) if (answers[x] >= 0) done++;
             const brow = document.createElement("div");
             brow.className = "brow";
-            brow.innerHTML = `<span class="brow-dot" style="background:${b.color}"></span><span class="brow-name">${esc(b.label)}</span><span class="brow-range">${b.soruSayisi > 1 ? (b.start + 1) + "-" + b.end : (b.start + 1)}</span><span class="brow-count" id="eab-${bi}">${b.soruSayisi}</span>`;
+            brow.innerHTML = `<span class="brow-dot" style="background:${b.color}"></span><span class="brow-name">${esc(b.label)}</span><span class="brow-range">${b.soruSayisi > 1 ? (b.start + 1) + "-" + b.end : (b.start + 1)}</span><span class="brow-count" id="eab-${bi}">${done}/${b.soruSayisi}</span>`;
             brow.addEventListener("click", () => eaJumpTo(b.start));
             bl.appendChild(brow);
         });
@@ -926,17 +930,20 @@ document.addEventListener("DOMContentLoaded", () => {
         const sheets = document.getElementById("eaSheets");
         sheets.innerHTML = "";
         brs.forEach((b, bi) => {
+            let done = 0;
+            for (let x = b.start; x < b.end; x++) if (answers[x] >= 0) done++;
             const box = document.createElement("div");
             box.className = "branch-sheet";
-            box.innerHTML = `<div class="bs-head" style="background:${b.color}"><span class="bs-title">${esc(b.label)}</span><span class="bs-range">${b.soruSayisi > 1 ? (b.start + 1) + " – " + b.end : (b.start + 1)}</span><span class="bs-count" id="eac-${bi}">0/${b.soruSayisi}</span></div>`;
+            box.innerHTML = `<div class="bs-head" style="background:${b.color}"><span class="bs-title">${esc(b.label)}</span><span class="bs-range">${b.soruSayisi > 1 ? (b.start + 1) + " – " + b.end : (b.start + 1)}</span><span class="bs-count" id="eac-${bi}">${done}/${b.soruSayisi}</span></div>`;
             const rowsWrap = document.createElement("div");
             rowsWrap.className = "bs-rows";
             for (let i = b.start; i < b.end; i++) {
                 const rowEl = document.createElement("div");
                 rowEl.className = "bs-row" + (i === eaActive ? " active" : "");
                 rowEl.id = "earow-" + i;
+                const val = answers[i] >= 0 ? letters[answers[i]] : "İ";
                 rowEl.innerHTML = `<span class="bs-num">${i + 1}</span>
-                    <div class="bs-opt">${letters.map((L, j) => `<button type="button" class="let-btn ${answers[i] === j ? "picked" : ""}" data-q="${i}" data-v="${j}" onclick="eaPick(${i},${j})">${L}</button>`).join("")}</div>
+                    <input type="text" class="ea-inp" value="${val}" maxlength="1" autocomplete="off" spellcheck="false" data-q="${i}" title="A, B, C, D veya İ (İptal)" onkeydown="eaBlockKey(event)" oninput="eaKey(this)">
                     <span class="bs-num-link" onclick="eaJumpTo(${i})" title="Soruyu göster"><i class="fas fa-arrow-right"></i></span>`;
                 rowsWrap.appendChild(rowEl);
             }
@@ -945,14 +952,30 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
-    window.eaPick = function(i, j) {
+    window.eaBlockKey = function(e) {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        const k = e.key;
+        if (k && k.length === 1 && !/[ABCDİ]/.test(k.toUpperCase())) e.preventDefault();
+    };
+
+    window.eaKey = function(inp) {
+        let v = inp.value.toUpperCase().replace(/[^ABCDİ]/g, "").slice(0, 1);
+        if (v === "") v = "İ";
+        inp.value = v;
+        inp.classList.toggle("iptal", v === "İ");
+        const map = { A: 0, B: 1, C: 2, D: 3, İ: -1 };
+        const q = parseInt(inp.getAttribute("data-q"), 10);
+        if (isNaN(q)) return;
         const rows = document.querySelectorAll("#examQuestions .exam-q-box");
-        const r = rows[i];
-        if (!r) return;
-        const s = r.querySelector(".qq-answer");
-        if (!s) return;
-        s.value = j;
+        const r = rows[q];
+        if (r) {
+            const s = r.querySelector(".qq-answer");
+            if (s) s.value = map[v];
+        }
         window.refreshExamAnswerPanel();
+        const el = document.getElementById("earow-" + q);
+        const ni = el && el.querySelector(".ea-inp");
+        if (ni) { ni.focus(); ni.select(); }
     };
 
     window.eaJumpTo = function(i) {
