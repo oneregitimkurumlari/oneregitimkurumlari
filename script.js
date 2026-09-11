@@ -360,6 +360,7 @@ function renderQuestionPane() {
             ${badge}
         </div>
         <div class="exam-qtext">${esc(q.text)}</div>
+        ${q.image ? `<img src="${q.image}" class="exam-qimg" alt="Soru ${i + 1}">` : ""}
         <div class="exam-nav-list">${navList}</div>
         ${legend}`;
 }
