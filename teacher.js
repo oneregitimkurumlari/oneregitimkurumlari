@@ -601,10 +601,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const base64 = dataUrl.split(",")[1];
 
             const payload = {
-                systemInstruction: { parts: [{ text: "Sen bir sınav soru çıkarıcısın. PDF'teki test sorularını 4 şıklı (A,B,C,D) çoktan seçmeli sorulara çevirirsin. Doğru şıkkın indeksini answer alanına yazarsın (A=0, B=1, C=2, D=3). PDF'te şıklar yoksa kendin 4 makul şık üretirsin. Çıktı yalnızca JSON dizisidir, başka hiçbir şey yazmazsın." }] },
+                systemInstruction: { parts: [{ text: "Sen bir sınav soru çıkarıcısın. PDF'teki test sorularını 4 şıklı (A,B,C,D) çoktan seçmeli sorulara çevirirsin. PDF'te şıklar yoksa kendin 4 makul şık üretirsin. DOĞRU CEVABI ASLA BELİRLEMEZ VE YAZMAZSIN; cevaplar öğretmen tarafından elle girilir. Çıktı yalnızca JSON dizisidir, başka hiçbir şey yazmazsın." }] },
                 contents: [{ parts: [
                     { inline_data: { mime_type: "application/pdf", data: base64 } },
-                    { text: "Bu PDF'teki her soruyu şu formatta JSON dizisi olarak döndür: [{\"text\":\"soru metni\",\"options\":[\"A şıkkı\",\"B şıkkı\",\"C şıkkı\",\"D şıkkı\"],\"answer\":0}]" }
+                    { text: "Bu PDF'teki her soruyu şu formatta JSON dizisi olarak döndür: [{\"text\":\"soru metni\",\"options\":[\"A şıkkı\",\"B şıkkı\",\"C şıkkı\",\"D şıkkı\"]}] - answer alanı ekleme." }
                 ] }],
                 generationConfig: { temperature: 0.1 }
             };
@@ -624,7 +624,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const questions = list.slice(0, 50).map(q => ({
                 text: String(q.text || "").trim(),
                 options: Array.isArray(q.options) ? ["", "", "", ""].map((_, i) => String(q.options[i] || "").trim()) : ["", "", "", ""],
-                answer: typeof q.answer === "number" ? q.answer : 0
+                answer: 0
             })).filter(q => q.text);
 
             if (questions.length === 0) throw new Error("Soru bulunamadı");
@@ -633,7 +633,7 @@ document.addEventListener("DOMContentLoaded", () => {
             wrap.innerHTML = "";
             questions.forEach(q => addExamQuestionRow(q));
             status.textContent = questions.length + " soru eklendi ✓";
-            showToast(questions.length + " soru PDF'ten alındı. Kontrol edip kaydedin.");
+            showToast(questions.length + " soru PDF'ten alındı. Doğru cevapları formda elle seçip kaydedin.");
         } catch (err) {
             status.textContent = "";
             showError("PDF okunamadı: " + err.message);
