@@ -1482,6 +1482,7 @@ document.addEventListener("DOMContentLoaded", () => {
     /* ============ TXT Birleştirme Bölümü ============ */
     let _txtFileList = null;
     let _txtExamId = "";
+    let _txtOnline = [];
 
     function txtLayout() {
         const o = remoteData.optik || {};
@@ -1491,6 +1492,26 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         const width = Math.max(parseInt(o.bitis || "0", 10), 0, ...fields.map(f => f.bitis));
         return { fields, width };
+    }
+
+    function txtBuildOnlineRec(layout, exam, answers, student) {
+        const rec = {};
+        rec.isim = student ? (student.name + " " + student.surname) : "";
+        rec.tcno = student ? (student.tcno || "") : "";
+        rec.numara = student ? (student.no || "") : "";
+        rec.kitapcik = "A";
+        const letters = ["A", "B", "C", "D"];
+        let offset = 0;
+        (exam.branches || []).forEach(b => {
+            let seg = "";
+            for (let k = 0; k < (b.soruSayisi || 0); k++) {
+                const a = answers[offset + k];
+                seg += (a === undefined || letters[a] === undefined) ? "-" : letters[a];
+            }
+            if (layout.fields.some(f => f.id === b.id)) rec[b.id] = seg;
+            offset += (b.soruSayisi || 0);
+        });
+        return rec;
     }
 
     function txtParseLine(layout, line) {
@@ -1515,7 +1536,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return chars.join("");
     }
 
-    function txtMergeAll(files) {
+    function txtMergeAll(files, onlineLines) {
         const layout = txtLayout();
         if (!layout.fields.some(f => f.baslangic > 0 && f.bitis >= f.baslangic)) {
             return { error: "Önce Optik Form bölümünde alanlara Başlangıç/Bitiş girilmelidir.", merged: "", count: 0 };
@@ -1527,7 +1548,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (s !== "") records.push(txtParseLine(layout, s));
             });
         });
-        return { error: "", merged: records.map(r => txtBuildLine(layout, r)).join("\n"), count: records.length };
+        const uploaded = records.map(r => txtBuildLine(layout, r));
+        const all = uploaded.concat(onlineLines || []);
+        return { error: "", merged: all.join("\n"), count: all.length };
     }
 
     function txtRender() {
@@ -1538,31 +1561,51 @@ document.addEventListener("DOMContentLoaded", () => {
         const examId = sel ? sel.value : _txtExamId;
         _txtExamId = examId;
         if (!examId) {
+            _txtOnline = [];
             listEl.innerHTML = "";
             preEl.textContent = "";
             statusEl.textContent = "";
             return;
         }
-        const merge = txtMergeAll(_txtFileList || []);
+        const exam = (remoteData.exams || []).find(x => x.id === examId);
+        const layout = txtLayout();
+        const onlineLines = exam ? (_txtOnline || []).map(o => {
+            const st = (remoteData.students || []).find(s => s.id === o.id);
+            const rec = txtBuildOnlineRec(layout, exam, o.answers || {}, st);
+            return txtBuildLine(layout, rec);
+        }) : [];
+        const merge = txtMergeAll(_txtFileList || [], onlineLines);
         if (merge.error) {
             preEl.textContent = merge.error;
             listEl.innerHTML = "";
             statusEl.textContent = "";
             return;
         }
-        statusEl.textContent = (_txtFileList || []).length + " dosya · " + merge.count + " öğrenci satırı";
+        statusEl.textContent = (_txtFileList || []).length + " dosya · " + (_txtOnline || []).length + " online · " + merge.count + " toplam satır";
         preEl.textContent = merge.merged;
-        listEl.innerHTML = (_txtFileList || []).map((f, i) => `
+        const uploadedHtml = (_txtFileList || []).map((f, i) => `
             <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:var(--bg-white);">
                 <i class="fas fa-file-alt" style="color:var(--text-light);"></i>
                 <span style="flex:1;font-size:0.84rem;color:var(--text);">${esc(f.name || "TXT")}</span>
                 <span style="font-size:0.72rem;color:var(--text-light);">${f.addedAt ? new Date(f.addedAt).toLocaleString("tr-TR") : ""}</span>
                 <button type="button" class="btn-delete" style="padding:4px 8px;font-size:0.72rem;" onclick="txtRemoveFile(${i})"><i class="fas fa-trash"></i></button>
             </div>`).join("");
+        const onlineHtml = (_txtOnline || []).map(o => {
+            const st = (remoteData.students || []).find(s => s.id === o.id);
+            const displayName = st ? (st.name + " " + st.surname) : "Bilinmiyor";
+            return `
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #a7f3d0;border-radius:8px;margin-bottom:6px;background:#f0fdf4;">
+                <i class="fas fa-globe" style="color:#059669;"></i>
+                <span style="flex:1;font-size:0.84rem;color:#065f46;">${esc(displayName)}</span>
+                <span style="font-size:0.72rem;color:#059669;">Online</span>
+                <span style="font-size:0.72rem;color:var(--text-light);">${o.updatedAt ? new Date(o.updatedAt).toLocaleString("tr-TR") : ""}</span>
+            </div>`;
+        }).join("");
+        listEl.innerHTML = uploadedHtml + onlineHtml;
     }
 
     async function txtLoad(examId) {
-        if (!examId) { _txtFileList = null; return; }
+        if (!examId) { _txtFileList = null; _txtOnline = []; return; }
         try {
             const res = await fetchWithTimeout(FIREBASE_URL + "/_examTxt/" + examId + ".json?t=" + Date.now(), { cache: "no-store" });
             const data = res.ok ? await res.json() : null;
@@ -1571,6 +1614,19 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (e) {
             _txtFileList = null;
             showError("TXT listesi okunamadı: " + e.message);
+        }
+        try {
+            const res2 = await fetchWithTimeout(FIREBASE_URL + "/_examResults/" + examId + ".json?t=" + Date.now(), { cache: "no-store" });
+            const data2 = res2.ok ? await res2.json() : null;
+            _txtOnline = [];
+            if (data2) {
+                Object.keys(data2).forEach(k => {
+                    const r = data2[k] || {};
+                    if (r.done) _txtOnline.push({ id: k, answers: r.answers || {}, updatedAt: r.updatedAt || 0 });
+                });
+            }
+        } catch (e) {
+            _txtOnline = [];
         }
     }
 
