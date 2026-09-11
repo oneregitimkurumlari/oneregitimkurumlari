@@ -1327,6 +1327,17 @@ html.dark .exam-right { background: #1e293b; }
 .exam-badge.empty { background: #f1f5f9; color: #64748b; }
 .exam-qtext { font-size: 1.25rem; font-weight: 700; color: var(--text); line-height: 1.5; }
 html.dark .exam-qtext { color: var(--text-dark); }
+.exam-question-img {
+    max-width: 100%;
+    max-height: 260px;
+    width: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    align-self: flex-start;
+    object-fit: contain;
+    background: #fff;
+}
+html.dark .exam-question-img { border-color: #334155; }
 
 .exam-options { display: flex; flex-direction: column; gap: 10px; }
 .exam-option {

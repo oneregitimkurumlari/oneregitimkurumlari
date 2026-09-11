@@ -970,6 +970,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const text = (q && q.text) ? q.text : "";
         const opts = (q && q.options) || ["", "", "", ""];
         const ans = (q && q.answer !== undefined) ? q.answer : 0;
+        const img = (q && q.image) ? q.image : "";
         const letters = ["A", "B", "C", "D"];
         let optRows = "";
         for (let j = 0; j < 4; j++) {
@@ -981,6 +982,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 <button type="button" class="btn-delete" onclick="removeExamQuestion(this)"><i class="fas fa-trash"></i></button>
             </div>
             <input type="text" class="qq-text" placeholder="Soru metni" value="${esc(text)}">
+            <div class="qq-img-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                <input type="hidden" class="qq-img" value="${img ? img : ""}">
+                <button type="button" class="qq-img-add" style="background:var(--bg-light);border:1px dashed var(--border);border-radius:8px;padding:8px 12px;font-size:0.82rem;font-weight:600;color:var(--text-medium);cursor:pointer;">
+                    <i class="fas fa-image"></i> Görsel Ekle
+                </button>
+                <input type="file" class="qq-img-file" accept="image/*" style="display:none;">
+                <div class="qq-img-preview"${img ? "" : ' style="display:none;"'} style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <img src="${img}" style="max-height:80px;border-radius:8px;border:1px solid var(--border);" alt="Önizleme">
+                    <button type="button" class="qq-img-remove" style="background:#fee2e2;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:0.78rem;color:#b91c1c;">
+                        <i class="fas fa-trash"></i> Kaldır
+                    </button>
+                </div>
+            </div>
             ${optRows}
             <div class="qq-answer-row">
                 <label>Doğru cevap</label>
@@ -992,6 +1006,65 @@ document.addEventListener("DOMContentLoaded", () => {
                 </select>
             </div>`;
         wrap.appendChild(row);
+
+        const addBtn = row.querySelector(".qq-img-add");
+        const fileInp = row.querySelector(".qq-img-file");
+        const prev = row.querySelector(".qq-img-preview");
+        if (img) addBtn.innerHTML = '<i class="fas fa-image"></i> Görseli Değiştir';
+
+        addBtn.addEventListener("click", () => fileInp.click());
+        fileInp.addEventListener("change", async (e) => {
+            const f = e.target.files && e.target.files[0];
+            e.target.value = "";
+            if (!f) return;
+            try {
+                const dataUrl = await processQuestionImage(f);
+                row.querySelector(".qq-img").value = dataUrl;
+                prev.style.display = "flex";
+                prev.innerHTML = `<img src="${dataUrl}" style="max-height:80px;border-radius:8px;border:1px solid var(--border);" alt="Önizleme">
+                    <button type="button" class="qq-img-remove" style="background:#fee2e2;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:0.78rem;color:#b91c1c;"><i class="fas fa-trash"></i> Kaldır</button>`;
+                addBtn.innerHTML = '<i class="fas fa-image"></i> Görseli Değiştir';
+                prev.querySelector(".qq-img-remove").addEventListener("click", () => {
+                    row.querySelector(".qq-img").value = "";
+                    prev.style.display = "none";
+                    prev.innerHTML = "";
+                    addBtn.innerHTML = '<i class="fas fa-image"></i> Görsel Ekle';
+                });
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+        prev.querySelector(".qq-img-remove").addEventListener("click", () => {
+            row.querySelector(".qq-img").value = "";
+            prev.style.display = "none";
+            prev.innerHTML = "";
+            addBtn.innerHTML = '<i class="fas fa-image"></i> Görsel Ekle';
+        });
+    }
+
+    function processQuestionImage(file) {
+        return new Promise((resolve, reject) => {
+            if (!file.type || file.type.indexOf("image/") !== 0) { reject(new Error("Lütfen bir görsel dosyası seçin.")); return; }
+            if (file.size > 4 * 1024 * 1024) { reject(new Error("Görsel 4 MB'tan küçük olmalı.")); return; }
+            const rd = new FileReader();
+            rd.onload = () => {
+                const img = new Image();
+                img.onload = () => {
+                    const scale = Math.min(1, 900 / img.width, 600 / img.height);
+                    const w = Math.max(1, Math.round(img.width * scale));
+                    const h = Math.max(1, Math.round(img.height * scale));
+                    const cv = document.createElement("canvas");
+                    cv.width = w;
+                    cv.height = h;
+                    cv.getContext("2d").drawImage(img, 0, 0, w, h);
+                    resolve(cv.toDataURL("image/jpeg", 0.72));
+                };
+                img.onerror = () => reject(new Error("Görsel okunamadı"));
+                img.src = rd.result;
+            };
+            rd.onerror = () => reject(new Error("Dosya okunamadı"));
+            rd.readAsDataURL(file);
+        });
     }
 
     window.removeExamQuestion = function(btn) {
@@ -1013,7 +1086,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!text) return;
             const options = Array.from(r.querySelectorAll(".qq-opt")).map(o => (o.value || "").trim());
             const answer = parseInt((r.querySelector(".qq-answer") || {}).value || "0", 10);
-            questions.push({ text, options, answer });
+            const imgEl = r.querySelector(".qq-img");
+            const image = imgEl && imgEl.value ? imgEl.value : "";
+            questions.push({ text, options, answer, image });
         });
         return questions;
     }
