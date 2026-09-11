@@ -917,10 +917,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js";
 
             const payload = {
-                systemInstruction: { parts: [{ text: "Sen bir sınav soru çıkarıcısısın. PDF'teki test sorularını 4 şıklı (A,B,C,D) çoktan seçmeli sorulara çevirirsin. PDF'te şıklar yoksa kendin 4 makul şık üretirsin. DOĞRU CEVABI ASLA BELİRLEMEZ VE YAZMAZSIN; cevaplar öğretmen tarafından elle girilir. Çıktı yalnızca JSON dizisidir, başka hiçbir şey yazmazsın. Resimli sorularda resmin PDF içindeki yeri (page ve bbox) JSON'a eklenir; resmi asla yeniden üretme, sadece konumunu bildir." }] },
+                systemInstruction: { parts: [{ text: "Sen bir sınav soru çıkarıcısısın. PDF'teki test sorularını 4 şıklı (A,B,C,D) çoktan seçmeli sorulara çevirirsin. PDF'te şıklar yoksa kendin 4 makul şık üretirsin. DOĞRU CEVABI ASLA BELİRLEMEZ VE YAZMAZSIN; cevaplar öğretmen tarafından elle girilir. Çıktı yalnızca JSON dizisidir, başka hiçbir şey yazmazsın. HER SORU için sorunun PDF'teki tam konumu (page ve bbox) JSON'a eklenir; soruyu asla yeniden üretme, sadece konumunu bildir." }] },
                 contents: [{ parts: [
                     { inline_data: { mime_type: "application/pdf", data: base64 } },
-                    { text: "Bu PDF'teki her soruyu şu formatta JSON dizisi olarak döndür: [{\"text\":\"soru metni\",\"options\":[\"A şıkkı\",\"B şıkkı\",\"C şıkkı\",\"D şıkkı\"]}] - answer alanı ekleme. Soruyu tamamlayan bir resim varsa bu soruya \"page\": <sayfa no, 1'den başlar> ve \"bbox\": {\"x\":0,\"y\":0,\"w\":200,\"h\":100} alanlarını ekle. Koordinatlar PDF nokta biriminde (72 DPI), sol üst köşe 0,0 kabul edilir; resmi olabildiğince sıkı çevreleyen kutu gir. Resim yoksa page/bbox alanlarını EKLEME." }
+                    { text: "Bu PDF'teki her soruyu şu formatta JSON dizisi olarak döndür: [{\"text\":\"soru metni\",\"options\":[\"A şıkkı\",\"B şıkkı\",\"C şıkkı\",\"D şıkkı\"]}] - answer alanı ekleme. HER soru için ZORUNLU olarak \"page\": <sayfa no, 1'den başlar> ve \"bbox\": {\"x\":0,\"y\":0,\"w\":200,\"h\":100} alanlarını ekle. bbox, TÜM soruyu (soru metni + varsa görsel/şekil/grafik/tablo + varsa yazılı şıklar) PDF nokta biriminde (72 DPI, sol üst köşe 0,0) sıkı ve TAM çevreleyen kutu olmalı. bbox'ı asla atlama, hiçbir soruyu atlama." }
                 ] }],
                 generationConfig: { temperature: 0.1, maxOutputTokens: 65536 }
             };
@@ -939,6 +939,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const questions = [];
             const cap = Math.min(list.length, 150);
+            let pdfDoc = null;
+            try {
+                if (window.pdfjsLib) pdfDoc = await window.pdfjsLib.getDocument({ data: base64ToU8(base64) }).promise;
+            } catch (e) { pdfDoc = null; }
             for (let qi = 0; qi < cap; qi++) {
                 const raw = list[qi];
                 const q = {
@@ -947,12 +951,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     answer: -1,
                     image: ""
                 };
-                if (!q.text) continue;
-                if (raw.bbox && raw.page) {
-                    status.textContent = "Görseller işleniyor: " + (questions.length + 1) + " / " + cap + "...";
+                if (!q.text && !(raw.bbox && raw.page)) continue;
+                if (pdfDoc && raw.bbox && raw.page) {
+                    status.textContent = "Soru görüntüleri oluşturuluyor: " + (questions.length + 1) + " / " + cap + "...";
                     try {
-                        q.image = await cropPdfImage(base64, raw.page, raw.bbox);
+                        q.image = await cropPdfRegion(pdfDoc, raw.page, raw.bbox);
                     } catch (err) { q.image = ""; }
+                    if (q.image) q.text = "";
                 }
                 questions.push(q);
             }
@@ -980,17 +985,16 @@ document.addEventListener("DOMContentLoaded", () => {
         return u;
     }
 
-    async function cropPdfImage(base64, pageNum, bbox) {
-        const lib = window.pdfjsLib;
-        if (!lib || !pageNum || !bbox) return "";
-        const pdf = await lib.getDocument({ data: base64ToU8(base64) }).promise;
-        if (!pdf || pdf.numPages < pageNum) return "";
+    async function cropPdfRegion(pdf, pageNum, bbox) {
+        if (!pdf || !pageNum || !bbox) return "";
+        if (!pdf.numPages || pdf.numPages < pageNum) return "";
         const page = await pdf.getPage(pageNum);
         const vp = page.getViewport({ scale: 1 });
-        const x = Math.max(0, Math.min(vp.width - 1, Number(bbox.x) || 0));
-        const y = Math.max(0, Math.min(vp.height - 1, Number(bbox.y) || 0));
-        const w = Math.min(vp.width - x, Math.max(1, Number(bbox.w) || 0));
-        const h = Math.min(vp.height - y, Math.max(1, Number(bbox.h) || 0));
+        const pad = 10;
+        const x = Math.max(0, Math.min(vp.width - 1, (Number(bbox.x) || 0) - pad));
+        const y = Math.max(0, Math.min(vp.height - 1, (Number(bbox.y) || 0) - pad));
+        const w = Math.min(vp.width - x, Math.max(1, (Number(bbox.w) || 0) + 2 * pad));
+        const h = Math.min(vp.height - y, Math.max(1, (Number(bbox.h) || 0) + 2 * pad));
         const scale = Math.min(2.5, 900 / Math.max(w, 1));
         const cv = document.createElement("canvas");
         cv.width = Math.max(2, Math.round(w * scale));
