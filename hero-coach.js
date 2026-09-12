@@ -3,7 +3,7 @@
     window.__heroCoachInit = true;
 
     var GEMINI_KEY = atob("QVEuQWI4Uk42S3JsTTZCcWlVczF3S2NmUVUxMXAzZ0xsdVVKY3NZZ3lZOG9xRFJ0bjJjUlE=");
-    var GEMINI_MODEL = "gemini-2.5-flash";
+    var GEMINI_MODEL = "gemini-3.6-flash";
 
     var DEEPSEEK_KEY = atob("c2stNWFhZmNlYzk5NGNiNGEwMDhmODJmMGVjNjU5MTM3N2I=");
     var DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
@@ -452,31 +452,49 @@
         return out;
     }
 
-    function providerAsk(sys, q, temperature, maxTokens) {
-        return deepseekAsk(sys, q, temperature, maxTokens).catch(function () {
-            return geminiText(sys, q, temperature, maxTokens);
+    function providerPlanSys() {
+        var keys = ["pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi", "pazar"];
+        var branches = allBranches();
+        return "Sen HERO adında öğrenciler için haftalık çalışma programı oluşturan bir AI koç kedisin.\n" +
+            "Öğrencinin dersleri: " + (branches.join(", ") || "bilinmiyor") + ".\n" +
+            "Kesinlikle bir JSON nesnesi döndür, başka hiçbir metin yazma. JSON anahtarları sıralı olmalı:\n" +
+            '{"pazartesi":["...","..."],"sali":["...","..."],"carsamba":["...","..."],"persembe":["...","..."],"cuma":["...","..."],"cumartesi":["...","..."],"pazar":["...","..."]}\n' +
+            "Kurallar:\n" +
+            "- Anahtar isimleri TAM olarak şöyle olmalı (Türkçe karakter yok): " + keys.join(", ") + ".\n" +
+            "- Her güne tam 2-3 görev yaz.\n" +
+            "- Görevler öğrencinin derslerinden oluşmalı: " + branches.join(", ") + ".\n" +
+            "- Her görevin içinde mutlaka bir sayı olmalı: uygun soru sayısı (Matematik 25, Fen Bilimleri 20, Türkçe 20, İngilizce 15, Sosyal Bilgiler 15, Din Kültürü 12) ve gerekirse 'konu tekrarı' vurgusu.\n" +
+            "- Cumartesi gününe '1 deneme sınavı çöz (40 soru)' görevi ekleyebilirsin.\n" +
+            "Sadece geçerli JSON döndür.";
+    }
+
+    function providerAsk(sys, q, temperature, maxTokens, jsonMode) {
+        return deepseekAsk(sys, q, temperature, maxTokens, jsonMode).catch(function () {
+            return geminiText(sys, q, temperature, maxTokens, jsonMode);
         });
     }
 
-    function deepseekAsk(sys, q, temperature, maxTokens) {
+    function deepseekAsk(sys, q, temperature, maxTokens, jsonMode) {
         if (!DEEPSEEK_KEY) return Promise.reject(new Error("no-key"));
         var url = DEEPSEEK_URL;
+        var body = {
+            model: DEEPSEEK_MODEL,
+            messages: [
+                { role: "system", content: sys },
+                { role: "user", content: q }
+            ],
+            temperature: temperature,
+            max_tokens: maxTokens,
+            stream: false
+        };
+        if (jsonMode) body.response_format = { type: "json_object" };
         return new Promise(function (resolve, reject) {
             var c = new AbortController();
             var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 25000);
             fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": "Bearer " + DEEPSEEK_KEY },
-                body: JSON.stringify({
-                    model: DEEPSEEK_MODEL,
-                    messages: [
-                        { role: "system", content: sys },
-                        { role: "user", content: q }
-                    ],
-                    temperature: temperature,
-                    max_tokens: maxTokens,
-                    stream: false
-                }),
+                body: JSON.stringify(body),
                 signal: c.signal
             }).then(function (res) {
                 if (!res.ok) throw new Error("http " + res.status);
@@ -490,9 +508,11 @@
         });
     }
 
-    function geminiText(sys, q, temperature, maxTokens) {
+    function geminiText(sys, q, temperature, maxTokens, jsonMode) {
         if (!GEMINI_KEY) return Promise.reject(new Error("no-key"));
         var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(GEMINI_MODEL) + ":generateContent?key=" + encodeURIComponent(GEMINI_KEY);
+        var gc = { temperature: temperature, maxOutputTokens: maxTokens };
+        if (jsonMode) gc.responseMimeType = "application/json";
         return new Promise(function (resolve, reject) {
             var c = new AbortController();
             var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 25000);
@@ -502,7 +522,7 @@
                 body: JSON.stringify({
                     systemInstruction: { parts: [{ text: sys }] },
                     contents: [{ role: "user", parts: [{ text: q }] }],
-                    generationConfig: { temperature: temperature, maxOutputTokens: maxTokens }
+                    generationConfig: gc
                 }),
                 signal: c.signal
             }).then(function (res) {
@@ -519,7 +539,7 @@
 
     function providerPlan() {
         var sys = providerPlanSys();
-        return providerAsk(sys, "Bu hafta için çalışma programını oluştur.", 0.6, 1500).then(function (txt) {
+        return providerAsk(sys, "Bu hafta için çalışma programını oluştur.", 0.6, 2048, true).then(function (txt) {
             txt = String(txt).replace(/```[a-z]*/gi, "").trim();
             var ma = txt.match(/\{[\s\S]*\}/);
             var obj = ma ? JSON.parse(ma[0]) : JSON.parse(txt);
@@ -665,7 +685,7 @@
                 return Promise.resolve("Sorun değil, planına dokunmadım. Başka bir konuda yardımcı olayım mı? 🐾");
             }
             pendingReplace = false;
-            return createPlanFlow();
+            return makePlan(true);
         }
         if (isCreate) return createPlanFlow();
 
