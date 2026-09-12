@@ -445,7 +445,7 @@
                 tasks.push(br.charAt(0).toUpperCase() + br.slice(1) + ": " + soruSayisi(br) + " soru çöz + konu tekrarı");
             }
             if (d === "cuma") tasks.push("Haftanın genel tekrarı");
-            if (d === "cumartesi") tasks.push("1 deneme sınavı çöz (40 soru)");
+            if (d === "cumartesi") tasks.push("1 deneme sınavı çöz (" + (65 + Math.floor(Math.random() * 26)) + " soru)");
             if (d === "pazar") tasks.push("Eksik konuların tekrarı + yanlışları gözden geçir");
             out[d] = tasks;
         });
@@ -464,7 +464,7 @@
             "- Her güne tam 2-3 görev yaz.\n" +
             "- Görevler öğrencinin derslerinden oluşmalı: " + branches.join(", ") + ".\n" +
             "- Her görevin içinde mutlaka bir sayı olmalı: uygun soru sayısı (Matematik 25, Fen Bilimleri 20, Türkçe 20, İngilizce 15, Sosyal Bilgiler 15, Din Kültürü 12) ve gerekirse 'konu tekrarı' vurgusu.\n" +
-            "- Cumartesi gününe '1 deneme sınavı çöz (40 soru)' görevi ekleyebilirsin.\n" +
+            "- Cumartesi gününe '1 deneme sınavı çöz (65-90 soru)' görevi ekleyebilirsin.\n" +
             "Sadece geçerli JSON döndür.";
     }
 
@@ -549,6 +549,9 @@
 
     function tasksWithCounts(list) {
         return (list || []).map(function (t) {
+            if (/deneme/.test(norm(t))) {
+                return "1 deneme sınavı çöz (" + (65 + Math.floor(Math.random() * 26)) + " soru)";
+            }
             if (/\d/.test(t)) return t;
             var n = norm(t);
             var cnt = 20;
@@ -562,7 +565,7 @@
         var out = {};
         days.forEach(function (d) {
             var gt = (g[d] || []).filter(Boolean);
-            var valid = gt.length >= 2 && gt.every(function (t) { return /\d/.test(t); });
+            var valid = gt.length >= 2 && gt.some(function (t) { return /\d/.test(t); });
             out[d] = valid ? gt : (base[d] || []).slice();
         });
         var branches = allBranches();
