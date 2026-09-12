@@ -3,7 +3,7 @@
     window.__heroCoachInit = true;
 
     var GEMINI_KEY = atob("QVEuQWI4Uk42S3JsTTZCcWlVczF3S2NmUVUxMXAzZ0xsdVVKY3NZZ3lZOG9xRFJ0bjJjUlE=");
-    var GEMINI_MODEL = "gemini-3.6-flash";
+    var GEMINI_MODEL = "gemini-3.1-pro-preview";
 
     var PROFANITY = ["amk", "aq", "oc", "pic", "pis", "kahpe", "orospu", "gavat", "salak", "aptal", "gerizekali", "manyak", "yavsak", "ibne", "serefsiz", "mal", "eşek"];
 

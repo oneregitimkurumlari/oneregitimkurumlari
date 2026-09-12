@@ -20,7 +20,7 @@
     }
 
     var GEMINI_KEY = atob("QVEuQWI4Uk42S3JsTTZCcWlVczF3S2NmUVUxMXAzZ0xsdVVKY3NZZ3lZOG9xRFJ0bjJjUlE=");
-    var GEMINI_MODEL = "gemini-3.6-flash";
+    var GEMINI_MODEL = "gemini-3.1-pro-preview";
 
     /* ---------- DOM ---------- */
     var fab, panel, body, input, sendBtn, typingEl, settingsRow, keyInput, modelInput, greeted = false;
