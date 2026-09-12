@@ -537,6 +537,35 @@
         });
     }
 
+    function geminiGrounded(sys, q, temperature, maxTokens) {
+        if (!GEMINI_KEY) return Promise.reject(new Error("no-key"));
+        var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(GEMINI_MODEL) + ":generateContent?key=" + encodeURIComponent(GEMINI_KEY);
+        return new Promise(function (resolve, reject) {
+            var c = new AbortController();
+            var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 30000);
+            fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    systemInstruction: { parts: [{ text: sys }] },
+                    contents: [{ role: "user", parts: [{ text: q }] }],
+                    generationConfig: { temperature: temperature, maxOutputTokens: maxTokens },
+                    tools: [{ google_search: {} }]
+                }),
+                signal: c.signal
+            }).then(function (res) {
+                if (!res.ok) throw new Error("http " + res.status);
+                return res.json();
+            }).then(function (j) {
+                var parts = j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts ? j.candidates[0].content.parts : [];
+                var txt = parts.map(function (p) { return p.text || ""; }).join("");
+                txt = String(txt).trim();
+                if (!txt) throw new Error("empty");
+                resolve(txt);
+            }).catch(function (e) { reject(e); }).then(function () { clearTimeout(t); });
+        });
+    }
+
     function providerPlan() {
         var sys = providerPlanSys();
         return providerAsk(sys, "Bu hafta için çalışma programını oluştur.", 0.6, 2048, true).then(function (txt) {
@@ -629,24 +658,55 @@
         return c;
     }
 
+    function clampQ(n, lo, hi) {
+        n = parseInt(n, 10);
+        if (!n || isNaN(n)) return lo;
+        return Math.max(lo, Math.min(hi, n));
+    }
+
+    function countFromTitle(name) {
+        var m = String(name || "").match(/(\d{2,5})\s*soru/i);
+        return m ? parseInt(m[1], 10) : null;
+    }
+
     function bookStatsSys(name, subject) {
+        var titleNum = countFromTitle(name);
         return "Sen Türkiye'deki yayınevlerinin kaynak kitaplarını çok iyi tanıyan bir eğitim uzmanısın. " +
             "Öğrencinin elindeki kaynak kitabın toplam soru sayısını tahmin et.\n" +
             'Kitap adı: "' + name + '"\n' +
             "Dersi: " + (subject || "bilinmiyor") + "\n" +
-            "Soru bankalarında genellikle 1500-6500 soru bulunur; konu özetli/test ağırlıklı kitaplarda bu sayı değişir. Emin değilsen makul bir orta değer seç.\n" +
+            (titleNum ? "ÖNEMLİ: Kitap adında 'X soru' ibaresi var, toplam soru sayısı bu sayıya çok yakındır: " + titleNum + ".\n" : "") +
+            "Bilgi: Türkiye'deki ortaokul/LGS soru bankaları genellikle 400-750 soru içerir; konu özetli kitaplar daha az, deneme setleri daha çok olabilir. Adında somut bir sayı yoksa 400-750 aralığında seç.\n" +
             'SADECE su JSONu dondur, baska metin yazma: {"totalQuestions": <sayi>, "confidence": "yuksek" | "orta" | "dusuk"}';
+    }
+
+    function heroGroundedNum(name) {
+        if (!GEMINI_KEY) return Promise.resolve(null);
+        var sys = "Sen Türk eğitim yayınları, soru bankaları ve LGS kitapları hakkında güncel web araması yapan bir kütüphaneci AI'sın.\n" +
+            "Kitap adı: \"" + name + "\"\n" +
+            "Web araması yaparak bu kitabın toplam soru sayısını bulmaya çalış.\n" +
+            "Bilgi: Türkiye'deki ortaokul/LGS soru bankaları genellikle 400-750 soru içerir. Kitap adında 'X soru' yazan bir sayı varsa o sayıyı esas al.\n" +
+            "Bulduğun sayıyı sadece tek bir tam sayı olarak yaz, başka hiçbir şey yazma. Emin değilsen 0 yaz.";
+        var q = "Bu kitabın toplam soru sayısı kaçtır? Sadece sayı yaz.";
+        return geminiGrounded(sys, q, 0.1, 80).then(function (txt) {
+            var m = String(txt).replace(/[^\d]/g, "").match(/(\d{2,5})/);
+            if (!m) return null;
+            var n = parseInt(m[1], 10);
+            if (isNaN(n) || n < 100 || n > 20000) return null;
+            return n;
+        }).catch(function () { return null; });
     }
 
     function heroBookDefault(subjectOrName) {
         var s = norm(subjectOrName || "");
-        if (s.indexOf("matematik") !== -1) return 2500;
-        if (s.indexOf("fen") !== -1) return 2000;
-        if (s.indexOf("turk") !== -1) return 2000;
-        if (s.indexOf("ingiliz") !== -1) return 1500;
-        if (s.indexOf("sosyal") !== -1) return 1500;
-        if (s.indexOf("din ") !== -1 || s.indexOf("din kult") !== -1) return 1200;
-        return 1500;
+        if (s.indexOf("matematik") !== -1) return 650;
+        if (s.indexOf("geometri") !== -1) return 550;
+        if (s.indexOf("fen") !== -1) return 600;
+        if (s.indexOf("turk") !== -1) return 600;
+        if (s.indexOf("ingiliz") !== -1) return 450;
+        if (s.indexOf("sosyal") !== -1) return 500;
+        if (s.indexOf("din") !== -1) return 450;
+        return 550;
     }
 
     function bookText() {
@@ -669,17 +729,24 @@
     }
 
     window.heroEstimateBook = function (name, subject) {
-        return providerAsk(bookStatsSys(name, subject), "Bu kitabın toplam soru sayısını tahmin et, sadece JSON döndür.", 0.2, 300, true)
-            .then(function (txt) {
-                txt = String(txt).replace(/```[a-z]*/gi, "").trim();
-                var ma = txt.match(/\{[\s\S]*\}/);
-                var o = ma ? JSON.parse(ma[0]) : JSON.parse(txt);
-                var n = parseInt(o.totalQuestions, 10);
-                if (!n || isNaN(n) || n < 100 || n > 20000) throw new Error("bad");
-                return { totalQuestions: n, confidence: String(o.confidence || "orta") };
-            }).catch(function () {
-                return { totalQuestions: heroBookDefault(subject || name), confidence: "düşük" };
-            });
+        var titleNum = countFromTitle(name);
+        if (titleNum) {
+            return Promise.resolve({ totalQuestions: clampQ(titleNum, 100, 20000), confidence: "yüksek", via: "ad" });
+        }
+        return heroGroundedNum(name).then(function (n) {
+            if (n) return { totalQuestions: n, confidence: "yüksek", via: "web" };
+            return providerAsk(bookStatsSys(name, subject), "Bu kitabın toplam soru sayısını tahmin et, sadece JSON döndür.", 0.2, 300, true)
+                .then(function (txt) {
+                    txt = String(txt).replace(/```[a-z]*/gi, "").trim();
+                    var ma = txt.match(/\{[\s\S]*\}/);
+                    var o = ma ? JSON.parse(ma[0]) : JSON.parse(txt);
+                    var n2 = parseInt(o.totalQuestions, 10);
+                    if (!n2 || isNaN(n2) || n2 < 100 || n2 > 20000) throw new Error("bad");
+                    return { totalQuestions: clampQ(n2, 250, 900), confidence: String(o.confidence || "orta"), via: "ai" };
+                }).catch(function () {
+                    return { totalQuestions: heroBookDefault(subject || name), confidence: "düşük", via: "tahmin" };
+                });
+        });
     };
 
     function writePlan(daysObj) {
