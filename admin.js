@@ -920,7 +920,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 systemInstruction: { parts: [{ text: "Sen bir sınav soru çıkarıcısısın. PDF'teki test sorularını 4 şıklı (A,B,C,D) çoktan seçmeli sorulara çevirirsin. PDF'te şıklar yoksa kendin 4 makul şık üretirsin. DOĞRU CEVABI ASLA BELİRLEMEZ VE YAZMAZSIN; cevaplar öğretmen tarafından elle girilir. Çıktı yalnızca JSON dizisidir, başka hiçbir şey yazmazsın. HER SORU için sorunun PDF'teki tam konumu (page ve bbox) JSON'a eklenir; soruyu asla yeniden üretme, sadece konumunu bildir." }] },
                 contents: [{ parts: [
                     { inline_data: { mime_type: "application/pdf", data: base64 } },
-                    { text: "Bu PDF'teki her soruyu şu formatta JSON dizisi olarak döndür: [{\"text\":\"soru metni\",\"options\":[\"A şıkkı\",\"B şıkkı\",\"C şıkkı\",\"D şıkkı\"]}] - answer alanı ekleme. HER soru için ZORUNLU olarak \"page\": <sayfa no, 1'den başlar> ve \"bbox\": {\"x\":0,\"y\":0,\"w\":200,\"h\":100} alanlarını ekle. bbox, TÜM soruyu PDF nokta biriminde (72 DPI, sol üst köşe 0,0) sıkı ve TAM saran kutu olmalı ve MUTLAKA şunların hepsini kapsamalı: (1) soru metni, (2) varsa görsel/şekil/grafik/tablo, (3) soruya ait TÜM yazılı şık satırları (A), B), C), D) şıkları). Şıklar soru metninin altında, yanında ya da her iki tarafta olabilir; hangi düzende olursa olsun bbox son şıkkın bittiği noktaya kadar uzanmalıdır. Hiçbir şık bbox dışında kalmamalı; bbox konusunda cömert ol, program şıkları kesmesin. bbox'ı asla atlama, hiçbir soruyu atlama." }
+                    { text: "Bu PDF'teki her soruyu şu formatta JSON dizisi olarak döndür: [{\"text\":\"soru metni\",\"options\":[\"A şıkkı\",\"B şıkkı\",\"C şıkkı\",\"D şıkkı\"]}] - answer alanı ekleme. HER soru için ZORUNLU olarak \"page\": <sayfa no, 1'den başlar> ve \"bbox\": {\"x\":0,\"y\":0,\"w\":200,\"h\":100} alanlarını ekle. bbox, TÜM soruyu PDF nokta biriminde (72 DPI, sol üst köşe 0,0) sıkı ve TAM saran kutu olmalı ve MUTLAKA şunların hepsini kapsamalı: (1) soru metni, (2) varsa görsel/şekil/grafik/tablo, (3) soruya ait TÜM yazılı şık satırları (A), B), C), D) şıkları). Şıklar soru metninin altında, yanında ya da her iki tarafta olabilir; hangi düzende olursa olsun bbox, üstte soru metninin başlangıcının ÜZERİNDEN, altta son şık satırının ALTINDAN geçecek şekilde bir miktar pay bırakmalıdır (üstte ~15, altta ~15 nokta). Soru kökü ve tüm şıklar bbox içinde eksiksiz kalmalı; hiçbir şık bbox dışında kalmamalı. bbox konusunda cömert ol, program görseli bbox'a göre kırpar. bbox'ı asla atlama, hiçbir soruyu atlama." }
                 ] }],
                 generationConfig: { temperature: 0.1, maxOutputTokens: 65536 }
             };
@@ -992,15 +992,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function extendQuestionBbox(raw, items) {
         const b = raw.bbox || {};
-        const top = Number(b.y) || 0;
-        const origBottom = top + (Number(b.h) || 0);
-        let bottom = origBottom + 80;
+        let top = (Number(b.y) || 0) - 250;
+        let bottom = (Number(b.y) || 0) + (Number(b.h) || 0) + 250;
         (items || []).forEach(o => {
             if (!o.raw.bbox || o.raw.page !== raw.page) return;
             const oy = Number(o.raw.bbox.y) || 0;
-            if (oy > top + 1 && oy < bottom) bottom = Math.max(origBottom, oy - 4);
+            const ob = oy + (Number(o.raw.bbox.h) || 0);
+            if (ob < (Number(b.y) || 0) && ob + 6 > top) top = ob + 6;
+            if (oy > (Number(b.y) || 0) && oy - 6 < bottom) bottom = oy - 6;
         });
-        return { x: b.x, y: b.y, w: b.w, h: Math.max(Number(b.h) || 0, bottom - top) };
+        const y = Math.max(0, top);
+        return { x: Math.max(0, (Number(b.x) || 0) - 10), y: y, w: (Number(b.w) || 0) + 20, h: Math.max(1, Math.max(y + 1, bottom) - y) };
     }
 
     async function cropPdfRegion(pdf, pageNum, bbox) {
