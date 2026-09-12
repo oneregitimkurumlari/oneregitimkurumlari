@@ -357,7 +357,9 @@
     function scheduleSubjects() {
         var m = {};
         try {
-            var sched = (window.getScheduleData && getScheduleData()) || (window.cachedData && cachedData.classes) || [];
+            var sched = (window.getScheduleData && getScheduleData()) ||
+                (typeof cachedData !== "undefined" && cachedData && cachedData.classes) ||
+                (window.cachedData && window.cachedData.classes) || [];
             sched.forEach(function (c) {
                 var d = String(c.dayLabel || c.day || "").toLowerCase();
                 if (!d || !c.title) return;
@@ -386,19 +388,29 @@
         return out;
     }
 
+    function cachedTeachers() {
+        try {
+            if (typeof cachedData !== "undefined" && cachedData && cachedData.teachers) return cachedData.teachers;
+            if (window.cachedData && window.cachedData.teachers) return window.cachedData.teachers;
+        } catch (e) {}
+        return [];
+    }
+
     function allBranches() {
         var subs = scheduleSubjects();
         var list = [];
         Object.keys(subs).forEach(function (d) {
             subs[d].forEach(function (s) { if (list.indexOf(s) === -1) list.push(s); });
         });
-        try {
-            ((window.cachedData && window.cachedData.teachers) || []).forEach(function (t) {
-                var b = String(t.branch || "").trim();
-                if (b && b.length <= 40 && list.indexOf(b) === -1) list.push(b);
+        cachedTeachers().forEach(function (t) {
+            var b = String(t.branch || "").trim();
+            if (b && b.length <= 40 && list.indexOf(b) === -1) list.push(b);
+        });
+        if (list.length < 4) {
+            ["Matematik", "Fen Bilimleri", "Türkçe", "İngilizce", "Sosyal Bilgiler", "Din Kültürü"].forEach(function (b) {
+                if (list.indexOf(b) === -1) list.push(b);
             });
-        } catch (e) {}
-        if (!list.length) list = ["Matematik", "Fen Bilimleri", "Türkçe", "İngilizce", "Sosyal Bilgiler", "Din Kültürü"];
+        }
         return list;
     }
 
