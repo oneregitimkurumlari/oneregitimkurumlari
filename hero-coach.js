@@ -400,15 +400,24 @@
         return [];
     }
 
+    function isAcademicBranch(b) {
+        var bad = ["rehberlik", "beden", "gorsel", "resim", "muzik", "sanat", "teknoloji ve tasarim", "spor", "serbest", "drama", "oyun", "izci", "scout"];
+        var n = norm(b);
+        for (var i = 0; i < bad.length; i++) if (n.indexOf(bad[i]) !== -1) return false;
+        return true;
+    }
+
     function allBranches() {
         var subs = scheduleSubjects();
         var list = [];
         Object.keys(subs).forEach(function (d) {
-            subs[d].forEach(function (s) { if (list.indexOf(s) === -1) list.push(s); });
+            subs[d].forEach(function (s) {
+                if (list.indexOf(s) === -1 && isAcademicBranch(s)) list.push(s);
+            });
         });
         cachedTeachers().forEach(function (t) {
             var b = String(t.branch || "").trim();
-            if (b && b.length <= 40 && list.indexOf(b) === -1) list.push(b);
+            if (b && b.length <= 40 && list.indexOf(b) === -1 && isAcademicBranch(b)) list.push(b);
         });
         if (list.length < 4) {
             ["Matematik", "Fen Bilimleri", "Türkçe", "İngilizce", "Sosyal Bilgiler", "Din Kültürü"].forEach(function (b) {
