@@ -15,7 +15,7 @@ const statusMap = {
     finished: { label: "Bitti", class: "status-finished" }
 };
 
-let cachedData = { teachers: [], classes: [], students: [], homeworks: [], exams: [], optik: null };
+let cachedData = { teachers: [], classes: [], students: [], homeworks: [], exams: [], optik: null, zbooks: [] };
 
 function getDuration(start, end) {
     if (!start || !end) return "-";
@@ -32,6 +32,7 @@ function applyJson(json) {
     cachedData.homeworks = json.homeworks || [];
     cachedData.exams = json.exams || [];
     cachedData.optik = json.optik || null;
+    cachedData.zbooks = json.zbooks || [];
 }
 
 async function loadData() {
@@ -48,7 +49,7 @@ async function loadData() {
             applyJson(await res.json());
         } catch (e) {
             console.error("Veri yüklenemedi:", e);
-            cachedData = { teachers: [], classes: [], students: [], homeworks: [], exams: [], optik: null };
+            cachedData = { teachers: [], classes: [], students: [], homeworks: [], exams: [], optik: null, zbooks: [] };
         }
     }
 }
@@ -266,6 +267,36 @@ function renderExams() {
                 <span><i class="fas fa-user"></i> ${esc(teacherName)}</span>
             </div>
             <button class="homework-file" onclick="startExamTab('${jsEsc(exam.id)}')"><i class="fas fa-pen"></i> Sınava Gir</button>
+        </div>`;
+    }).join("");
+}
+
+function renderZBooks() {
+    const grid = document.getElementById("zbooksGrid");
+    if (!grid) return;
+    const books = (cachedData.zbooks || []).filter(b => /^https?:\/\//i.test(b.link || ""));
+    if (books.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-light);">
+                <i class="fas fa-book" style="font-size:3rem;margin-bottom:16px;display:block;"></i>
+                <p style="font-size:1.1rem;">Henüz Z kitap paylaşılmamış</p>
+                <p style="font-size:0.85rem;margin-top:6px;">Öğretmenleriniz ekleyince burada görünecek</p>
+            </div>`;
+        return;
+    }
+    grid.innerHTML = books.slice().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).map(zb => {
+        const cover = zb.coverImage
+            ? `<div class="zbook-cover"><img src="${esc(zb.coverImage)}" alt="${esc(zb.name)}" onerror="this.style.visibility='hidden'"></div>`
+            : `<div class="zbook-cover zbook-cover-empty"><i class="fas fa-book-open"></i></div>`;
+        return `
+        <div class="exam-card zbook-card">
+            ${cover}
+            <div class="homework-header">
+                <span class="homework-subject">${esc(zb.publisher || "Z Kitap")}</span>
+                <span class="homework-date">${esc(zb.createdAt || "")}</span>
+            </div>
+            <h3>${esc(zb.name)}</h3>
+            <button class="homework-file" onclick="window.open('${jsEsc(zb.link)}','_blank','noopener')"><i class="fas fa-book-open"></i> Sayfayı Aç</button>
         </div>`;
     }).join("");
 }
@@ -1074,6 +1105,7 @@ function renderView(view) {
     if (view === "odevler") renderHomework();
     if (view === "sinavlar") renderExams();
     if (view === "kaynaklar") renderBooksList();
+    if (view === "zkitaplar") renderZBooks();
 }
 
 function bindScheduleFilter() {

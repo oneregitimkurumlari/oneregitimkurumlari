@@ -4,8 +4,8 @@ const DATA_URL = FIREBASE_URL + "/.json";
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function jsEsc(s) { return String(s == null ? "" : s).replace(/\\/g, "\\\\").replace(/'/g, "\\'"); }
 
-let remoteData = { teachers: [], classes: [], students: [], homeworks: [], exams: [], optik: null };
-let deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set(), exams: new Set() };
+let remoteData = { teachers: [], classes: [], students: [], homeworks: [], exams: [], optik: null, zbooks: [] };
+let deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set(), exams: new Set(), zbooks: new Set() };
 
 let recState = { recording: false, classId: null, mediaRecorder: null, chunks: [], stream: null, startedAt: null };
 
@@ -155,7 +155,8 @@ async function fetchRemoteData() {
         remoteData.homeworks = json.homeworks || [];
         remoteData.exams = json.exams || [];
         remoteData.optik = json.optik || null;
-        deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set(), exams: new Set() };
+        remoteData.zbooks = json.zbooks || [];
+        deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set(), exams: new Set(), zbooks: new Set() };
         return true;
     } catch (e) {
         console.error("Uzak veri okuma hatası:", e);
@@ -184,6 +185,7 @@ async function saveRemoteData() {
         remoteData.students = mergeArrays(serverData.students, remoteData.students, deletedIds.students);
         remoteData.homeworks = mergeArrays(serverData.homeworks, remoteData.homeworks || [], deletedIds.homeworks);
         remoteData.exams = mergeArrays(serverData.exams, remoteData.exams || [], deletedIds.exams);
+        remoteData.zbooks = mergeArrays(serverData.zbooks, remoteData.zbooks || [], deletedIds.zbooks);
         remoteData.optik = serverData.optik !== undefined ? serverData.optik : (remoteData.optik || null);
 
         const payload = {
@@ -192,7 +194,8 @@ async function saveRemoteData() {
             students: remoteData.students,
             homeworks: remoteData.homeworks,
             exams: remoteData.exams,
-            optik: remoteData.optik
+            optik: remoteData.optik,
+            zbooks: remoteData.zbooks
         };
 
         const res = await fetchWithTimeout(FIREBASE_URL + "/.json", {
@@ -206,7 +209,7 @@ async function saveRemoteData() {
             return false;
         }
 
-        deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set(), exams: new Set() };
+        deletedIds = { teachers: new Set(), classes: new Set(), students: new Set(), homeworks: new Set(), exams: new Set(), zbooks: new Set() };
         return true;
     } catch (e) {
         console.error("Kayit hatasi:", e);
@@ -280,6 +283,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderHomework(teacherId);
         renderExams(teacherId);
         renderOptik();
+        renderZBooks();
         initNavigation();
         setInterval(() => { renderClasses(teacherId); }, 30000);
     }
@@ -572,6 +576,143 @@ document.addEventListener("DOMContentLoaded", () => {
             if (ok) {
                 renderHomework(currentTeacher);
                 showToast("Ödev silindi!");
+            }
+        });
+    };
+
+    /* ============ Z Kitaplar ============ */
+    function renderZBooks() {
+        const tbody = document.getElementById("zbooksTable");
+        const empty = document.getElementById("emptyZBooks");
+        const books = remoteData.zbooks || [];
+        if (!tbody) return;
+        if (books.length === 0) {
+            tbody.innerHTML = "";
+            empty.style.display = "block";
+            return;
+        }
+        empty.style.display = "none";
+        tbody.innerHTML = books.map((b, i) => {
+            const who = b.addedBy === "admin" ? "Yönetim"
+                : (() => { const t = (remoteData.teachers || []).find(x => x.id === b.addedBy); return t ? t.name + " " + t.surname : "Yönetim"; })();
+            const cover = b.coverImage
+                ? `<img src="${esc(b.coverImage)}" style="height:54px;border-radius:6px;max-width:90px;object-fit:cover;" alt="Kapak">`
+                : `<span style="color:var(--text-light);">-</span>`;
+            const linkCell = /^https?:\/\//i.test(b.link || "")
+                ? `<a href="${esc(b.link)}" target="_blank" rel="noopener" style="color:var(--primary);max-width:220px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;">${esc(b.link)}</a>`
+                : `<span style="color:var(--text-light);">-</span>`;
+            return `
+            <tr>
+                <td>${i + 1}</td>
+                <td>${cover}</td>
+                <td><strong>${esc(b.name)}</strong></td>
+                <td>${esc(b.publisher || "-")}</td>
+                <td>${linkCell}</td>
+                <td>${esc(b.createdAt || "")}<br><small style="color:var(--text-light);">${esc(who)}</small></td>
+                <td class="actions-cell">
+                    <button class="btn-edit" onclick="editZBook('${jsEsc(b.id)}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-delete" onclick="deleteZBook('${jsEsc(b.id)}')"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }).join("");
+    }
+
+    document.getElementById("addZBookBtn").addEventListener("click", () => {
+        document.getElementById("zbookForm").style.display = "block";
+        document.getElementById("zbookFormTitle").textContent = "Yeni Z Kitap Ekle";
+        document.getElementById("zbookFormEl").reset();
+        document.getElementById("editZBookId").value = "";
+        document.getElementById("zbookCover").value = "";
+        document.getElementById("zbookCoverPreview").style.display = "none";
+        document.getElementById("zbookName").focus();
+    });
+
+    document.getElementById("cancelZBookBtn").addEventListener("click", () => {
+        document.getElementById("zbookForm").style.display = "none";
+    });
+
+    document.getElementById("zbookCoverAdd").addEventListener("click", () => {
+        document.getElementById("zbookCoverFile").click();
+    });
+
+    document.getElementById("zbookCoverRemove").addEventListener("click", () => {
+        document.getElementById("zbookCover").value = "";
+        document.getElementById("zbookCoverPreview").style.display = "none";
+        document.getElementById("zbookCoverFile").value = "";
+    });
+
+    document.getElementById("zbookCoverFile").addEventListener("change", async (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        try {
+            const dataUrl = await processQuestionImage(f);
+            document.getElementById("zbookCover").value = dataUrl;
+            document.getElementById("zbookCoverImg").src = dataUrl;
+            document.getElementById("zbookCoverPreview").style.display = "block";
+        } catch (err) {
+            alert("Görsel yüklenemedi: " + err.message);
+        }
+    });
+
+    document.getElementById("zbookFormEl").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const editId = document.getElementById("editZBookId").value;
+        const linkRaw = document.getElementById("zbookLink").value.trim();
+        if (!/^https?:\/\//i.test(linkRaw)) {
+            alert("Lütfen geçerli bir web linki girin (https://... ile başlasın).");
+            return;
+        }
+        const zbData = {
+            name: document.getElementById("zbookName").value.trim(),
+            publisher: document.getElementById("zbookPublisher").value.trim(),
+            link: linkRaw,
+            coverImage: document.getElementById("zbookCover").value || ""
+        };
+        if (editId) {
+            const idx = (remoteData.zbooks || []).findIndex(b => b.id === editId);
+            if (idx !== -1) remoteData.zbooks[idx] = { ...remoteData.zbooks[idx], ...zbData };
+        } else {
+            zbData.id = generateId();
+            zbData.addedBy = currentTeacher;
+            zbData.createdAt = new Date().toISOString().split("T")[0];
+            if (!remoteData.zbooks) remoteData.zbooks = [];
+            remoteData.zbooks.push(zbData);
+        }
+        const ok = await saveRemoteData();
+        if (ok) {
+            showToast(editId ? "Z kitap güncellendi!" : "Z kitap eklendi!");
+            renderZBooks();
+            document.getElementById("zbookForm").style.display = "none";
+        }
+    });
+
+    window.editZBook = function(id) {
+        const b = (remoteData.zbooks || []).find(x => x.id === id);
+        if (!b) return;
+        document.getElementById("zbookForm").style.display = "block";
+        document.getElementById("zbookFormTitle").textContent = "Z Kitap Düzenle";
+        document.getElementById("editZBookId").value = b.id;
+        document.getElementById("zbookName").value = b.name || "";
+        document.getElementById("zbookPublisher").value = b.publisher || "";
+        document.getElementById("zbookLink").value = b.link || "";
+        if (b.coverImage) {
+            document.getElementById("zbookCover").value = b.coverImage;
+            document.getElementById("zbookCoverImg").src = b.coverImage;
+            document.getElementById("zbookCoverPreview").style.display = "block";
+        } else {
+            document.getElementById("zbookCover").value = "";
+            document.getElementById("zbookCoverPreview").style.display = "none";
+        }
+    };
+
+    window.deleteZBook = function(id) {
+        showConfirm("Bu Z kitabı silmek istediğinize emin misiniz?", async () => {
+            remoteData.zbooks = (remoteData.zbooks || []).filter(b => b.id !== id);
+            deletedIds.zbooks.add(id);
+            const ok = await saveRemoteData();
+            if (ok) {
+                renderZBooks();
+                showToast("Z kitap silindi!");
             }
         });
     };

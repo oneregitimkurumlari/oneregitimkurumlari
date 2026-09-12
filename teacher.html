@@ -53,6 +53,9 @@
             <button class="sidebar-btn" data-section="exams">
                 <i class="fas fa-clipboard-list"></i> Sınavlar
             </button>
+            <button class="sidebar-btn" data-section="zbooks">
+                <i class="fas fa-book"></i> Z Kitaplar
+            </button>
             <button class="sidebar-btn" data-section="optik">
                 <i class="fas fa-hashtag"></i> Optik Form
             </button>
@@ -413,13 +416,92 @@
                 </div>
             </div>
         </div>
+
+        <div class="section-page" id="zbooksPage">
+            <div class="page-header">
+                <h3>Z Kitaplar</h3>
+                <button class="btn-add" id="addZBookBtn">
+                    <i class="fas fa-plus"></i> Z Kitap Ekle
+                </button>
+            </div>
+
+            <div class="form-panel" id="zbookForm" style="display:none;">
+                <h3 id="zbookFormTitle">Yeni Z Kitap Ekle</h3>
+                <form id="zbookFormEl">
+                    <input type="hidden" id="editZBookId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Kitap Adı</label>
+                            <input type="text" id="zbookName" placeholder="Örn: Matematik 8. Sınıf Soru Bankası" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Yayın Adı</label>
+                            <input type="text" id="zbookPublisher" placeholder="Örn: Öner Eğitim Yayınları">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group" style="flex:1;">
+                            <label>Z Kitap Web Linki</label>
+                            <input type="url" id="zbookLink" placeholder="https://... (okulun Z-kitap web adresi)">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Kapak Görseli (isteğe bağlı)</label>
+                            <div class="qq-img-row">
+                                <input type="hidden" id="zbookCover" value="">
+                                <button type="button" class="qq-img-add" id="zbookCoverAdd" style="background:var(--bg-light);color:var(--text);border:1px dashed var(--border);padding:8px 14px;border-radius:8px;cursor:pointer;">
+                                    <i class="fas fa-image"></i> Görsel Yükle
+                                </button>
+                                <input type="file" id="zbookCoverFile" accept="image/*" style="display:none;">
+                                <div class="qq-img-preview" id="zbookCoverPreview" style="display:none;">
+                                    <img id="zbookCoverImg" src="" style="max-height:90px;border-radius:8px;border:1px solid var(--border);" alt="Önizleme">
+                                    <button type="button" class="qq-img-remove" id="zbookCoverRemove" style="margin-left:8px;padding:6px 10px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--bg-light);color:var(--text);">
+                                        <i class="fas fa-trash"></i> Kaldır
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-save">
+                            <i class="fas fa-save"></i> Kaydet
+                        </button>
+                        <button type="button" class="btn-cancel" id="cancelZBookBtn">
+                            <i class="fas fa-times"></i> İptal
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Kapak</th>
+                            <th>Kitap Adı</th>
+                            <th>Yayın</th>
+                            <th>Link</th>
+                            <th>Ekleme</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="zbooksTable"></tbody>
+                </table>
+                <div class="empty-state" id="emptyZBooks">
+                    <i class="fas fa-book"></i>
+                    <p>Henüz Z kitap eklenmemiş</p>
+                </div>
+            </div>
+        </div>
         </div>
     </main>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js"></script>
-<script src="teacher.js?v=20"></script>
+<script src="teacher.js?v=21"></script>
 <script src="transition.js"></script>
 <script>
 (function(){
