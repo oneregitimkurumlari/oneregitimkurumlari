@@ -766,6 +766,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const EXCEL_HEADERS = ["Ad", "Soyad", "TC Kimlik No", "Kullanıcı Adı", "Şifre"];
+    const EXCEL_HEADERS_TEACHER = ["Ad", "Soyad", "TC Kimlik No", "Kullanıcı Adı", "Şifre", "Branş"];
 
     function excelReady() {
         if (!window.XLSX) {
@@ -775,12 +776,13 @@ document.addEventListener("DOMContentLoaded", () => {
         return true;
     }
 
-    function downloadExcelTemplate(fileName) {
+    function downloadExcelTemplate(fileName, kind) {
         if (!excelReady()) return;
-        const ws = XLSX.utils.aoa_to_sheet([EXCEL_HEADERS]);
-        ws["!cols"] = [{ wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 12 }];
+        const headers = kind === "teacher" ? EXCEL_HEADERS_TEACHER : EXCEL_HEADERS;
+        const ws = XLSX.utils.aoa_to_sheet([headers]);
+        ws["!cols"] = headers.map(h => ({ wch: h === "TC Kimlik No" ? 16 : h === "Şifre" ? 12 : 16 }));
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Liste");
+        XLSX.utils.book_append_sheet(wb, ws, kind === "teacher" ? "Öğretmenler" : "Öğrenciler");
         XLSX.writeFile(wb, fileName);
     }
 
@@ -788,7 +790,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("teacherExcelInput").click();
     });
     document.getElementById("teacherTemplateBtn").addEventListener("click", () => {
-        downloadExcelTemplate("ogretmen_sablonu.xlsx");
+        downloadExcelTemplate("ogretmen_sablonu.xlsx", "teacher");
     });
     document.getElementById("teacherExcelInput").addEventListener("change", async (e) => {
         await importExcelFile(e.target.files && e.target.files[0], "teacher");
@@ -798,7 +800,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("studentExcelInput").click();
     });
     document.getElementById("studentTemplateBtn").addEventListener("click", () => {
-        downloadExcelTemplate("ogrenci_sablonu.xlsx");
+        downloadExcelTemplate("ogrenci_sablonu.xlsx", "student");
     });
     document.getElementById("studentExcelInput").addEventListener("change", async (e) => {
         await importExcelFile(e.target.files && e.target.files[0], "student");
@@ -825,9 +827,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const existing = new Set((remoteData[list] || []).map(x => String(x.username || "").trim().toLowerCase()));
             for (let r = 0; r < rows.length; r++) {
                 const cells = (rows[r] || []).map(c => String(c == null ? "" : c).trim());
-                if (!cells[0] && !cells[1] && !cells[2] && !cells[3] && !cells[4]) continue;
+                const relevant = cells.slice(0, isTeacher ? 6 : 5);
+                if (!relevant.some(v => v)) continue;
                 if (cells[0].toLowerCase() === "ad" && cells[1].toLowerCase() === "soyad") continue;
                 const name = cells[0], surname = cells[1], tcno = cells[2], username = cells[3], password = cells[4];
+                const branch = isTeacher ? cells[5] : "";
                 const rowNo = r + 1;
                 if (!name || !surname) { errors.push("Satır " + rowNo + ": Ad/Soyad boş"); continue; }
                 if (!/^\d{11}$/.test(tcno)) { errors.push("Satır " + rowNo + ": TC Kimlik No 11 haneli olmalı"); continue; }
@@ -837,7 +841,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 existing.add(username.toLowerCase());
                 const rec = { id: generateId(), name: name, surname: surname, username: username, password: password, tcno: tcno };
                 if (isTeacher) {
-                    rec.branch = "";
+                    rec.branch = branch;
                     rec.email = "";
                 } else {
                     rec.studentClass = "";
