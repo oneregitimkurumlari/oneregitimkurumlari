@@ -119,11 +119,11 @@
 
     function buildFloat() {
         var css = '#heroRoot{font-family:inherit}' +
-            '.h-fab{position:fixed;left:22px;bottom:22px;z-index:9990;width:64px;height:64px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,#fb923c,#f97316);color:#fff;font-size:30px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(249,115,22,.45);opacity:0;pointer-events:none;transform:translateY(14px);transition:.3s}' +
+            '.h-fab{position:fixed;right:20px;bottom:94px;z-index:9990;width:62px;height:62px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,#fb923c,#f97316);color:#fff;font-size:30px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(249,115,22,.45);opacity:0;pointer-events:none;transform:translateY(14px);transition:.3s}' +
             '.h-fab.h-on{opacity:1;pointer-events:auto;transform:none}' +
             '.h-fab:hover{transform:scale(1.08)}' +
             '.h-fab .h-dot{position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #fff}' +
-            '.h-panel-x{position:fixed;left:22px;bottom:96px;z-index:9991;width:340px;max-width:calc(100vw - 30px);background:#fff;border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.25);display:none;flex-direction:column;overflow:hidden;border:1px solid #fed7aa}' +
+            '.h-panel-x{position:fixed;right:20px;bottom:168px;z-index:9991;width:340px;max-width:calc(100vw - 30px);background:#fff;border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.25);display:none;flex-direction:column;overflow:hidden;border:1px solid #fed7aa}' +
             '.h-panel-x.h-show{display:flex}' +
             '.h-head2{display:flex;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(135deg,#ffedd5,#fed7aa);border-bottom:1px solid #ffedd5}' +
             '.h-avatar{width:46px;height:46px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 2px 6px rgba(0,0,0,.12);flex-shrink:0}' +
@@ -167,7 +167,8 @@
             '.h-day{display:flex;justify-content:space-between;font-size:.72rem;color:#92400e;padding:2px 0}' +
             '.h-day-label{font-weight:600}' +
             '.h-day-pct{color:#f97316;font-weight:700}' +
-            '.h-note{font-size:.78rem;color:#92400e;background:#fff;border:1px dashed #fdba74;border-radius:10px;padding:8px 10px;margin:0}';
+            '.h-note{font-size:.78rem;color:#92400e;background:#fff;border:1px dashed #fdba74;border-radius:10px;padding:8px 10px;margin:0}' +
+            '@media(max-width:640px){.h-fab{right:12px;bottom:82px;width:52px;height:52px;font-size:26px}.h-panel-x{right:12px;bottom:148px;left:12px;width:auto}}';
         var st = document.createElement("style");
         st.textContent = css;
         document.head.appendChild(st);
@@ -209,7 +210,7 @@
 
         var chips = document.createElement("div");
         chips.className = "h-chips";
-        var quick = ["Haftalık planım", "Bugünkü görevlerim", "İlerlememi göster", "Koç tavsiyesi ver", "Beni motive et"];
+        var quick = ["Bana haftalık plan oluştur", "Haftalık planım", "Bugünkü görevlerim", "İlerlememi göster", "Koç tavsiyesi ver", "Beni motive et"];
         quick.forEach(function (q) {
             var c = document.createElement("button");
             c.className = "h-chip";
@@ -348,6 +349,126 @@
         return list[Math.floor(Math.random() * list.length)];
     }
 
+    /* ---------------- HERO haftalık program oluşturabilir ---------------- */
+    var pendingReplace = false;
+
+    function scheduleSubjects() {
+        var m = {};
+        try {
+            var sched = (window.getScheduleData && getScheduleData()) || (window.cachedData && cachedData.classes) || [];
+            sched.forEach(function (c) {
+                var d = String(c.dayLabel || c.day || "").toLowerCase();
+                if (!d || !c.title) return;
+                (m[d] = m[d] || []).push(String(c.title));
+            });
+        } catch (e) {}
+        Object.keys(m).forEach(function (k) { m[k] = m[k].filter(function (v, i, a) { return a.indexOf(v) === i; }); });
+        return m;
+    }
+
+    function dayKeyTR(s) {
+        var keys = ["pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi", "pazar"];
+        var n = norm(s);
+        for (var i = 0; i < keys.length; i++) if (n.indexOf(keys[i]) !== -1) return keys[i];
+        return null;
+    }
+
+    function normalizeDays(obj) {
+        var out = {};
+        Object.keys(obj || {}).forEach(function (k) {
+            var dk = dayKeyTR(k.replace(/[0-9]/g, ""));
+            if (!dk) return;
+            var arr = (obj[k] || []).map(function (t) { return String(t).trim(); }).filter(Boolean);
+            if (arr.length) out[dk] = arr;
+        });
+        return out;
+    }
+
+    function fallbackPlan() {
+        var subs = scheduleSubjects();
+        var out = {};
+        ["pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi", "pazar"].forEach(function (d) {
+            var tasks = (subs[d] || []).slice(0, 2).map(function (t) { return t.charAt(0).toUpperCase() + t.slice(1) + ": konu tekrarı + test çöz"; });
+            tasks.push("30 dk kitap okuma");
+            if (d === "cumartesi" || d === "pazar") tasks.push("Haftanın tekrarı + eksik konular");
+            out[d] = tasks;
+        });
+        return out;
+    }
+
+    function geminiPlan() {
+        if (!GEMINI_KEY) return Promise.reject(new Error("no-key"));
+        var subs = scheduleSubjects();
+        var subjLine = "";
+        Object.keys(subs).forEach(function (d) { subjLine += d + ": " + subs[d].join(", ") + "\n"; });
+        var sys = "Sen HERO adında öğrenciler için haftalık çalışma programı oluşturan bir AI koç kedisin. Öğrencinin haftalık ders programı:\n" + subjLine + "\n\nTürkçe, yaşına uygun ve motive edici görev başlıkları üret. Çıktı yalnızca JSON olmalı, başka hiçbir şey yazma: {\"pazartesi\":[\"görev\",\"görev\"],\"sali\":[...],\"carsamba\":[...],\"persembe\":[...],\"cuma\":[...],\"cumartesi\":[...],\"pazar\":[...]} - her güne 2-4 görev. Görevler 'tablo çiz', 'test çöz', 'konu tekrarı', 'soru bankası', 'kitap okuma' gibi somut olsun. Ders programındaki derslere öncelik ver.";
+        var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(GEMINI_MODEL) + ":generateContent?key=" + encodeURIComponent(GEMINI_KEY);
+        return new Promise(function (resolve, reject) {
+            var c = new AbortController();
+            var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 45000);
+            fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    systemInstruction: { parts: [{ text: sys }] },
+                    contents: [{ role: "user", parts: [{ text: "Bu hafta için çalışma programını oluştur." }] }],
+                    generationConfig: { temperature: 0.5, maxOutputTokens: 1500 }
+                }),
+                signal: c.signal
+            }).then(function (res) {
+                if (!res.ok) throw new Error("http " + res.status);
+                return res.json();
+            }).then(function (j) {
+                var txt = j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts[0] ? j.candidates[0].content.parts[0].text : "";
+                txt = String(txt).replace(/```[a-z]*/gi, "").trim();
+                var m = txt.match(/\{[\s\S]*\}/);
+                var obj = m ? JSON.parse(m[0]) : JSON.parse(txt);
+                resolve(normalizeDays(obj));
+            }).catch(function (e) { reject(e); }).then(function () { clearTimeout(t); });
+        });
+    }
+
+    function writePlan(daysObj) {
+        var sid = getStudentId();
+        var c = window.planCache || {};
+        if (!c[sid]) c[sid] = {};
+        var wk = currentWeek();
+        var bucket = {};
+        ["pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi", "pazar"].forEach(function (d) {
+            var arr = daysObj[d] || [];
+            bucket[d] = arr.map(function (t) { return { id: "h-" + Math.floor(Math.random() * 1e9), text: t, done: false }; });
+        });
+        c[sid][wk] = bucket;
+        window.planCache = c;
+        return savePlans().then(function () {
+            try { if (window.renderPlanList) renderPlanList(); if (window.renderTodayPlan) renderTodayPlan(); } catch (e) {}
+            renderPlanPanel(); updateProgressBar();
+            return true;
+        }).catch(function () { return false; });
+    }
+
+    function createPlanFlow() {
+        var s = weekSummary();
+        if (s.any) {
+            pendingReplace = true;
+            return "Miyav, haftalık planın şu an dolu (" + s.total + " görev var). Yerine HERO'nun hazırladığı yeni bir program koyayım mı? Onayılıyorsan 'evet' yaz. 🐾";
+        }
+        return makePlan(false);
+    }
+
+    function makePlan(isReplace) {
+        return geminiPlan().catch(function () { return fallbackPlan(); }).then(function (days) {
+            return writePlan(days).then(function (ok) {
+                var cnt = 0;
+                Object.keys(days).forEach(function (k) { cnt += (days[k] || []).length; });
+                if (!ok) return "Miyav, program hazır ama kaydedilemedi. Bağlantını kontrol edip tekrar dene istersen. 🐾";
+                return isReplace
+                    ? "Yeni haftalık programın hazır! " + cnt + " görev eklendi. Çalışma Planı sayfasına göz atmayı unutma. Miyav! 🐾"
+                    : "HERO haftalık programını oluşturdu! " + cnt + " görev plana eklendi. Dilediğin gibi düzenleyebilirsin. Miyav! 🐾";
+            });
+        });
+    }
+
     function planContext() {
         try {
             var s = weekSummary();
@@ -415,6 +536,18 @@
         if (hasBad(q)) return Promise.resolve("Bu konuda sana yardım edemem canım, derslerin ve planın hakkında konuşalım olur mu? 🐾");
         var math = cebir(q);
         if (math) return Promise.resolve(math);
+
+        var isCreate = /(olustur|hazirla|plan yap|program yap|program kur|kendin yaz|kendin kur|yeni plan|program hazirla)/.test(n);
+        if (pendingReplace) {
+            if (/(hayir|hayır|yok|isteme|gerek yok|dur)/.test(n)) {
+                pendingReplace = false;
+                return Promise.resolve("Sorun değil, planına dokunmadım. Başka bir konuda yardımcı olayım mı? 🐾");
+            }
+            pendingReplace = false;
+            return createPlanFlow();
+        }
+        if (isCreate) return createPlanFlow();
+
         for (var i = 0; i < RULES.length; i++) {
             if (RULES[i].keys.some(function (k) { return n.indexOf(k) !== -1; })) {
                 var r = RULES[i].fn();
