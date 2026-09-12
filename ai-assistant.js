@@ -208,6 +208,7 @@
         panel.classList.toggle("ai-show", show);
         fab.classList.toggle("ai-open", show);
         if (show) {
+            if (window.heroChatClose) window.heroChatClose();
             if (!greeted) {
                 greeted = true;
                 botSay("Merhaba 👋 Ben senin yapay zekâ asistanınım. Ders programın, ödevlerin ve siteyi kullanmak hakkında sorularını cevaplayabilirim.");
@@ -215,6 +216,8 @@
             setTimeout(function () { input.focus(); }, 120);
         }
     }
+
+    window.aiAssistantClose = function () { toggleOpen(false); };
 
     function say(role, text) {
         var m = document.createElement("div");

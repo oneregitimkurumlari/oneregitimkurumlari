@@ -270,6 +270,7 @@
         panel.classList.toggle("h-show", show);
         fab.classList.toggle("h-open", show);
         if (show) {
+            if (window.aiAssistantClose) window.aiAssistantClose();
             if (!greeted) {
                 greeted = true;
                 botSay("Miyav! 🐱 Ben HERO, senin yapay zekâ koçunum. Haftalık çalışma planını takip ediyorum. Zorlandığın yerde rehberlik etmek için buradayım! ");
@@ -279,6 +280,7 @@
     }
 
     window.heroChatOpen = function () { toggleOpen(true); };
+    window.heroChatClose = function () { toggleOpen(false); };
 
     function say(role, text) {
         var m = document.createElement("div");
