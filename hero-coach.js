@@ -392,6 +392,12 @@
         Object.keys(subs).forEach(function (d) {
             subs[d].forEach(function (s) { if (list.indexOf(s) === -1) list.push(s); });
         });
+        try {
+            ((window.cachedData && window.cachedData.teachers) || []).forEach(function (t) {
+                var b = String(t.branch || "").trim();
+                if (b && b.length <= 40 && list.indexOf(b) === -1) list.push(b);
+            });
+        } catch (e) {}
         if (!list.length) list = ["Matematik", "Fen Bilimleri", "Türkçe", "İngilizce", "Sosyal Bilgiler", "Din Kültürü"];
         return list;
     }
@@ -410,13 +416,15 @@
 
     function fallbackPlan() {
         var branches = allBranches();
+        var rot = branches.length ? Math.floor(Date.now() / 604800000) % branches.length : 0;
+        var ordered = branches.slice(rot).concat(branches.slice(0, rot));
         var days = ["pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi", "pazar"];
         var out = {};
-        var pick = branches.slice();
+        var pick = ordered.slice();
         days.forEach(function (d) {
             var tasks = [];
             for (var k = 0; k < 2; k++) {
-                if (!pick.length) pick = branches.slice();
+                if (!pick.length) pick = ordered.slice();
                 var br = pick.shift();
                 tasks.push(br.charAt(0).toUpperCase() + br.slice(1) + ": " + soruSayisi(br) + " soru çöz + konu tekrarı");
             }
@@ -426,38 +434,6 @@
             out[d] = tasks;
         });
         return out;
-    }
-
-    function geminiPlan() {
-        if (!GEMINI_KEY) return Promise.reject(new Error("no-key"));
-        var subs = scheduleSubjects();
-        var subjLine = "";
-        Object.keys(subs).forEach(function (d) { subjLine += d + ": " + subs[d].join(", ") + "\n"; });
-        var sys = "Sen HERO adında öğrenciler için haftalık çalışma programı oluşturan bir AI koç kedisin. Öğrencinin haftalık ders programı:\n" + subjLine + "\n\nTürkçe, yaşına uygun görevler üret. Çıktı yalnızca JSON olmalı, başka hiçbir şey yazma: {\"pazartesi\":[\"görev\",\"görev\"],\"sali\":[...],\"carsamba\":[...],\"persembe\":[...],\"cuma\":[...],\"cumartesi\":[...],\"pazar\":[...]} - her güne 2-4 görev. MUTLAKA: (1) Öğrencinin TÜM branşlarını haftaya dağıt, hiçbir branş atlanmasın; (2) her görev başlığında somut bir soru sayısı geçsin (örn. 'Matematik: 25 test sorusu çöz', 'Fen Bilimleri: 20 soruluk test + konu tekrarı', 'Türkçe: 20 paragraf sorusu'). Görevler kısa, net ve uygulanabilir olsun. Hafta sonuna deneme sınavı gibi özel görevler eklenebilir.";
-        var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(GEMINI_MODEL) + ":generateContent?key=" + encodeURIComponent(GEMINI_KEY);
-        return new Promise(function (resolve, reject) {
-            var c = new AbortController();
-            var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 45000);
-            fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    systemInstruction: { parts: [{ text: sys }] },
-                    contents: [{ role: "user", parts: [{ text: "Bu hafta için çalışma programını oluştur." }] }],
-                    generationConfig: { temperature: 0.5, maxOutputTokens: 1500 }
-                }),
-                signal: c.signal
-            }).then(function (res) {
-                if (!res.ok) throw new Error("http " + res.status);
-                return res.json();
-            }).then(function (j) {
-                var txt = j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts[0] ? j.candidates[0].content.parts[0].text : "";
-                txt = String(txt).replace(/```[a-z]*/gi, "").trim();
-                var m = txt.match(/\{[\s\S]*\}/);
-                var obj = m ? JSON.parse(m[0]) : JSON.parse(txt);
-                resolve(normalizeDays(obj));
-            }).catch(function (e) { reject(e); }).then(function () { clearTimeout(t); });
-        });
     }
 
     function writePlan(daysObj) {
@@ -489,15 +465,14 @@
     }
 
     function makePlan(isReplace) {
-        return geminiPlan().catch(function () { return fallbackPlan(); }).then(function (days) {
-            return writePlan(days).then(function (ok) {
-                var cnt = 0;
-                Object.keys(days).forEach(function (k) { cnt += (days[k] || []).length; });
-                if (!ok) return "Miyav, program hazır ama kaydedilemedi. Bağlantını kontrol edip tekrar dene istersen. 🐾";
-                return isReplace
-                    ? "Yeni haftalık programın hazır! " + cnt + " görev eklendi. Çalışma Planı sayfasına göz atmayı unutma. Miyav! 🐾"
-                    : "HERO haftalık programını oluşturdu! " + cnt + " görev plana eklendi. Dilediğin gibi düzenleyebilirsin. Miyav! 🐾";
-            });
+        var days = fallbackPlan();
+        return writePlan(days).then(function (ok) {
+            var cnt = 0;
+            Object.keys(days).forEach(function (k) { cnt += (days[k] || []).length; });
+            if (!ok) return "Miyav, program hazır ama kaydedilemedi. Bağlantını kontrol edip tekrar dene istersen. 🐾";
+            return isReplace
+                ? "Yeni haftalık programın hazır! " + cnt + " görev eklendi. Çalışma Planı sayfasına göz atmayı unutma. Miyav! 🐾"
+                : "HERO haftalık programını oluşturdu! Tüm branşlar haftaya dağıtıldı, her görevde soru sayısı yazıyor. Toplam " + cnt + " görev plana eklendi. Miyav! 🐾";
         });
     }
 
