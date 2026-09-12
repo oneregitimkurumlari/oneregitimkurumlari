@@ -737,6 +737,17 @@ var religiousHolidays = {
 var PLAN_URL = FIREBASE_URL + "/_plans.json";
 var planCache = null;
 
+function fbFetch(url, options, ms) {
+    ms = ms || 8000;
+    return new Promise(function (resolve, reject) {
+        var c = new AbortController();
+        var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, ms);
+        fetch(url, Object.assign({ signal: c.signal }, options || {}))
+            .then(function (r) { clearTimeout(t); resolve(r); })
+            .catch(function (e) { clearTimeout(t); reject(e); });
+    });
+}
+
 function getStudentId() {
     var u = sessionStorage.getItem("siteUser");
     if (!u) return "default";
@@ -746,7 +757,7 @@ function getStudentId() {
 
 async function loadPlans() {
     try {
-        var res = await fetch(PLAN_URL + "?t=" + Date.now(), { cache: "no-store" });
+        var res = await fbFetch(PLAN_URL + "?t=" + Date.now(), { cache: "no-store" });
         var json = await res.json();
         planCache = json || {};
     } catch (e) {
@@ -772,14 +783,16 @@ function weekKey() {
 
 async function savePlans() {
     try {
-        await fetch(PLAN_URL + "?t=" + Date.now(), {
+        var res = await fbFetch(PLAN_URL + "?t=" + Date.now(), {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(planCache)
         });
+        if (!res.ok) throw new Error("http " + res.status);
+        return true;
     } catch (e) {
-        console.error("Plan kaydedilemedi:", e);
-        alert("Plan kaydedilemedi. Veri bağlantısını kontrol edin.");
+        console.warn("Plan kaydedilemedi:", e);
+        return false;
     }
 }
 

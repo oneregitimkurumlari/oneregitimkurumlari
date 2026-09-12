@@ -463,7 +463,7 @@
         var url = DEEPSEEK_URL;
         return new Promise(function (resolve, reject) {
             var c = new AbortController();
-            var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 45000);
+            var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 25000);
             fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": "Bearer " + DEEPSEEK_KEY },
@@ -495,7 +495,7 @@
         var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(GEMINI_MODEL) + ":generateContent?key=" + encodeURIComponent(GEMINI_KEY);
         return new Promise(function (resolve, reject) {
             var c = new AbortController();
-            var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 45000);
+            var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 25000);
             fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -589,21 +589,28 @@
         return makePlan(false);
     }
 
+    function withBudget(ms, pr) {
+        return new Promise(function (resolve) {
+            var done = false;
+            var t = setTimeout(function () { if (!done) { done = true; resolve(false); } }, ms);
+            pr.then(function (v) { if (!done) { done = true; clearTimeout(t); resolve(v); } },
+                function () { if (!done) { done = true; clearTimeout(t); resolve(false); } });
+        });
+    }
+
     function makePlan(isReplace) {
         var base = fallbackPlan();
-        return providerPlan()
-            .then(function (g) { return mergePlan(base, g); })
-            .catch(function () { return base; })
-            .then(function (days) {
-                return writePlan(days).then(function (ok) {
-                    var cnt = 0;
-                    Object.keys(days).forEach(function (k) { cnt += (days[k] || []).length; });
-                    if (!ok) return "Miyav, program hazır ama kaydedilemedi. Bağlantını kontrol edip tekrar dene istersen. 🐾";
-                    return isReplace
-                        ? "Yeni haftalık programın hazır! " + cnt + " görev eklendi. Çalışma Planı sayfasına göz atmayı unutma. Miyav! 🐾"
-                        : "HERO haftalık programını oluşturdu! Tüm branşlar haftaya dağıtıldı, her görevde soru sayısı yazıyor. Toplam " + cnt + " görev plana eklendi. Miyav! 🐾";
-                });
+        return withBudget(30000, providerPlan()).then(function (g) {
+            var days = g ? mergePlan(base, g) : base;
+            return writePlan(days).then(function (ok) {
+                var cnt = 0;
+                Object.keys(days).forEach(function (k) { cnt += (days[k] || []).length; });
+                if (!ok) return "Miyav, program hazır ama kaydedilemedi. Bağlantını kontrol edip tekrar dene istersen. 🐾";
+                return isReplace
+                    ? "Yeni haftalık programın hazır! " + cnt + " görev eklendi. Çalışma Planı sayfasına göz atmayı unutma. Miyav! 🐾"
+                    : "HERO haftalık programını oluşturdu! Tüm branşlar haftaya dağıtıldı, her görevde soru sayısı yazıyor. Toplam " + cnt + " görev plana eklendi. Miyav! 🐾";
             });
+        });
     }
 
     function planContext() {
@@ -683,7 +690,9 @@
         sendBtn.disabled = true;
         typing(true);
         setTimeout(function () {
-            answer(v).then(function (txt) {
+            var ans;
+            try { ans = answer(v); } catch (e) { ans = Promise.resolve("Bir şeyler ters gitti, lütfen biraz sonra tekrar dene. 🐾"); }
+            ans.then(function (txt) {
                 typing(false);
                 botSay(txt);
             }).catch(function () {
