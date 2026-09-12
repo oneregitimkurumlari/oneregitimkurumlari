@@ -386,13 +386,43 @@
         return out;
     }
 
-    function fallbackPlan() {
+    function allBranches() {
         var subs = scheduleSubjects();
+        var list = [];
+        Object.keys(subs).forEach(function (d) {
+            subs[d].forEach(function (s) { if (list.indexOf(s) === -1) list.push(s); });
+        });
+        if (!list.length) list = ["Matematik", "Fen Bilimleri", "Türkçe", "İngilizce", "Sosyal Bilgiler", "Din Kültürü"];
+        return list;
+    }
+
+    function soruSayisi(lesson) {
+        var n = norm(lesson);
+        if (n.indexOf("matematik") !== -1) return 25;
+        if (n.indexOf("fen") !== -1) return 20;
+        if (n.indexOf("turk") !== -1) return 20;
+        if (n.indexOf("ingiliz") !== -1) return 15;
+        if (n.indexOf("sosyal") !== -1) return 15;
+        if (n.indexOf("din") !== -1) return 12;
+        if (n.indexOf("geometri") !== -1) return 10;
+        return 20;
+    }
+
+    function fallbackPlan() {
+        var branches = allBranches();
+        var days = ["pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi", "pazar"];
         var out = {};
-        ["pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi", "pazar"].forEach(function (d) {
-            var tasks = (subs[d] || []).slice(0, 2).map(function (t) { return t.charAt(0).toUpperCase() + t.slice(1) + ": konu tekrarı + test çöz"; });
-            tasks.push("30 dk kitap okuma");
-            if (d === "cumartesi" || d === "pazar") tasks.push("Haftanın tekrarı + eksik konular");
+        var pick = branches.slice();
+        days.forEach(function (d) {
+            var tasks = [];
+            for (var k = 0; k < 2; k++) {
+                if (!pick.length) pick = branches.slice();
+                var br = pick.shift();
+                tasks.push(br.charAt(0).toUpperCase() + br.slice(1) + ": " + soruSayisi(br) + " soru çöz + konu tekrarı");
+            }
+            if (d === "cuma") tasks.push("Haftanın genel tekrarı");
+            if (d === "cumartesi") tasks.push("1 deneme sınavı çöz (40 soru)");
+            if (d === "pazar") tasks.push("Eksik konuların tekrarı + yanlışları gözden geçir");
             out[d] = tasks;
         });
         return out;
@@ -403,7 +433,7 @@
         var subs = scheduleSubjects();
         var subjLine = "";
         Object.keys(subs).forEach(function (d) { subjLine += d + ": " + subs[d].join(", ") + "\n"; });
-        var sys = "Sen HERO adında öğrenciler için haftalık çalışma programı oluşturan bir AI koç kedisin. Öğrencinin haftalık ders programı:\n" + subjLine + "\n\nTürkçe, yaşına uygun ve motive edici görev başlıkları üret. Çıktı yalnızca JSON olmalı, başka hiçbir şey yazma: {\"pazartesi\":[\"görev\",\"görev\"],\"sali\":[...],\"carsamba\":[...],\"persembe\":[...],\"cuma\":[...],\"cumartesi\":[...],\"pazar\":[...]} - her güne 2-4 görev. Görevler 'tablo çiz', 'test çöz', 'konu tekrarı', 'soru bankası', 'kitap okuma' gibi somut olsun. Ders programındaki derslere öncelik ver.";
+        var sys = "Sen HERO adında öğrenciler için haftalık çalışma programı oluşturan bir AI koç kedisin. Öğrencinin haftalık ders programı:\n" + subjLine + "\n\nTürkçe, yaşına uygun görevler üret. Çıktı yalnızca JSON olmalı, başka hiçbir şey yazma: {\"pazartesi\":[\"görev\",\"görev\"],\"sali\":[...],\"carsamba\":[...],\"persembe\":[...],\"cuma\":[...],\"cumartesi\":[...],\"pazar\":[...]} - her güne 2-4 görev. MUTLAKA: (1) Öğrencinin TÜM branşlarını haftaya dağıt, hiçbir branş atlanmasın; (2) her görev başlığında somut bir soru sayısı geçsin (örn. 'Matematik: 25 test sorusu çöz', 'Fen Bilimleri: 20 soruluk test + konu tekrarı', 'Türkçe: 20 paragraf sorusu'). Görevler kısa, net ve uygulanabilir olsun. Hafta sonuna deneme sınavı gibi özel görevler eklenebilir.";
         var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(GEMINI_MODEL) + ":generateContent?key=" + encodeURIComponent(GEMINI_KEY);
         return new Promise(function (resolve, reject) {
             var c = new AbortController();
