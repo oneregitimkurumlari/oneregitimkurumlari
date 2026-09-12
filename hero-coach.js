@@ -432,7 +432,7 @@
 
     function fallbackPlan() {
         var branches = allBranches();
-        var rot = branches.length ? Math.floor(Date.now() / 604800000) % branches.length : 0;
+        var rot = branches.length ? Math.floor(Math.random() * branches.length) : 0;
         var ordered = branches.slice(rot).concat(branches.slice(0, rot));
         var days = ["pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi", "pazar"];
         var out = {};
