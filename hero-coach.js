@@ -584,6 +584,104 @@
         return out;
     }
 
+    var BOOK_WEEKS = 26;
+
+    function bookSubjectOf(b) {
+        if (b && b.subject) return b.subject;
+        var n = norm(b && b.name || "");
+        var subs = ["Matematik", "Fen Bilimleri", "Türkçe", "İngilizce", "Sosyal Bilgiler", "Din Kültürü", "Geometri"];
+        for (var i = 0; i < subs.length; i++) {
+            if (n.indexOf(norm(subs[i])) !== -1) return subs[i];
+        }
+        return "Diğer";
+    }
+
+    function bookDayIndex(name) {
+        var h = 0;
+        norm(name).split("").forEach(function (ch) { h = (h * 31 + (ch.charCodeAt(0) || 1)) % 100000; });
+        return h % 7;
+    }
+
+    function bookWeeklyQuota(total) {
+        return Math.max(1, Math.round(total / BOOK_WEEKS));
+    }
+
+    function addBookTasks(days) {
+        var books = [];
+        try { if (typeof myBooks === "function") books = myBooks() || []; } catch (e) {}
+        var dayKeys = ["pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi", "pazar"];
+        books.forEach(function (b) {
+            if (!b || !b.totalQuestions || b.totalQuestions <= 0) return;
+            var per = bookWeeklyQuota(b.totalQuestions);
+            var d = dayKeys[bookDayIndex((b.name || "") + "-" + (b.subject || ""))];
+            var subj = bookSubjectOf(b);
+            var text = "📗 " + b.name + (subj && subj !== "Diğer" ? " (" + subj + ")" : "") + ": " + per + " soru çöz";
+            (days[d] = days[d] || []).push(text);
+        });
+        return days;
+    }
+
+    function bookTaskCount(days) {
+        var c = 0;
+        Object.keys(days || {}).forEach(function (k) {
+            (days[k] || []).forEach(function (t) { if (/📗/.test(t)) c++; });
+        });
+        return c;
+    }
+
+    function bookStatsSys(name, subject) {
+        return "Sen Türkiye'deki yayınevlerinin kaynak kitaplarını çok iyi tanıyan bir eğitim uzmanısın. " +
+            "Öğrencinin elindeki kaynak kitabın toplam soru sayısını tahmin et.\n" +
+            'Kitap adı: "' + name + '"\n' +
+            "Dersi: " + (subject || "bilinmiyor") + "\n" +
+            "Soru bankalarında genellikle 1500-6500 soru bulunur; konu özetli/test ağırlıklı kitaplarda bu sayı değişir. Emin değilsen makul bir orta değer seç.\n" +
+            'SADECE su JSONu dondur, baska metin yazma: {"totalQuestions": <sayi>, "confidence": "yuksek" | "orta" | "dusuk"}';
+    }
+
+    function heroBookDefault(subjectOrName) {
+        var s = norm(subjectOrName || "");
+        if (s.indexOf("matematik") !== -1) return 2500;
+        if (s.indexOf("fen") !== -1) return 2000;
+        if (s.indexOf("turk") !== -1) return 2000;
+        if (s.indexOf("ingiliz") !== -1) return 1500;
+        if (s.indexOf("sosyal") !== -1) return 1500;
+        if (s.indexOf("din ") !== -1 || s.indexOf("din kult") !== -1) return 1200;
+        return 1500;
+    }
+
+    function bookText() {
+        var books = [];
+        try { if (typeof myBooks === "function") books = myBooks() || []; } catch (e) {}
+        if (!books.length) return "Henüz kaynak kitap eklemedin 🐾 Pano'daki 'Kaynak Kitaplar' bölümünden elindeki kitapları ekleyebilirsin.";
+        var lines = ["Kaynak kitapların:"];
+        var total = 0;
+        books.forEach(function (b) {
+            if (b.totalQuestions) {
+                var per = bookWeeklyQuota(b.totalQuestions);
+                lines.push("📗 " + b.name + (bookSubjectOf(b) !== "Diğer" ? " (" + bookSubjectOf(b) + ")" : "") + " — ~" + b.totalQuestions + " soru (haftalık " + per + " soru ödevi)");
+                total += per;
+            } else {
+                lines.push("📗 " + b.name + " — soru sayısı tahmin ediliyor");
+            }
+        });
+        lines.push("Tüm kitapları ~" + BOOK_WEEKS + " haftada (6 ay) bitirmek için haftalık toplam ~" + total + " soru ödevlendirilir. Plan güncellenince görevlerin arasında kitap adları görünecek.");
+        return lines.join("\n");
+    }
+
+    window.heroEstimateBook = function (name, subject) {
+        return providerAsk(bookStatsSys(name, subject), "Bu kitabın toplam soru sayısını tahmin et, sadece JSON döndür.", 0.2, 300, true)
+            .then(function (txt) {
+                txt = String(txt).replace(/```[a-z]*/gi, "").trim();
+                var ma = txt.match(/\{[\s\S]*\}/);
+                var o = ma ? JSON.parse(ma[0]) : JSON.parse(txt);
+                var n = parseInt(o.totalQuestions, 10);
+                if (!n || isNaN(n) || n < 100 || n > 20000) throw new Error("bad");
+                return { totalQuestions: n, confidence: String(o.confidence || "orta") };
+            }).catch(function () {
+                return { totalQuestions: heroBookDefault(subject || name), confidence: "düşük" };
+            });
+    };
+
     function writePlan(daysObj) {
         var sid = getStudentId();
         var c = window.planCache || {};
@@ -625,13 +723,16 @@
         var base = fallbackPlan();
         return withBudget(30000, providerPlan()).then(function (g) {
             var days = g ? mergePlan(base, g) : base;
+            days = addBookTasks(days);
+            var bookN = bookTaskCount(days);
             return writePlan(days).then(function (ok) {
                 var cnt = 0;
                 Object.keys(days).forEach(function (k) { cnt += (days[k] || []).length; });
                 if (!ok) return "Miyav, program hazır ama kaydedilemedi. Bağlantını kontrol edip tekrar dene istersen. 🐾";
+                var extra = bookN ? " Kaynak kitaplarından da " + bookN + " görev eklendi (kitap adları görevlerde yazıyor)." : "";
                 return isReplace
-                    ? "Yeni haftalık programın hazır! " + cnt + " görev eklendi. Çalışma Planı sayfasına göz atmayı unutma. Miyav! 🐾"
-                    : "HERO haftalık programını oluşturdu! Tüm branşlar haftaya dağıtıldı, her görevde soru sayısı yazıyor. Toplam " + cnt + " görev plana eklendi. Miyav! 🐾";
+                    ? "Yeni haftalık programın hazır! " + cnt + " görev plana eklendi." + extra + " Çalışma Planı sayfasına göz atmayı unutma. Miyav! 🐾"
+                    : "HERO haftalık programını oluşturdu! Tüm branşlar haftaya dağıtıldı, her görevde soru sayısı yazıyor. Toplam " + cnt + " görev plana eklendi." + extra + " Miyav! 🐾";
             });
         });
     }
@@ -656,6 +757,7 @@
         { keys: ["merhaba", "selam", "hey", "miyav", "hiii", "sa"], fn: function () { return "Miyav, merhaba " + studentName() + "! 🐱 Ben HERO. Haftalık planını takip edip sana koçluk yapıyorum. Nasıl yardımcı olayım?"; } },
         { keys: ["tesekkur", "sagol", "eyvallah", "teşekkür"], fn: function () { return "Rica ederim! 🐾 İşini bitirince miyavla, başarını kutlayalım!"; } },
         { keys: ["haftal", "plan", "program"], fn: function () { return weekText(); } },
+        { keys: ["kaynak", "soru banka", "kitab", "kitaplar"], fn: function () { return bookText(); } },
         { keys: ["bugun", "bugün", "yarin", "yarın"], fn: function () { return todayText(); } },
         { keys: ["ilerle", "progres", "yuzde", "yüzde", "devam"], fn: function () { return progressText(); } },
         { keys: ["tavsiye", "oner", "öner", "ipucu", "nasil calis", "nasıl çalış", "takti", "koç", "koc", "rehber"], fn: function () { return guidanceText(); } },

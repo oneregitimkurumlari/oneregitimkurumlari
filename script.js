@@ -796,6 +796,143 @@ async function savePlans() {
     }
 }
 
+/* ---------------- Kaynak Kitaplar ---------------- */
+var BOOKS_KEY = "kaynak_books_";
+
+function bkNorm(s) {
+    var tr = { "ğ": "g", "ş": "s", "ı": "i", "ö": "o", "ü": "u", "ç": "c", "İ": "i" };
+    return String(s || "").toLowerCase().split("").map(c => tr[c] || c).join("")
+        .replace(/[\s,.:;()"'\/\-]/g, "").trim();
+}
+
+function myBooks() {
+    try {
+        var raw = localStorage.getItem(BOOKS_KEY + getStudentId());
+        var arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveMyBooks(list) {
+    try { localStorage.setItem(BOOKS_KEY + getStudentId(), JSON.stringify(list)); } catch (e) {}
+    if (window.renderBooksList) renderBooksList();
+    if (window.refreshPlanPanel) refreshPlanPanel();
+}
+
+function addBookItem(name, subject) {
+    name = (name || "").trim();
+    if (!name) return;
+    var list = myBooks();
+    var dup = list.some(function (b) { return bkNorm(b.name) === bkNorm(name); });
+    if (dup) { alert("Bu kitap zaten eklenmiş."); return; }
+    var b = { id: "b" + Date.now(), name: name, subject: subject || "", totalQuestions: null, status: "estimating" };
+    list.push(b);
+    saveMyBooks(list);
+    if (window.heroEstimateBook) {
+        heroEstimateBook(name, subject || "").then(function (r) {
+            var list2 = myBooks();
+            var it = null;
+            list2.forEach(function (x) { if (x.id === b.id) it = x; });
+            if (it) {
+                it.totalQuestions = r.totalQuestions;
+                it.confidence = r.confidence;
+                it.status = "ok";
+                saveMyBooks(list2);
+            }
+        });
+    } else {
+        var dflt = /matematik/i.test(name) ? 2500 : /fen bilim/i.test(name) ? 2000 : /turkce|türkçe/.test(name) ? 2000 : /ingiliz/i.test(name) ? 1500 : /sosyal/i.test(name) ? 1500 : /din/i.test(name) ? 1200 : 1500;
+        b.totalQuestions = dflt;
+        b.status = "ok";
+        saveMyBooks(list);
+    }
+}
+
+function addBookFromForm() {
+    var nEl = document.getElementById("bookName");
+    var sEl = document.getElementById("bookSubject");
+    addBookItem(nEl ? nEl.value : "", sEl ? sEl.value : "");
+    if (nEl) nEl.value = "";
+}
+
+function removeBookItem(id) {
+    saveMyBooks(myBooks().filter(function (b) { return b.id !== id; }));
+}
+
+function renewBookEstimate(id) {
+    var list = myBooks();
+    var b = null;
+    list.forEach(function (x) { if (x.id === id) b = x; });
+    if (!b) return;
+    b.status = "estimating";
+    b.totalQuestions = null;
+    saveMyBooks(list);
+    if (window.heroEstimateBook) {
+        heroEstimateBook(b.name, b.subject || "").then(function (r) {
+            var list2 = myBooks();
+            var it = null;
+            list2.forEach(function (x) { if (x.id === id) it = x; });
+            if (it) { it.totalQuestions = r.totalQuestions; it.confidence = r.confidence; it.status = "ok"; saveMyBooks(list2); }
+        }).catch(function () {
+            var list2 = myBooks();
+            var it = null;
+            list2.forEach(function (x) { if (x.id === id) it = x; });
+            if (it) { it.totalQuestions = 1500; it.status = "ok"; saveMyBooks(list2); }
+        });
+    }
+}
+
+function renderBooksList() {
+    var el = document.getElementById("booksList");
+    var hint = document.getElementById("booksHint");
+    var foot = document.getElementById("booksFoot");
+    if (!el) return;
+    var list = myBooks();
+    if (!list.length) {
+        el.innerHTML = "";
+        if (hint) hint.style.display = "block";
+        if (foot) foot.innerHTML = "";
+        return;
+    }
+    if (hint) hint.style.display = "none";
+    var html = "";
+    var estimating = false;
+    list.forEach(function (b) {
+        var subj = b.subject && b.subject !== "Diğer" ? '<span class="badge-book">' + esc(b.subject) + '</span>' : "";
+        var info;
+        if (b.status === "estimating") {
+            estimating = true;
+            info = '<small class="book-wait"><i class="fas fa-spinner fa-spin"></i> Soru sayısı tahmin ediliyor…</small>';
+        } else if (b.totalQuestions) {
+            info = '<small>≈ ' + b.totalQuestions + ' soru · haftada ~' + Math.max(1, Math.round(b.totalQuestions / 26)) + ' soru ödevi</small>';
+        } else {
+            estimating = true;
+            info = '<small>Soru sayısı bilinmiyor</small>';
+        }
+        var renewBtn = b.status !== "estimating"
+            ? '<button class="mini-btn" onclick="renewBookEstimate(\'' + b.id + '\')" title="Yeniden tahmin et"><i class="fas fa-sync"></i></button>'
+            : "";
+        html += '<div class="plan-item">' +
+            '<span class="book-icon">📗</span>' +
+            '<span class="plan-text"><strong>' + esc(b.name) + '</strong> ' + subj + '<br>' + info + '</span>' +
+            renewBtn +
+            '<span class="plan-del" onclick="removeBookItem(\'' + b.id + '\')"><i class="fas fa-trash"></i></span>' +
+            '</div>';
+    });
+    el.innerHTML = html;
+    var total = 0;
+    list.forEach(function (b) { if (b.totalQuestions) total += b.totalQuestions; });
+    if (estimating) {
+        foot.innerHTML = "Bazı kitapların soru sayısı tahmin ediliyor; hazır olanlar haftalık ödevlere eklenir.";
+    } else if (list.length) {
+        foot.innerHTML = "Toplam ≈ <b>" + total + "</b> soru · HERO bunları ~6 ayda (~26 hafta) bitirmek için haftalık yaklaşık <b>" + Math.max(1, Math.round(total / 26)) + "</b> soru ödevlendirir.";
+    } else {
+        foot.innerHTML = "";
+    }
+}
+
 function getTodayDOM() {
     var d = new Date();
     var labels = ["pazar", "pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi"];
@@ -866,6 +1003,11 @@ function initDashboard() {
     var planInput = document.getElementById("planText");
     if (planInput) planInput.addEventListener("keydown", e => { if (e.key === "Enter") addPlanTask(); });
 
+    var bookAddBtn = document.getElementById("bookAddBtn");
+    if (bookAddBtn) bookAddBtn.addEventListener("click", addBookFromForm);
+    var bookNameIn = document.getElementById("bookName");
+    if (bookNameIn) bookNameIn.addEventListener("keydown", e => { if (e.key === "Enter") addBookFromForm(); });
+
     if (window.location.hash) {
         var v = window.location.hash.replace("#", "");
         if (document.getElementById("view-" + v)) renderView(v);
@@ -931,6 +1073,7 @@ function renderView(view) {
     }
     if (view === "odevler") renderHomework();
     if (view === "sinavlar") renderExams();
+    if (view === "kaynaklar") renderBooksList();
 }
 
 function bindScheduleFilter() {

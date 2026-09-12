@@ -91,6 +91,7 @@
                 <a href="#panel" class="side-link active" data-view="panel"><i class="fas fa-th-large"></i><span class="side-txt">Panelim</span></a>
                 <a href="#takvim" class="side-link" data-view="takvim"><i class="fas fa-calendar-alt"></i><span class="side-txt">Takvim</span></a>
                 <a href="#plan" class="side-link" data-view="plan"><i class="fas fa-clipboard-check"></i><span class="side-txt">Çalışma Planı</span></a>
+<a href="#kaynaklar" class="side-link" data-view="kaynaklar"><i class="fas fa-book-open"></i><span class="side-txt">Kaynak Kitaplar</span></a>
                 <a href="#dersler" class="side-link" data-view="dersler"><i class="fas fa-video"></i><span class="side-txt">Canlı Ders</span></a>
                 <a href="#kayitlar" class="side-link" data-view="kayitlar"><i class="fas fa-history"></i><span class="side-txt">Kayıtlar</span></a>
 <a href="#odevler" class="side-link" data-view="odevler"><i class="fas fa-file-alt"></i><span class="side-txt">Ödevler</span></a>
@@ -206,6 +207,34 @@
                 <div id="heroPlanPanel"></div>
             </section>
 
+            <!-- ==== GÖRÜNÜM: KAYNAK KİTAPLAR ==== -->
+            <section class="view" id="view-kaynaklar">
+                <div class="view-head">
+                    <h2>Kaynak Kitaplar</h2>
+                    <p>Elindeki kaynak kitapları ekle; HERO arka planda soru sayılarını araştırıp ~6 ayda bitirebileceğin şekilde ödevlendirsin</p>
+                </div>
+                <div class="dash-card">
+                    <div class="plan-creator">
+                        <input type="text" id="bookName" placeholder="Kitap adı (örn. Fen Bilimleri 8. Sınıf Soru Bankası)">
+                        <select id="bookSubject">
+                            <option value="">Ders (otomatik de olur)</option>
+                            <option>Matematik</option>
+                            <option>Fen Bilimleri</option>
+                            <option>Türkçe</option>
+                            <option>İngilizce</option>
+                            <option>Sosyal Bilgiler</option>
+                            <option>Din Kültürü</option>
+                            <option>Geometri</option>
+                            <option>Diğer</option>
+                        </select>
+                        <button class="btn btn-primary" id="bookAddBtn"><i class="fas fa-plus"></i> Ekle</button>
+                    </div>
+                    <p class="plan-empty" id="booksHint" style="display:none;">Henüz kaynak kitap eklenmedi. Yukarıdan elindeki kitapları eklemeye başla.</p>
+                    <div id="booksList"></div>
+                    <p class="books-foot" id="booksFoot"></p>
+                </div>
+            </section>
+
             <!-- ==== GÖRÜNÜM: CANLI DERS (ders programı dahil) ==== -->
             <section class="view" id="view-dersler">
                 <div class="view-head">
@@ -308,11 +337,11 @@
     </div>
 </div>
 
-<script src="script.js?v=22"></script>
+<script src="script.js?v=24"></script>
 <script src="session.js?v=1"></script>
 <script src="transition.js"></script>
 <script src="ai-assistant.js?v=10"></script>
-<script src="hero-coach.js?v=16"></script>
+<script src="hero-coach.js?v=17"></script>
 <script>
 (function () {
     var modal = document.getElementById('installModal');
