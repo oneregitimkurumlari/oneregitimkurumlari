@@ -850,7 +850,7 @@
         var math = cebir(q);
         if (math) return Promise.resolve(math);
 
-        var isCreate = /(olustur|hazirla|plan yap|program yap|program kur|kendin yaz|kendin kur|yeni plan|program hazirla)/.test(n);
+        var isCreate = /(olustur|hazirla|plan yap|program yap|program kur|kendin yaz|kendin kur|yeni plan|program hazirla|odevlendir|gorevlendir|odev ver|gorev ver|odevle)/.test(n);
         if (pendingReplace) {
             if (/(hayir|hayır|yok|isteme|gerek yok|dur)/.test(n)) {
                 pendingReplace = false;
