@@ -2,7 +2,7 @@
   "teachers": [
     {
       "name": "furkan",
-      "surname": "�ner",
+      "surname": "´┐¢ner",
       "branch": "matematik",
       "email": "",
       "username": "FURKAN",
@@ -15,7 +15,7 @@
       "title": "matematik",
       "teacherId": "mt240345im9aa",
       "day": "sali",
-      "dayLabel": "Salı",
+      "dayLabel": "Sal─▒",
       "date": "2026-08-28",
       "startTime": "20:14",
       "endTime": "21:59",
@@ -23,7 +23,7 @@
       "classroom": "-",
       "description": "",
       "capacity": 25,
-      "type": "Canlı Ders",
+      "type": "Canl─▒ Ders",
       "status": "upcoming",
       "courseType": "math",
       "id": "mtd7nxvhfutf0",
@@ -41,7 +41,7 @@
       "classroom": "-",
       "description": "",
       "capacity": 25,
-      "type": "Canlı Ders",
+      "type": "Canl─▒ Ders",
       "status": "upcoming",
       "courseType": "math",
       "id": "mtdcudxi709vv"
@@ -51,8 +51,8 @@
     {
       "username": "FURKAN",
       "name": "Furkan",
-      "surname": "Öner",
-      "studentClass": "PİHOS",
+      "surname": "├ûner",
+      "studentClass": "P─░HOS",
       "email": "",
       "password": "Kayseri38",
       "id": "mt31e6ibbrrz4"
@@ -61,7 +61,7 @@
   "homeworks": [
     {
       "title": "BURSLULUK SINAVI",
-      "subject": "TÜM DERS",
+      "subject": "T├£M DERS",
       "description": "BURSLULUK SINAVI 4",
       "fileUrl": "",
       "fileName": "oner-egitim-pihos2025-bursluluk-4-word-eklenmis-filigransiz (2).pdf",
@@ -72,7 +72,7 @@
     },
     {
       "title": "BURSLULUK SINAVI",
-      "subject": "TÜM DERS",
+      "subject": "T├£M DERS",
       "description": "",
       "fileUrl": "https://github.com/oneregitimkurumlari/oneregitimkurumlari/blob/master/uploads/1787337289113_oner-egitim-pihos2025-bursluluk-4-word-eklenmis-filigransiz%20(2).pdf",
       "fileName": "oner-egitim-pihos2025-bursluluk-4-word-eklenmis-filigransiz (2).pdf",
