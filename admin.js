@@ -765,6 +765,100 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
+    const EXCEL_HEADERS = ["Ad", "Soyad", "TC Kimlik No", "Kullanıcı Adı", "Şifre"];
+
+    function excelReady() {
+        if (!window.XLSX) {
+            showError("Excel kütüphanesi yüklenemedi. İnternet bağlantınızı kontrol edin ve sayfayı yenileyin.");
+            return false;
+        }
+        return true;
+    }
+
+    function downloadExcelTemplate(fileName) {
+        if (!excelReady()) return;
+        const ws = XLSX.utils.aoa_to_sheet([EXCEL_HEADERS]);
+        ws["!cols"] = [{ wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 12 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Liste");
+        XLSX.writeFile(wb, fileName);
+    }
+
+    document.getElementById("teacherExcelBtn").addEventListener("click", () => {
+        downloadExcelTemplate("ogretmen_sablonu.xlsx");
+    });
+    document.getElementById("teacherExcelInput").addEventListener("change", async (e) => {
+        await importExcelFile(e.target.files && e.target.files[0], "teacher");
+        e.target.value = "";
+    });
+    document.getElementById("studentExcelBtn").addEventListener("click", () => {
+        downloadExcelTemplate("ogrenci_sablonu.xlsx");
+    });
+    document.getElementById("studentExcelInput").addEventListener("change", async (e) => {
+        await importExcelFile(e.target.files && e.target.files[0], "student");
+        e.target.value = "";
+    });
+
+    async function importExcelFile(file, kind) {
+        if (!file) return;
+        if (!excelReady()) return;
+        if (!/\.(xlsx|xls|csv)$/i.test(file.name)) {
+            showError("Lütfen .xlsx veya .csv dosyası seçin.");
+            return;
+        }
+        const isTeacher = kind === "teacher";
+        const list = isTeacher ? "teachers" : "students";
+        const added = [];
+        const errors = [];
+        try {
+            const buf = await file.arrayBuffer();
+            const wb = XLSX.read(buf, { type: "array" });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            if (!ws) throw new Error("Sayfa bulunamadı");
+            const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+            const existing = new Set((remoteData[list] || []).map(x => String(x.username || "").trim().toLowerCase()));
+            for (let r = 0; r < rows.length; r++) {
+                const cells = (rows[r] || []).map(c => String(c == null ? "" : c).trim());
+                if (!cells[0] && !cells[1] && !cells[2] && !cells[3] && !cells[4]) continue;
+                if (cells[0].toLowerCase() === "ad" && cells[1].toLowerCase() === "soyad") continue;
+                const name = cells[0], surname = cells[1], tcno = cells[2], username = cells[3], password = cells[4];
+                const rowNo = r + 1;
+                if (!name || !surname) { errors.push("Satır " + rowNo + ": Ad/Soyad boş"); continue; }
+                if (!/^\d{11}$/.test(tcno)) { errors.push("Satır " + rowNo + ": TC Kimlik No 11 haneli olmalı"); continue; }
+                if (!username) { errors.push("Satır " + rowNo + ": Kullanıcı Adı boş"); continue; }
+                if (password.length < 6) { errors.push("Satır " + rowNo + ": Şifre en az 6 karakter olmalı"); continue; }
+                if (existing.has(username.toLowerCase())) { errors.push("Satır " + rowNo + ": '" + username + "' zaten kayıtlı"); continue; }
+                existing.add(username.toLowerCase());
+                const rec = { id: generateId(), name: name, surname: surname, username: username, password: password, tcno: tcno };
+                if (isTeacher) {
+                    rec.branch = "";
+                    rec.email = "";
+                } else {
+                    rec.studentClass = "";
+                    rec.email = "";
+                    rec.no = "";
+                }
+                added.push(rec);
+            }
+            if (added.length === 0) {
+                showError("Hiçbir kayıt eklenemedi. " + (errors[0] || "Dosyada doldurulmuş satır yok."));
+                return;
+            }
+            if (!remoteData[list]) remoteData[list] = [];
+            remoteData[list].push(...added);
+            const ok = await saveRemoteData();
+            if (!ok) { showError("Kayıt kaydedilemedi."); return; }
+            renderTeachers();
+            renderStudents();
+            updateDashboard();
+            showToast(added.length + (isTeacher ? " öğretmen" : " öğrenci") + " eklendi ✓");
+            if (errors.length) showError(errors.length + " satır atlandı: " + errors.slice(0, 3).join(" | "));
+        } catch (err) {
+            console.error("Excel import hatası:", err);
+            showError("Excel okunamadı: " + err.message);
+        }
+    }
+
     function renderHomework() {
         const tbody = document.getElementById("homeworkTable");
         const empty = document.getElementById("emptyHomework");

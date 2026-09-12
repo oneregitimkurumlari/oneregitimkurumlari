@@ -133,9 +133,15 @@
             <div class="section-page" id="teachersPage">
                 <div class="page-header">
                     <h3>Öğretmen Yönetimi</h3>
-                    <button class="btn-add" id="addTeacherBtn">
-                        <i class="fas fa-plus"></i> Öğretmen Ekle
-                    </button>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <button class="btn-add" id="addTeacherBtn">
+                            <i class="fas fa-plus"></i> Öğretmen Ekle
+                        </button>
+                        <button class="btn-add" style="background:#6366f1;" id="teacherExcelBtn">
+                            <i class="fas fa-file-excel"></i> Excel ile Yükle
+                        </button>
+                        <input type="file" id="teacherExcelInput" accept=".xlsx,.xls,.csv" style="display:none;">
+                    </div>
                 </div>
 
                 <div class="form-panel" id="teacherForm" style="display:none;">
@@ -347,9 +353,15 @@
             <div class="section-page" id="studentsPage">
                 <div class="page-header">
                     <h3>Öğrenci Yönetimi</h3>
-                    <button class="btn-add" id="addStudentBtn">
-                        <i class="fas fa-plus"></i> Öğrenci Ekle
-                    </button>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <button class="btn-add" id="addStudentBtn">
+                            <i class="fas fa-plus"></i> Öğrenci Ekle
+                        </button>
+                        <button class="btn-add" style="background:#6366f1;" id="studentExcelBtn">
+                            <i class="fas fa-file-excel"></i> Excel ile Yükle
+                        </button>
+                        <input type="file" id="studentExcelInput" accept=".xlsx,.xls,.csv" style="display:none;">
+                    </div>
                 </div>
 
                 <div class="form-panel" id="studentForm" style="display:none;">
@@ -678,7 +690,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js"></script>
-<script src="admin.js?v=21"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="admin.js?v=22"></script>
 <script src="transition.js"></script>
 <script>
 (function(){
