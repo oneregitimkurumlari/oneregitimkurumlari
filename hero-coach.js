@@ -5,9 +5,9 @@
     var GEMINI_KEY = atob("QVEuQWI4Uk42S3JsTTZCcWlVczF3S2NmUVUxMXAzZ0xsdVVKY3NZZ3lZOG9xRFJ0bjJjUlE=");
     var GEMINI_MODEL = "gemini-3.6-flash";
 
-    var DEEPSEEK_KEY = atob("c2stNWFhZmNlYzk5NGNiNGEwMDhmODJmMGVjNjU5MTM3N2I=");
-    var DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
-    var DEEPSEEK_MODEL = "deepseek-chat";
+    var DEEPSEEK_KEY = atob("c2stb3ItdjEtMDQ5MDMwN2JjMTgyNDU3Y2ZjOTUzMzYyMjA2YTI1ZTEzMmRiYTZlMTFlN2ZjNDRhMzMzODVjNWI1N2IzNTM0OQ==");
+    var DEEPSEEK_URL = "https://openrouter.ai/api/v1/chat/completions";
+    var DEEPSEEK_MODEL = "deepseek/deepseek-chat-v3.1";
 
     var PROFANITY = ["amk", "aq", "oc", "pic", "pis", "kahpe", "orospu", "gavat", "salak", "aptal", "gerizekali", "manyak", "yavsak", "ibne", "serefsiz", "mal", "eşek"];
 
@@ -493,7 +493,7 @@
             var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 25000);
             fetch(url, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + DEEPSEEK_KEY },
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + DEEPSEEK_KEY, "HTTP-Referer": "https://oneregitimkurumlari.github.io/", "X-Title": "ONLINE PIROS" },
                 body: JSON.stringify(body),
                 signal: c.signal
             }).then(function (res) {
