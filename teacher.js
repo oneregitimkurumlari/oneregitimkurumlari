@@ -609,7 +609,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 systemInstruction: { parts: [{ text: "Sen bir sınav soru çıkarıcısısın. PDF'teki test sorularını 4 şıklı (A,B,C,D) çoktan seçmeli sorulara çevirirsin. PDF'te şıklar yoksa kendin 4 makul şık üretirsin. DOĞRU CEVABI ASLA BELİRLEMEZ VE YAZMAZSIN; cevaplar öğretmen tarafından elle girilir. Çıktı yalnızca JSON dizisidir, başka hiçbir şey yazmazsın. HER SORU için sorunun PDF'teki tam konumu (page ve bbox) JSON'a eklenir; soruyu asla yeniden üretme, sadece konumunu bildir." }] },
                 contents: [{ parts: [
                     { inline_data: { mime_type: "application/pdf", data: base64 } },
-                    { text: "Bu PDF'teki her soruyu şu formatta JSON dizisi olarak döndür: [{\"text\":\"soru metni\",\"options\":[\"A şıkkı\",\"B şıkkı\",\"C şıkkı\",\"D şıkkı\"]}] - answer alanı ekleme. HER soru için ZORUNLU olarak \"page\": <sayfa no, 1'den başlar> ve \"bbox\": {\"x\":0,\"y\":0,\"w\":200,\"h\":100} alanlarını ekle. bbox, TÜM soruyu (soru metni + varsa görsel/şekil/grafik/tablo + varsa yazılı şıklar) PDF nokta biriminde (72 DPI, sol üst köşe 0,0) sıkı ve TAM çevreleyen kutu olmalı. bbox'ı asla atlama, hiçbir soruyu atlama." }
+                    { text: "Bu PDF'teki her soruyu şu formatta JSON dizisi olarak döndür: [{\"text\":\"soru metni\",\"options\":[\"A şıkkı\",\"B şıkkı\",\"C şıkkı\",\"D şıkkı\"]}] - answer alanı ekleme. HER soru için ZORUNLU olarak \"page\": <sayfa no, 1'den başlar> ve \"bbox\": {\"x\":0,\"y\":0,\"w\":200,\"h\":100} alanlarını ekle. bbox, TÜM soruyu PDF nokta biriminde (72 DPI, sol üst köşe 0,0) sıkı ve TAM saran kutu olmalı ve MUTLAKA şunların hepsini kapsamalı: (1) soru metni, (2) varsa görsel/şekil/grafik/tablo, (3) soruya ait TÜM yazılı şık satırları (A), B), C), D) şıkları). Şıklar soru metninin altında, yanında ya da her iki tarafta olabilir; hangi düzende olursa olsun bbox son şıkkın bittiği noktaya kadar uzanmalıdır. Hiçbir şık bbox dışında kalmamalı; bbox konusunda cömert ol, program şıkları kesmesin. bbox'ı asla atlama, hiçbir soruyu atlama." }
                 ] }],
                 generationConfig: { temperature: 0.1, maxOutputTokens: 65536 }
             };
@@ -626,7 +626,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const list = JSON.parse(m ? m[0] : text);
             if (!Array.isArray(list) || list.length === 0) throw new Error("Soru bulunamadı");
 
-            const questions = [];
+            const items = [];
             const cap = Math.min(list.length, 150);
             let pdfDoc = null;
             try {
@@ -641,10 +641,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     image: ""
                 };
                 if (!q.text && !(raw.bbox && raw.page)) continue;
+                items.push({ q, raw });
+            }
+            const questions = [];
+            for (let i = 0; i < items.length; i++) {
+                const q = items[i].q;
+                const raw = items[i].raw;
                 if (pdfDoc && raw.bbox && raw.page) {
-                    status.textContent = "Soru görüntüleri oluşturuluyor: " + (questions.length + 1) + " / " + cap + "...";
+                    status.textContent = "Soru görüntüleri oluşturuluyor: " + (i + 1) + " / " + items.length + "...";
                     try {
-                        q.image = await cropPdfRegion(pdfDoc, raw.page, raw.bbox);
+                        q.image = await cropPdfRegion(pdfDoc, raw.page, extendQuestionBbox(raw, items));
                     } catch (err) { q.image = ""; }
                     if (q.image) q.text = "";
                 }
@@ -671,6 +677,19 @@ document.addEventListener("DOMContentLoaded", () => {
         const u = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
         return u;
+    }
+
+    function extendQuestionBbox(raw, items) {
+        const b = raw.bbox || {};
+        const top = Number(b.y) || 0;
+        const origBottom = top + (Number(b.h) || 0);
+        let bottom = origBottom + 80;
+        (items || []).forEach(o => {
+            if (!o.raw.bbox || o.raw.page !== raw.page) return;
+            const oy = Number(o.raw.bbox.y) || 0;
+            if (oy > top + 1 && oy < bottom) bottom = Math.max(origBottom, oy - 4);
+        });
+        return { x: b.x, y: b.y, w: b.w, h: Math.max(Number(b.h) || 0, bottom - top) };
     }
 
     async function cropPdfRegion(pdf, pageNum, bbox) {
