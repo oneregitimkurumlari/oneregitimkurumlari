@@ -785,6 +785,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     document.getElementById("teacherExcelBtn").addEventListener("click", () => {
+        document.getElementById("teacherExcelInput").click();
+    });
+    document.getElementById("teacherTemplateBtn").addEventListener("click", () => {
         downloadExcelTemplate("ogretmen_sablonu.xlsx");
     });
     document.getElementById("teacherExcelInput").addEventListener("change", async (e) => {
@@ -792,6 +795,9 @@ document.addEventListener("DOMContentLoaded", () => {
         e.target.value = "";
     });
     document.getElementById("studentExcelBtn").addEventListener("click", () => {
+        document.getElementById("studentExcelInput").click();
+    });
+    document.getElementById("studentTemplateBtn").addEventListener("click", () => {
         downloadExcelTemplate("ogrenci_sablonu.xlsx");
     });
     document.getElementById("studentExcelInput").addEventListener("change", async (e) => {
