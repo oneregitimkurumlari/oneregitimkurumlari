@@ -613,7 +613,7 @@
         return out;
     }
 
-    var BOOK_WEEKS = 26;
+    var BOOK_WEEKS = 4;
 
     function bookSubjectOf(b) {
         if (b && b.subject) return b.subject;
@@ -724,7 +724,7 @@
                 lines.push("📗 " + b.name + " — soru sayısı tahmin ediliyor");
             }
         });
-        lines.push("Tüm kitapları ~" + BOOK_WEEKS + " haftada (6 ay) bitirmek için haftalık toplam ~" + total + " soru ödevlendirilir. Plan güncellenince görevlerin arasında kitap adları görünecek.");
+        lines.push("Tüm kitapları ~" + BOOK_WEEKS + " haftada (1 ay) bitirmek için haftalık toplam ~" + total + " soru ödevlendirilir. Plan güncellenince görevlerin arasında kitap adları görünecek.");
         return lines.join("\n");
     }
 

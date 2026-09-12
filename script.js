@@ -937,7 +937,7 @@ function renderBooksList() {
             estimating = true;
             info = '<small class="book-wait"><i class="fas fa-spinner fa-spin"></i> Soru sayısı tahmin ediliyor…</small>';
         } else if (b.totalQuestions) {
-            info = '<small>≈ ' + b.totalQuestions + ' soru · haftada ~' + Math.max(1, Math.round(b.totalQuestions / 26)) + ' soru ödevi</small>';
+            info = '<small>≈ ' + b.totalQuestions + ' soru · haftada ~' + Math.max(1, Math.round(b.totalQuestions / 4)) + ' soru ödevi</small>';
         } else {
             estimating = true;
             info = '<small>Soru sayısı bilinmiyor</small>';
@@ -958,7 +958,7 @@ function renderBooksList() {
     if (estimating) {
         foot.innerHTML = "Bazı kitapların soru sayısı tahmin ediliyor; hazır olanlar haftalık ödevlere eklenir.";
     } else if (list.length) {
-        foot.innerHTML = "Toplam ≈ <b>" + total + "</b> soru · HERO bunları ~6 ayda (~26 hafta) bitirmek için haftalık yaklaşık <b>" + Math.max(1, Math.round(total / 26)) + "</b> soru ödevlendirir.";
+        foot.innerHTML = "Toplam ≈ <b>" + total + "</b> soru · HERO bunları ~1 ayda (~4 hafta) bitirmek için haftalık yaklaşık <b>" + Math.max(1, Math.round(total / 4)) + "</b> soru ödevlendirir.";
     } else {
         foot.innerHTML = "";
     }
