@@ -291,7 +291,6 @@ async function openExam(examId) {
             exam: exam,
             qi: 0,
             answers: (data && data.answers) || {},
-            dirty: {},
             done: !!(data && data.done)
         };
         renderExamRunner();
@@ -304,7 +303,6 @@ function examStatusClass(i) {
     const st = examState;
     if (st.done) return st.answers[i] !== undefined ? "exam-q-stat-saved" : "exam-q-stat-empty";
     if (st.answers[i] !== undefined) return "exam-q-stat-saved";
-    if (st.dirty[i] !== undefined) return "exam-q-stat-dirty";
     return "exam-q-stat-empty";
 }
 
@@ -352,9 +350,8 @@ function renderQuestionPane() {
     const saved = st.answers[i] !== undefined;
 
     let badge;
-    if (st.done) badge = saved ? '<span class="exam-badge saved">Kayıtlı ✓</span>' : '<span class="exam-badge empty">Boş</span>';
-    else if (saved) badge = '<span class="exam-badge saved">Kayıtlı ✓</span>';
-    else if (st.dirty[i] !== undefined) badge = '<span class="exam-badge dirty">Seçildi, kaydedilmedi</span>';
+    if (st.done) badge = saved ? '<span class="exam-badge saved">İşaretlendi ✓</span>' : '<span class="exam-badge empty">Boş</span>';
+    else if (saved) badge = '<span class="exam-badge saved">İşaretlendi ✓</span>';
     else badge = '<span class="exam-badge empty">Boş</span>';
 
     return `
@@ -377,7 +374,7 @@ function renderNavPane() {
         navList += `<button class="exam-q-btn ${examStatusClass(j)} ${j === i ? "active" : ""}" onclick="goToQuestion(${j})">${j + 1}</button>`;
     }
 
-    const legend = st.done ? "" : '<div class="exam-legend"><span class="dot saved"></span> Kayıtlı <span class="dot dirty"></span> Seçildi <span class="dot empty"></span> Boş</div>';
+    const legend = st.done ? "" : '<div class="exam-legend"><span class="dot saved"></span> İşaretlendi <span class="dot empty"></span> Boş</div>';
 
     return `<div class="exam-nav-title">Sorular</div>
         <div class="exam-nav-list">${navList}</div>
@@ -394,7 +391,7 @@ function renderOptionsPane() {
 
     const letters = ["A", "B", "C", "D"];
     const saved = st.answers[i] !== undefined;
-    const picked = st.dirty[i] !== undefined ? st.dirty[i] : saved ? st.answers[i] : undefined;
+    const picked = saved ? st.answers[i] : undefined;
 
     let opts = "";
     for (let j = 0; j < (q.options || []).length && j < 4; j++) {
@@ -403,7 +400,6 @@ function renderOptionsPane() {
         opts += `<button type="button" class="exam-option ${isPicked ? "picked" : ""}"${click}><span class="exam-opt-letter">${letters[j]}</span><span>${esc(q.options[j])}</span></button>`;
     }
 
-    const saveRow = st.done ? "" : `<button class="exam-save" onclick="saveAnswer()"><i class="fas fa-save"></i> Kaydet</button>`;
     const prev = i > 0 ? `<button class="exam-nav-btn" onclick="goToQuestion(${i - 1})"><i class="fas fa-chevron-left"></i> Önceki</button>` : "";
     const next = i < n - 1 ? `<button class="exam-nav-btn" onclick="goToQuestion(${i + 1})">Sonraki <i class="fas fa-chevron-right"></i></button>` : "";
     const finish = st.done ? "" : `<button class="exam-nav-btn exam-nav-finish" onclick="finishExam()"><i class="fas fa-flag-checkered"></i> Sınavı Bitir</button>`;
@@ -413,7 +409,6 @@ function renderOptionsPane() {
         <div class="exam-options">${opts}</div>
         <div class="exam-control-row">
             ${prev}
-            ${saveRow}
             ${next}
             ${finish}
         </div>`;
@@ -421,32 +416,18 @@ function renderOptionsPane() {
 
 function pickOption(j) {
     if (!examState || examState.done) return;
-    examState.dirty[examState.qi] = j;
+    const st = examState;
+    st.answers[st.qi] = j;
     renderExamRunner();
+    persistExamState(st);
 }
 
-async function saveAnswer() {
-    const st = examState;
-    if (!st || st.done) return;
-    const val = st.dirty[st.qi];
-    if (val === undefined) {
-        alert("Bir şık seçtikten sonra kaydedebilirsin.");
-        return;
-    }
-    try {
-        st.answers[st.qi] = val;
-        delete st.dirty[st.qi];
-        const res = await fetch(examResultURL(st.exam.id), {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ answers: st.answers, done: st.done, txt: buildOptikTxt(), updatedAt: Date.now() })
-        });
-        if (!res.ok) throw new Error("http " + res.status);
-        renderExamRunner();
-        showDownloadToast("Soru kaydedildi ✓");
-    } catch (e) {
-        alert("Soru kaydedilemedi. Veri bağlantısını kontrol edin.");
-    }
+function persistExamState(st) {
+    fetch(examResultURL(st.exam.id), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: st.answers, done: st.done, txt: buildOptikTxt(), updatedAt: Date.now() })
+    }).catch(() => {});
 }
 
 function optikFields() {
@@ -503,7 +484,7 @@ function finishExam() {
     const total = st.exam.questions.length;
     const savedCnt = st.exam.questions.filter((qi, i) => st.answers[i] !== undefined).length;
     const emptyCnt = total - savedCnt;
-    if (!confirm("Sınavı bitirmek istiyor musun? Kaydedilmeyen " + emptyCnt + " soru boş sayılacak.")) return;
+    if (!confirm("Sınavı bitirmek istiyor musun? Boş bırakılan " + emptyCnt + " soru boş sayılacak.")) return;
     fetch(examResultURL(st.exam.id), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
