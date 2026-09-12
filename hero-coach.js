@@ -3,7 +3,11 @@
     window.__heroCoachInit = true;
 
     var GEMINI_KEY = atob("QVEuQWI4Uk42S3JsTTZCcWlVczF3S2NmUVUxMXAzZ0xsdVVKY3NZZ3lZOG9xRFJ0bjJjUlE=");
-    var GEMINI_MODEL = "gemini-3.1-pro-preview";
+    var GEMINI_MODEL = "gemini-2.5-flash";
+
+    var DEEPSEEK_KEY = atob("c2stNWFhZmNlYzk5NGNiNGEwMDhmODJmMGVjNjU5MTM3N2I=");
+    var DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
+    var DEEPSEEK_MODEL = "deepseek-chat";
 
     var PROFANITY = ["amk", "aq", "oc", "pic", "pis", "kahpe", "orospu", "gavat", "salak", "aptal", "gerizekali", "manyak", "yavsak", "ibne", "serefsiz", "mal", "eşek"];
 
@@ -448,17 +452,46 @@
         return out;
     }
 
-    function geminiPlan() {
+    function providerAsk(sys, q, temperature, maxTokens) {
+        return deepseekAsk(sys, q, temperature, maxTokens).catch(function () {
+            return geminiText(sys, q, temperature, maxTokens);
+        });
+    }
+
+    function deepseekAsk(sys, q, temperature, maxTokens) {
+        if (!DEEPSEEK_KEY) return Promise.reject(new Error("no-key"));
+        var url = DEEPSEEK_URL;
+        return new Promise(function (resolve, reject) {
+            var c = new AbortController();
+            var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 45000);
+            fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + DEEPSEEK_KEY },
+                body: JSON.stringify({
+                    model: DEEPSEEK_MODEL,
+                    messages: [
+                        { role: "system", content: sys },
+                        { role: "user", content: q }
+                    ],
+                    temperature: temperature,
+                    max_tokens: maxTokens,
+                    stream: false
+                }),
+                signal: c.signal
+            }).then(function (res) {
+                if (!res.ok) throw new Error("http " + res.status);
+                return res.json();
+            }).then(function (j) {
+                var txt = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content ? j.choices[0].message.content : "";
+                txt = String(txt).trim();
+                if (!txt) throw new Error("empty");
+                resolve(txt);
+            }).catch(function (e) { reject(e); }).then(function () { clearTimeout(t); });
+        });
+    }
+
+    function geminiText(sys, q, temperature, maxTokens) {
         if (!GEMINI_KEY) return Promise.reject(new Error("no-key"));
-        var subs = scheduleSubjects();
-        var line = "";
-        Object.keys(subs).forEach(function (d) { line += d + ": " + subs[d].join(", ") + "\n"; });
-        var all = allBranches();
-        var sys = "Sen HERO adında öğrenciler için haftalık çalışma programı oluşturan bir AI koç kedisin.\n" +
-            (all.length ? "Öğrencinin TÜM BRANŞLARI: " + all.join(", ") + ".\n" : "") +
-            "Haftalık ders programı:\n" + line +
-            "\nÇıktı YALNIZCA JSON olmalı, başka hiçbir şey yazma: {\"pazartesi\":[\"görev\",\"görev\"],\"sali\":[],\"carsamba\":[],\"persembe\":[],\"cuma\":[],\"cumartesi\":[],\"pazar\":[]}.\n" +
-            "ZORUNLU KURALLAR: (1) 'TÜM BRANŞLAR' listesindeki HER branşı haftaya dağıt, hiçbirini atlama; (2) her görev başlığında somut bir soru sayısı geçsin (örn. 'Matematik: 25 test sorusu çöz', 'Fen Bilimleri: 20 soruluk test + konu tekrarı', 'Türkçe: 20 paragraf sorusu'); (3) her güne 2-4 görev. Görevler kısa, net ve uygulanabilir olsun. Cuma genel tekrar, hafta sonu deneme sınavı ekleyebilirsin.";
         var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(GEMINI_MODEL) + ":generateContent?key=" + encodeURIComponent(GEMINI_KEY);
         return new Promise(function (resolve, reject) {
             var c = new AbortController();
@@ -468,8 +501,8 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     systemInstruction: { parts: [{ text: sys }] },
-                    contents: [{ role: "user", parts: [{ text: "Bu hafta için çalışma programını oluştur." }] }],
-                    generationConfig: { temperature: 0.6, maxOutputTokens: 1500 }
+                    contents: [{ role: "user", parts: [{ text: q }] }],
+                    generationConfig: { temperature: temperature, maxOutputTokens: maxTokens }
                 }),
                 signal: c.signal
             }).then(function (res) {
@@ -477,11 +510,20 @@
                 return res.json();
             }).then(function (j) {
                 var txt = j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts[0] ? j.candidates[0].content.parts[0].text : "";
-                txt = String(txt).replace(/```[a-z]*/gi, "").trim();
-                var ma = txt.match(/\{[\s\S]*\}/);
-                var obj = ma ? JSON.parse(ma[0]) : JSON.parse(txt);
-                resolve(normalizeDays(obj));
+                txt = String(txt).trim();
+                if (!txt) throw new Error("empty");
+                resolve(txt);
             }).catch(function (e) { reject(e); }).then(function () { clearTimeout(t); });
+        });
+    }
+
+    function providerPlan() {
+        var sys = providerPlanSys();
+        return providerAsk(sys, "Bu hafta için çalışma programını oluştur.", 0.6, 1500).then(function (txt) {
+            txt = String(txt).replace(/```[a-z]*/gi, "").trim();
+            var ma = txt.match(/\{[\s\S]*\}/);
+            var obj = ma ? JSON.parse(ma[0]) : JSON.parse(txt);
+            return normalizeDays(obj);
         });
     }
 
@@ -549,7 +591,7 @@
 
     function makePlan(isReplace) {
         var base = fallbackPlan();
-        return geminiPlan()
+        return providerPlan()
             .then(function (g) { return mergePlan(base, g); })
             .catch(function () { return base; })
             .then(function (days) {
@@ -576,31 +618,8 @@
     }
 
     function geminiAsk(q) {
-        if (!GEMINI_KEY) return Promise.reject(new Error("no-key"));
         var sys = "Sen HERO adında, ortaokul/ilkokul öğrencileri için AI koç olan sevimli bir kedisin. Öğrencinin haftalık çalışma planını takip ediyorsun ve rehberlik (koçluk) yapıyorsun. Öğrencinin planı şu anda:\n" + planContext() + "\n\nGörevlerini plan üzerinden değerlendir; motive et, ders çalışma taktiği öner, zorlandığını anla ve yaşına uygun, kısa, sıcak ve Türkçe yanıt ver. Cevap en fazla 250 kelime olsun. Zaman zaman 'miyav' gibi kedi havasında samimi ifadeler kullanabilirsin.";
-        var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(GEMINI_MODEL) + ":generateContent?key=" + encodeURIComponent(GEMINI_KEY);
-        return new Promise(function (resolve, reject) {
-            var c = new AbortController();
-            var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 40000);
-            fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    systemInstruction: { parts: [{ text: sys }] },
-                    contents: [{ role: "user", parts: [{ text: q }] }],
-                    generationConfig: { temperature: 0.6, maxOutputTokens: 500 }
-                }),
-                signal: c.signal
-            }).then(function (res) {
-                if (!res.ok) throw new Error("http " + res.status);
-                return res.json();
-            }).then(function (j) {
-                var txt = j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts[0] ? j.candidates[0].content.parts[0].text : null;
-                txt = (txt || "").trim();
-                if (!txt) throw new Error("empty");
-                resolve(txt);
-            }).catch(function (e) { reject(e); }).then(function () { clearTimeout(t); });
-        });
+        return providerAsk(sys, q, 0.6, 500);
     }
 
     var RULES = [
