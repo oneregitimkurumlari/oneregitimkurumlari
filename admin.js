@@ -697,6 +697,13 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        const tcno = document.getElementById("studentTcno").value.trim();
+        if (!/^\d{11}$/.test(tcno)) {
+            showError("TC Kimlik No 11 haneli sayılardan oluşmalıdır!");
+            document.getElementById("studentTcno").focus();
+            return;
+        }
+
         const studentData = {
             username: username,
             name: document.getElementById("studentName").value.trim(),
@@ -704,7 +711,7 @@ document.addEventListener("DOMContentLoaded", () => {
             studentClass: document.getElementById("studentClass").value.trim(),
             email: document.getElementById("studentEmail").value.trim(),
             no: document.getElementById("studentNo").value.trim(),
-            tcno: document.getElementById("studentTcno").value.trim()
+            tcno: tcno
         };
 
         if (!editId || password.length > 0) {
