@@ -9,7 +9,7 @@
 
     function norm(s) {
         var r = { "ğ": "g", "Ğ": "g", "ş": "s", "Ş": "s", "ı": "i", "İ": "i", "ö": "o", "Ö": "o", "ü": "u", "Ü": "u", "ç": "c", "Ç": "c" };
-        return String(s).toLowerCase().split("").map(function (ch) { return r[ch] || ch; }).join("")
+        return String(s).replace(/İ/g, "i").toLowerCase().split("").map(function (ch) { return r[ch] || ch; }).join("")
             .replace(/[.,!?;:()"']/g, " ")
             .replace(/\s+/g, " ").trim();
     }
@@ -436,6 +436,77 @@
         return out;
     }
 
+    function geminiPlan() {
+        if (!GEMINI_KEY) return Promise.reject(new Error("no-key"));
+        var subs = scheduleSubjects();
+        var line = "";
+        Object.keys(subs).forEach(function (d) { line += d + ": " + subs[d].join(", ") + "\n"; });
+        var all = allBranches();
+        var sys = "Sen HERO adında öğrenciler için haftalık çalışma programı oluşturan bir AI koç kedisin.\n" +
+            (all.length ? "Öğrencinin TÜM BRANŞLARI: " + all.join(", ") + ".\n" : "") +
+            "Haftalık ders programı:\n" + line +
+            "\nÇıktı YALNIZCA JSON olmalı, başka hiçbir şey yazma: {\"pazartesi\":[\"görev\",\"görev\"],\"sali\":[],\"carsamba\":[],\"persembe\":[],\"cuma\":[],\"cumartesi\":[],\"pazar\":[]}.\n" +
+            "ZORUNLU KURALLAR: (1) 'TÜM BRANŞLAR' listesindeki HER branşı haftaya dağıt, hiçbirini atlama; (2) her görev başlığında somut bir soru sayısı geçsin (örn. 'Matematik: 25 test sorusu çöz', 'Fen Bilimleri: 20 soruluk test + konu tekrarı', 'Türkçe: 20 paragraf sorusu'); (3) her güne 2-4 görev. Görevler kısa, net ve uygulanabilir olsun. Cuma genel tekrar, hafta sonu deneme sınavı ekleyebilirsin.";
+        var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(GEMINI_MODEL) + ":generateContent?key=" + encodeURIComponent(GEMINI_KEY);
+        return new Promise(function (resolve, reject) {
+            var c = new AbortController();
+            var t = setTimeout(function () { c.abort(); reject(new Error("timeout")); }, 45000);
+            fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    systemInstruction: { parts: [{ text: sys }] },
+                    contents: [{ role: "user", parts: [{ text: "Bu hafta için çalışma programını oluştur." }] }],
+                    generationConfig: { temperature: 0.6, maxOutputTokens: 1500 }
+                }),
+                signal: c.signal
+            }).then(function (res) {
+                if (!res.ok) throw new Error("http " + res.status);
+                return res.json();
+            }).then(function (j) {
+                var txt = j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts[0] ? j.candidates[0].content.parts[0].text : "";
+                txt = String(txt).replace(/```[a-z]*/gi, "").trim();
+                var ma = txt.match(/\{[\s\S]*\}/);
+                var obj = ma ? JSON.parse(ma[0]) : JSON.parse(txt);
+                resolve(normalizeDays(obj));
+            }).catch(function (e) { reject(e); }).then(function () { clearTimeout(t); });
+        });
+    }
+
+    function tasksWithCounts(list) {
+        return (list || []).map(function (t) {
+            if (/\d/.test(t)) return t;
+            var n = norm(t);
+            var cnt = 20;
+            allBranches().forEach(function (b) { if (n.indexOf(norm(b)) !== -1) cnt = soruSayisi(b); });
+            return t + " + " + cnt + " soru çöz";
+        });
+    }
+
+    function mergePlan(base, g) {
+        var days = ["pazartesi", "sali", "carsamba", "persembe", "cuma", "cumartesi", "pazar"];
+        var out = {};
+        days.forEach(function (d) {
+            var gt = (g[d] || []).filter(Boolean);
+            var valid = gt.length >= 2 && gt.every(function (t) { return /\d/.test(t); });
+            out[d] = valid ? gt : (base[d] || []).slice();
+        });
+        var branches = allBranches();
+        branches.forEach(function (br) {
+            var nb = norm(br);
+            var found = false;
+            days.forEach(function (d) {
+                out[d].forEach(function (t) { if (norm(t).indexOf(nb) !== -1) found = true; });
+            });
+            if (!found) {
+                var minDay = days.slice().sort(function (a, b) { return out[a].length - out[b].length; })[0];
+                out[minDay] = (out[minDay] || []).concat([br.charAt(0).toUpperCase() + br.slice(1) + ": " + soruSayisi(br) + " soru çöz + konu tekrarı"]);
+            }
+        });
+        days.forEach(function (d) { out[d] = tasksWithCounts(out[d] || []); });
+        return out;
+    }
+
     function writePlan(daysObj) {
         var sid = getStudentId();
         var c = window.planCache || {};
@@ -465,15 +536,20 @@
     }
 
     function makePlan(isReplace) {
-        var days = fallbackPlan();
-        return writePlan(days).then(function (ok) {
-            var cnt = 0;
-            Object.keys(days).forEach(function (k) { cnt += (days[k] || []).length; });
-            if (!ok) return "Miyav, program hazır ama kaydedilemedi. Bağlantını kontrol edip tekrar dene istersen. 🐾";
-            return isReplace
-                ? "Yeni haftalık programın hazır! " + cnt + " görev eklendi. Çalışma Planı sayfasına göz atmayı unutma. Miyav! 🐾"
-                : "HERO haftalık programını oluşturdu! Tüm branşlar haftaya dağıtıldı, her görevde soru sayısı yazıyor. Toplam " + cnt + " görev plana eklendi. Miyav! 🐾";
-        });
+        var base = fallbackPlan();
+        return geminiPlan()
+            .then(function (g) { return mergePlan(base, g); })
+            .catch(function () { return base; })
+            .then(function (days) {
+                return writePlan(days).then(function (ok) {
+                    var cnt = 0;
+                    Object.keys(days).forEach(function (k) { cnt += (days[k] || []).length; });
+                    if (!ok) return "Miyav, program hazır ama kaydedilemedi. Bağlantını kontrol edip tekrar dene istersen. 🐾";
+                    return isReplace
+                        ? "Yeni haftalık programın hazır! " + cnt + " görev eklendi. Çalışma Planı sayfasına göz atmayı unutma. Miyav! 🐾"
+                        : "HERO haftalık programını oluşturdu! Tüm branşlar haftaya dağıtıldı, her görevde soru sayısı yazıyor. Toplam " + cnt + " görev plana eklendi. Miyav! 🐾";
+                });
+            });
     }
 
     function planContext() {
