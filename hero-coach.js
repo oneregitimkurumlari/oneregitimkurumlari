@@ -642,10 +642,18 @@
         books.forEach(function (b) {
             if (!b || !b.totalQuestions || b.totalQuestions <= 0) return;
             var per = bookWeeklyQuota(b.totalQuestions);
-            var d = dayKeys[bookDayIndex((b.name || "") + "-" + (b.subject || ""))];
+            var base = bookDayIndex((b.name || "") + "-" + (b.subject || ""));
+            var sParts = 4;
+            var perDay = Math.max(1, Math.round(per / sParts));
             var subj = bookSubjectOf(b);
-            var text = "📗 " + b.name + (subj && subj !== "Diğer" ? " (" + subj + ")" : "") + ": " + per + " soru çöz";
-            (days[d] = days[d] || []).push(text);
+            var short = "📗 " + b.name + (subj && subj !== "Diğer" ? " (" + subj + ")" : "");
+            var done = 0;
+            for (var i = 0; i < sParts; i++) {
+                var n = i < sParts - 1 ? perDay : Math.max(1, per - done);
+                var d = dayKeys[(base + i) % 7];
+                (days[d] = days[d] || []).push(short + ": " + n + " soru çöz");
+                done += n;
+            }
         });
         return days;
     }
